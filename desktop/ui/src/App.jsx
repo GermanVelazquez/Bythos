@@ -728,6 +728,7 @@ export default function App() {
   const [importando, setImportando] = useState(false)
   const [importResultado, setImportResultado] = useState(null)
   const [salud, setSalud] = useState(null)
+  const [filtroProgreso, setFiltroProgreso] = useState(null)
 
   async function recargar() {
     try {
@@ -772,6 +773,19 @@ export default function App() {
     return () => { vivo = false }
   }, [view, carpetas])
 
+  // Opened-folder header: when a folder is opened from Carpetas (view 'all'
+  // with carpetaFiltro), fetch its OWN progress so the header shows the
+  // folder's bar and counts instead of the global ones. Depends on `recursos`
+  // so the header refreshes after status changes trigger recargar().
+  useEffect(() => {
+    if (view !== 'all' || !carpetaFiltro) { setFiltroProgreso(null); return }
+    let vivo = true
+    api.progresoCarpeta(carpetaFiltro).then(normStats).then((p) => {
+      if (vivo) setFiltroProgreso(p)
+    }).catch(() => { if (vivo) setFiltroProgreso(null) })
+    return () => { vivo = false }
+  }, [view, carpetaFiltro, recursos])
+
   // Backend status for the settings view
   useEffect(() => {
     if (view !== 'settings') return
@@ -810,8 +824,15 @@ export default function App() {
     export: 'Exportar', settings: 'Ajustes',
   }[view] || 'Biblioteca'
 
+  const carpetaAbierta = (view === 'all' && carpetaFiltro) ? (folderById[carpetaFiltro] ?? '') : ''
+  const filtroProm = filtroProgreso && filtroProgreso.total
+    ? Math.min(100, Math.max(0, Math.round(filtroProgreso.promedio ?? 0)))
+    : 0
+
   const pageSubtitle = (view === 'all')
-    ? `${stats.total} elementos · ${stats.completados} completados · ${stats.enCurso} en curso · Promedio ${stats.promedio ?? 0}%`
+    ? (carpetaAbierta && filtroProgreso
+      ? `Carpeta ${carpetaAbierta} · ${filtroProgreso.total} elementos · ${filtroProgreso.completados} completados · Promedio ${filtroProm}%`
+      : `${stats.total} elementos · ${stats.completados} completados · ${stats.enCurso} en curso · Promedio ${stats.promedio ?? 0}%`)
     : view === 'dashboard'
       ? `${stats.total} elementos · Promedio ${stats.promedio ?? 0}% en ${carpetas.length} carpetas`
       : view === 'folders'
@@ -953,11 +974,21 @@ export default function App() {
             <>
               <ProgressOverview stats={stats} />
               {carpetaFiltro && folderById[carpetaFiltro] && (
-                <div>
-                  <span className="folder-chip">
-                    {folderById[carpetaFiltro]}
-                    <button onClick={() => setCarpetaFiltro('')}>Quitar</button>
-                  </span>
+                <div className="panel">
+                  <p className="panel-title">{folderById[carpetaFiltro]}</p>
+                  {filtroProgreso ? (
+                    <>
+                      <div className="progress-grid">
+                        <ProgressCard dotColor="#5FA97B" label="Completados" num={filtroProgreso.completados} fillColor="#5FA97B" fillWidth={filtroProgreso.total ? `${(filtroProgreso.completados / filtroProgreso.total) * 100}%` : '0%'} />
+                        <ProgressCard dotColor="#C8C8C8" label="En curso" num={filtroProgreso.enCurso} fillColor="#C8C8C8" fillWidth={filtroProgreso.total ? `${(filtroProgreso.enCurso / filtroProgreso.total) * 100}%` : '0%'} />
+                        <ProgressCard dotColor="#C9964A" label="Pendientes" num={filtroProgreso.pendientes} fillColor="#C9964A" fillWidth={filtroProgreso.total ? `${(filtroProgreso.pendientes / filtroProgreso.total) * 100}%` : '0%'} />
+                      </div>
+                      <p className="progress-avg">Promedio carpeta: {filtroProm}% en {filtroProgreso.total} elementos</p>
+                    </>
+                  ) : (
+                    <p className="panel-sub">Calculando progreso…</p>
+                  )}
+                  <button className="btn-outline" onClick={() => setCarpetaFiltro('')}>Quitar filtro</button>
                 </div>
               )}
               <ResourceGrid
