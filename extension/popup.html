@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    /* CSS aquí mismo, sin archivo aparte. ¿Por qué?
+       El popup vive 3 segundos: abrir, guardar, cerrar.
+       Un popup.css separado es un viaje extra que lo hace parpadear.
+       15 líneas inline = instantáneo. */
+    body { width: 260px; font-family: system-ui, sans-serif; padding: 12px; margin: 0; }
+    h1 { font-size: 16px; margin: 0 0 8px; }
+    #page-url { font-size: 11px; color: #64748b; word-break: break-all; }
+    input, select { width: 100%; box-sizing: border-box; padding: 8px; margin: 4px 0 8px; }
+    #guardar { width: 100%; padding: 10px; background: #4f46e5; color: #fff; border: 0; border-radius: 8px; cursor: pointer; }
+    #guardar:disabled { opacity: .5; cursor: not-allowed; }
+    #msg { font-size: 12px; min-height: 16px; }
+  </style>
+</head>
+<body>
+  <h1>📚 Bythos</h1>
+  <!-- Estos 4 ids son un CONTRATO con popup.js (siguiente clase).
+       Si los renombras aquí y no allá, el botón muere en silencio. -->
+  <p id="page-url">Detectando página…</p>
+  <label for="folder">Carpeta:</label>
+  <select id="folder"></select>
+  <button id="guardar">💾 Guardar esta página</button>
+  <p id="msg"></p>
+
+  <!-- Al final del body: el HTML ya existe cuando el JS lo busca.
+       Si lo pones en <head>, getElementById da null. Bug clásico. -->
+  <script src="popup.js"></script>
+</body>
+</html>

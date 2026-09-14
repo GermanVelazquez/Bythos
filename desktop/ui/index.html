@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- viewport = que se vea bien en ventana pequeña de escritorio -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- favicon.png sale de assets/ y Vite lo copia a dist/ en el build -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <!-- Inter like the product design; styles.css falls back to system-ui offline -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <title>Bythos</title>
+  </head>
+  <body>
+    <!-- LA puerta: aquí React enchufa tu App (main.jsx busca este id).
+         Si cambias "root" aquí, cámbialo también en main.jsx o nada aparece
+         y no hay error claro. Es el bug mudo #1 de juniors. -->
+    <div id="root"></div>
+
+    <!-- type="module" = permite import/export.
+         /src/main.jsx en dev (Vite lo sirve), Vite lo reescribe a
+         /assets/index-XXX.js en pnpm build para el .exe. Tú no tocas nada. -->
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

@@ -1,0 +1,20 @@
+# El .db es tuyo, no del repo. Cada usuario tiene el suyo al instalar.
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+# Build del .exe
+desktop/bythos.exe
+desktop/bythos
+desktop/bythos-demo.exe
+desktop/bythos-demo
+# Extension: nunca subir clave privada ni artefacto empaquetado
+extension.pem
+extension.crx
+*.crx
+# Estado local de herramientas
+.atl/
+# React (dist/ se ignora, MENOS .gitkeep: sin él go:embed no compila)
+desktop/ui/node_modules/
+desktop/ui/dist/*
+!desktop/ui/dist/.gitkeep
