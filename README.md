@@ -1,34 +1,46 @@
-# Bythos — tu biblioteca en tu PC (app de escritorio + extensión)
+<p align="center">
+  <img src="assets/bythos-logo.jpeg" alt="Bythos" width="280">
+</p>
 
-Guarda links de YouTube y artículos, organízalos por carpetas, marca tu avance y repasa.
-Todo vive en tu disco (`bythos.db` en tu carpeta de configuración). Sin cuentas, sin nube:
-Google solo ve lo que TÚ le pegas al repasar. Nada sale solo.
+<h1 align="center">Bythos — tu biblioteca personal, en tu PC</h1>
 
-**Stack:** Go + SQLite (memoria y cerebro) · React + CSS con Vite y pnpm (cara) · Extensión Chrome MV3 (brazo)
+<p align="center">
+  Guarda lo que quieres aprender. Estúdialo. Repásalo.<br>
+  Sin nube, sin cuentas, sin ruido.
+</p>
 
-## Mapa (dónde vive cada cosa y por qué)
+## El problema que resuelve
 
-```
-bythos/
-  desktop/                        → el programa descargable (.exe de 1 archivo)
-    main.go                       → director: abre .db + incrusta UI + prende :8080
-    db/                           → memoria (SQL solo aquí): db.go, folders.go, resources.go, progreso.go
-    api/                          → cerebro (HTTP, sin SQL): server.go (11 rutas),
-                                    metadata.go (olfato), ui.go (sirve dist), export.go (repaso)
-    ui/                           → cara: package.json, vite.config.js, index.html,
-                                    src/{api.js, App.jsx, main.jsx, styles.css}
-  extension/                      → brazo: manifest.json + popup.html + popup.js
-```
+Hoy estamos tapados de información: videos de YouTube a medias, artículos abiertos en 20 pestañas, hilos guardados que jamás vuelven a abrirse. El conocimiento queda disperso en mil lugares y estudiar se vuelve imposible.
 
-Reglas que cumplimos: `main` flaco · SQL solo en `db/` · la UI y la extensión nunca tocan el
-`.db` (hablan HTTP) · la extensión manda solo `{url}` y Go huele título/imagen/tipo.
+**Bythos ataca eso de frente:** un solo lugar donde guardas todo lo que quieres aprender, lo organizas por temas, marcas cuánto avanzaste en cada cosa y lo repasas cuando quieras — incluso con ayuda de la IA.
 
-## Cómo correrlo
+## Qué hace
 
-Requisitos: Go 1.25+ y (para la UI) Node 18+ con pnpm 9.
+- 💾 **Guardar en 1 clic** desde el navegador con la extensión (sin copiar ni pegar links).
+- 🗂️ **Carpetas por tema** con filtro Todas / En curso / Completadas.
+- 📊 **Progreso real**: cada link lleva su % (0–100), cada carpeta muestra su promedio y el dashboard muestra tu avance global.
+- 🔍 **Metadata automática**: al guardar una URL, Bythos detecta título, imagen y tipo (video, artículo, otro).
+- 🤖 **Repaso con IA**: exporta tu carpeta en 4 formatos (notas, Gemini, NotebookLM, Drive) y trae el progreso de vuelta con import-avance.
+- 📦 **App de 1 archivo**: un solo `.exe` que lleva la interfaz adentro. Doble clic y listo.
+
+## 100 % local, tus datos son tuyos
+
+Todo vive en tu disco, en `bythos.db` dentro de tu carpeta de configuración. No hay login, no hay servidor, no hay telemetría. Google solo ve lo que **tú** decides pegarle al repasar. Nada sale solo.
+
+## Empieza en 2 minutos
+
+1. **Descarga y abre la app** (o compilala abajo): se abre tu biblioteca en `http://localhost:8080`.
+2. **Instala la extensión** (ver pasos abajo): verás el icono B en tu barra del navegador.
+3. **Guarda tu primer link**: abre cualquier video o artículo, pulsa 💾 **Guardar esta página**, elige la carpeta.
+4. **Verificación**: el link aparece en la app con su título e imagen. Marca tu avance y mira cómo sube la barra. ✅
+
+## Cómo correrlo (desarrollo)
+
+Requisitos: Go 1.25+ y (para la UI) Node 18+ con pnpm 9 (o npm).
 
 ```powershell
-# 1. Cerebro + memoria → http://localhost:8080/api/salud = {"ok":true}
+# 1. App completa → http://localhost:8080 (API en /api/salud)
 cd desktop
 go run .
 
@@ -37,60 +49,76 @@ cd desktop/ui
 pnpm install
 pnpm dev
 
-# 3. Descargable de 1 archivo (UI DENTRO del .exe, una sola puerta :8080)
+# 3. Ejecutable de 1 archivo (la UI va DENTRO del .exe, una sola puerta :8080)
 cd desktop/ui
 pnpm build
 cd ..
 go build -o bythos.exe .
 .\bythos.exe
-# Abre http://localhost:8080/ → tu React. /api/... sigue viva.
 ```
 
-Sin `pnpm build`, `/` avisa en español qué hacer (no un 404 mudo).
+Sin `pnpm build`, la raíz `/` te avisa en español qué hacer (no un 404 mudo).
 
 ## Extensión (guardar sin copiar links)
 
 1. Prende la app (`go run .` o el `.exe`): `localhost:8080` eres tú mismo, debe estar vivo.
-2. `chrome://extensions` → modo desarrollador → "Cargar descomprimida" → carpeta `extension/`.
-3. En cualquier video/artículo pulsa 💾 **Guardar esta página** (elige tu carpeta ID, la ves en la app).
-4. Si la app está apagada, el popup te lo dice ("Abre primero tu app") en vez de fallar mudo.
+2. Abre `chrome://extensions` → activa el **modo desarrollador** → **"Cargar descomprimida"** → elige la carpeta `extension/` de este repo.
+3. Fija el icono 🅱️ en tu barra para tenerlo a mano.
+4. En cualquier video o artículo pulsa 💾 **Guardar esta página** (elige la carpeta, la ves en la app) o el botón Bythos que aparece en la propia página.
+5. Si la app está apagada, el popup te lo dice ("Abre primero tu app") en vez de fallar en silencio.
 
-Permisos mínimos a propósito: `activeTab` (solo la pestaña clicada) + `storage` (tu carpeta
-favorita) + `http://localhost:8080/*` (solo tu PC, nadie más).
+Permisos mínimos a propósito: `activeTab` (solo la pestaña que clicas) + `storage` (tu carpeta favorita) + `http://localhost:8080/*` (solo tu PC, nadie más).
 
 ## API local (toda en localhost:8080, sin login: es tu PC)
 
 | Método | Ruta | Hace |
 |---|---|---|
-| GET | /api/salud | ¿sigo vivo? |
+| GET | /api/salud | ¿sigo vivo? `{"ok":true,"version":"1.0.0"}` |
 | GET/POST | /api/carpetas | listar / crear `{nombre}` |
-| GET | /api/carpetas/{id}/progreso | `{total, completados, pendientes, en_curso, porcentaje}` |
-| GET | /api/recursos?carpeta_id= | listar (0 o vacío = todos) |
-| POST | /api/recursos | guardar `{carpeta_id, url}` — Go huele título/imagen/tipo |
-| PATCH | /api/recursos/{id} | estado `{estado: pendiente\|en_curso\|completado}` |
+| DELETE | /api/carpetas/{id} | borrar (con sus recursos) |
+| GET | /api/carpetas/{id}/progreso | `{total, completados, porcentaje, promedio}` |
+| GET/POST | /api/recursos | listar (`?carpeta_id=`) / guardar `{carpeta_id, url}` |
+| PATCH | /api/recursos/{id} | avance `{progreso: 0-100}` o estado |
 | DELETE | /api/recursos/{id} | borrar |
-| GET | /api/stats | progreso general (gráfico portada) |
-| GET | /api/carpetas/{id}/export?format= | `markdown` (notas) · `gemini` (pegar en la IA) · `notebooklm` (importar) · `drive` (descarga `.md`) |
-| GET | / | tu React (o aviso si falta `pnpm build`) |
+| GET | /api/stats | avance global (dashboard) |
+| GET | /api/carpetas/{id}/export?format= | `markdown` · `gemini` · `notebooklm` · `drive` |
+| POST | /api/carpetas/{id}/import-avance | trae el % de vuelta desde el texto repasado |
+| GET | / | tu biblioteca (o aviso si falta `pnpm build`) |
 
 ## Repaso (a dónde va cada export)
 
-- **Markdown**: lista `[título](url)` para tus notas/Obsidian (botón Copiar en la UI).
-- **Gemini**: tus links + 3 órdenes (resumen, 10 preguntas, plan 7 días) para pegar en `gemini.google.com`.
-- **NotebookLM**: pasos + URLs una por una para `notebooklm.google.com`.
-- **Drive**: mismo Markdown como archivo `bythos-<carpeta>.md` (el navegador lo descarga, tú lo subes).
+- **Markdown**: lista `[título](url)` con % para tus notas/Obsidian (botón Copiar en la UI).
+- **Gemini**: tus links + órdenes (resumen, preguntas, plan de 7 días) para pegar en `gemini.google.com`.
+- **NotebookLM**: pasos + URLs para importar en `notebooklm.google.com`.
+- **Drive**: el mismo Markdown como archivo `bythos-<carpeta>.md` (el navegador lo descarga, tú lo subes).
 
 ## Tests
 
 ```powershell
 cd desktop
-go vet ./...   # compilación sana
-go test ./api/ # export (puro, sin DB) en milisegundos
+go vet ./...  # compilación sana
+go test ./... # API + base de datos, todo en segundos
 ```
 
-## Estado: v1 terminada ✅
+## Mapa (dónde vive cada cosa y por qué)
 
-Guardar con olfato + carpetas + estados + % y barra + export 4 formatos + UI + extensión +
-`.exe` single-file + tests. Todo probado clase a clase.
-Lujos futuros (nada bloquea usarla): tags `json:` minúsculas · borrar carpetas en UI ·
-barra % por carpeta · instalador con icono.
+```
+bythos/
+  assets/                         → logo e iconos (icon.svg fuente, PNGs, favicon)
+  desktop/                        → el programa descargable (.exe de 1 archivo)
+    main.go                       → director: abre .db + incrusta UI + prende :8080
+    db/                           → memoria (SQL solo aquí) + tests
+    api/                          → cerebro (HTTP, sin SQL) + tests
+    ui/                           → cara: React + Vite (src/{api.js, App.jsx, ...})
+    ventana/                      → abre la app en modo ventana (Edge --app)
+  extension/                      → brazo: manifest.json + popup + content script + iconos
+```
+
+Reglas que cumplimos: `main` flaco · SQL solo en `db/` · la UI y la extensión nunca tocan el `.db` (hablan HTTP) · la extensión manda solo `{url}` y Go detecta título/imagen/tipo.
+
+## Roadmap
+
+- [x] Guardar con metadata + carpetas + progreso + export 4 formatos + UI + extensión + `.exe` + tests + iconos
+- [ ] Instalador con icono en el `.exe` (ver `assets/README.md`)
+- [ ] Chequeo de actualizaciones desde la app
+- [ ] Tests de UI (vitest)
