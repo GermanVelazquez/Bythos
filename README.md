@@ -122,3 +122,7 @@ Reglas que cumplimos: `main` flaco · SQL solo en `db/` · la UI y la extensión
 - [ ] Instalador con icono en el `.exe` (ver `assets/README.md`)
 - [ ] Chequeo de actualizaciones desde la app
 - [ ] Tests de UI (vitest)
+
+## Licencia
+
+MIT — ver [LICENSE](LICENSE). Bythos es open source: puedes usarlo, modificarlo y distribuirlo libremente.

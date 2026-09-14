@@ -1,0 +1,70 @@
+# CI de Bythos: compila la UI, el .exe y publica el artefacto.
+# La firma (SignPath Foundation, gratis para OSS) se activa cuando aprueben
+# la solicitud en https://signpath.org/apply.html — ver paso comentado abajo.
+name: Build Bythos
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: pnpm
+          cache-dependency-path: desktop/ui/pnpm-lock.yaml
+
+      - name: Build UI
+        working-directory: desktop/ui
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Vet + tests (Go)
+        working-directory: desktop
+        run: |
+          go vet ./...
+          go test ./...
+
+      - name: Build exe (UI embebida)
+        working-directory: desktop
+        run: go build -o bythos.exe .
+
+      - name: Upload exe sin firmar
+        id: upload-unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: bythos-unsigned
+          path: desktop/bythos.exe
+          retention-days: 7
+
+      # ── Firma gratis con SignPath Foundation (activar tras la aprobación) ──
+      # 1. Aplica en https://signpath.org/apply.html con la URL de este repo.
+      # 2. Guarda el token como secret SIGNPATH_API_TOKEN en el repo.
+      # 3. Completa organization-id y project-slug, y descomenta este paso.
+      # El binario firmado corre en Windows con Smart App Control prendido.
+      # - name: Firmar exe con SignPath
+      #   uses: signpath/github-action-submit-signing-request@v2
+      #   with:
+      #     api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+      #     organization-id: "<SignPath organization id>"
+      #     project-slug: "<SignPath project slug>"
+      #     signing-policy-slug: release-signing
+      #     github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
+      #     wait-for-completion: true
+      #     output-artifact-directory: firmados
