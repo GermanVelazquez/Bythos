@@ -159,7 +159,7 @@ function Sidebar({ currentView, onChangeView, counts }) {
           })}
         </div>
       ))}
-      <div className="sidebar-foot">v1.0.0 · Local</div>
+      <div className="sidebar-foot">v1.0.1 · Local</div>
     </aside>
   )
 }
@@ -908,7 +908,7 @@ function SettingsView({ salud, stats, totalCarpetas }) {
       </div>
       <div className="setting-row">
         <span className="setting-key">Versión</span>
-        <span className="setting-val">v1.0.0 · Local</span>
+        <span className="setting-val">v1.0.1 · Local</span>
       </div>
     </div>
   )

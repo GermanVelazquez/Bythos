@@ -9,6 +9,12 @@
   Sin nube, sin cuentas, sin ruido.
 </p>
 
+> ### ⬇ Descargar Bythos para Windows
+>
+> **[Descargar Bythos-Setup.exe (última versión)](https://github.com/GermanVelazquez/Bythos/releases/latest/download/Bythos-Setup.exe)**
+>
+> Haz doble clic para instalar (no pide permisos de administrador). Si Windows muestra SmartScreen, pulsa "Más información" → "Ejecutar de todas formas".
+
 ## El problema que resuelve
 
 Hoy estamos tapados de información: videos de YouTube a medias, artículos abiertos en 20 pestañas, hilos guardados que jamás vuelven a abrirse. El conocimiento queda disperso en mil lugares y estudiar se vuelve imposible.
@@ -108,7 +114,7 @@ Permisos mínimos a propósito: `activeTab` (solo la pestaña que clicas) + `sto
 
 | Método | Ruta | Hace |
 |---|---|---|
-| GET | /api/salud | ¿sigo vivo? `{"ok":true,"version":"1.0.0"}` |
+| GET | /api/salud | ¿sigo vivo? `{"ok":true,"version":"1.0.1"}` |
 | GET/POST | /api/carpetas | listar / crear `{nombre}` |
 | DELETE | /api/carpetas/{id} | borrar (con sus recursos) |
 | GET | /api/carpetas/{id}/progreso | `{total, completados, porcentaje, promedio}` |
