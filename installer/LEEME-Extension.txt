@@ -1,0 +1,31 @@
+Bythos — Extensión para Chrome (guía de instalación)
+====================================================
+
+Esta carpeta (Bythos-Extension) la dejó en tu Escritorio el
+instalador de Bythos. NO la borres: Chrome la usa tal cual está.
+Solo funciona con la app abierta (http://localhost:8080 eres tú mismo).
+
+INSTALACIÓN (3 pasos):
+
+1) Abre Bythos (doble clic en su acceso directo).
+   La app debe estar corriendo: sin ella, la extensión no tiene
+   a quién hablarle y el botón te lo dice en vez de fallar en silencio.
+
+2) En Chrome abre chrome://extensions, activa el "Modo de
+   desarrollador" (arriba a la derecha) y pulsa "Cargar
+   descomprimida". Elige esta carpeta Bythos-Extension del Escritorio
+   y acepta.
+
+3) Fija el icono B en tu barra (pieza de rompecabezas -> pin en
+   "Bythos") para tenerlo a mano. En cualquier video o artículo
+   pulsa "Guardar esta página", elige la carpeta y listo: lo ves en la app.
+
+NOTAS:
+
+- Si mueves o renombras esta carpeta, Chrome la pierde: repite el
+  paso 2 apuntando a la nueva ubicación (nada se desengancha solo,
+  solo hay que recargarla).
+- Si desinstalas Bythos, el desinstalador te pregunta antes de
+  borrar esta carpeta. Responde "No" si quieres conservarla.
+- Permisos mínimos a propósito: solo la pestaña que clicas, tu
+  carpeta favorita y http://localhost:8080 (solo tu PC, nadie más).
