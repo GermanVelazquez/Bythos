@@ -59,14 +59,30 @@ go build -o bythos.exe .
 
 Sin `pnpm build`, la raíz `/` te avisa en español qué hacer (no un 404 mudo).
 
-## Instalador Windows
+## Instalador Windows (Inno Setup, recomendado)
 
-El instalador copia la app a `%LocalAppData%\Bythos`, crea el acceso directo "Bythos" en el Escritorio + entrada en el menú inicio, y deja `uninstall.bat` para quitarlo. Tu base de datos NO viaja: se crea sola en `%APPDATA%\Bythos\bythos.db` al abrir la app.
-
-Es Go puro a propósito (`installer/main.go`, sin dependencias ni Inno Setup): los accesos directos se crean con WSH, que resuelve el Escritorio real aunque esté redirigido a OneDrive.
+El setup con asistente gráfico se compila con Inno Setup 6: bienvenida, licencia, carpeta destino (`%LocalAppData%\Bythos`, sin admin), icono de Escritorio opcional, entrada "Bythos" en el menú inicio y desinstalador registrado en el Panel de control. Tu base de datos NO viaja: se crea sola en `%APPDATA%\Bythos\bythos.db` al abrir la app.
 
 ```powershell
-# Compilar el instalador (el setup pesa ~21 MB y no se commitea, ver .gitignore)
+# 1. App fresca (la UI va DENTRO del .exe)
+cd desktop/ui
+npm run build
+cd ..
+go build -o bythos.exe .
+# 2. Compilar el setup (requiere Inno Setup 6: winget install -e --id JRSoftware.InnoSetup)
+cd ..\installer
+& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" bythos.iss
+# Sale en installer\Output\Bythos-Setup.exe (pesado, no se commitea, ver .gitignore)
+```
+
+Instalación silenciosa: `Bythos-Setup.exe /SILENT /DIR="C:\Ruta\Bythos"` (sin el icono de Escritorio: agrega `/MERGETASKS=!desktopicon`).
+
+### Instalador Go (fallback sin dependencias)
+
+Si no puedes instalar Inno Setup, queda `installer/main.go`: Go puro, sin dependencias (accesos directos vía WSH, que resuelve el Escritorio real aunque esté redirigido a OneDrive).
+
+```powershell
+# Compilar el instalador Go (el setup pesa ~21 MB y no se commitea, ver .gitignore)
 cd desktop/ui
 npm run build
 cd ..

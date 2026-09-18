@@ -10,9 +10,10 @@ desktop/bythos-demo.exe
 desktop/bythos-demo
 desktop/bythos-test.exe
 # Instalador: el .exe compilado embebe bythos.exe (pesado, no va al repo).
-# Solo se commitea installer/*.go; el setup se compila al liberar.
+# Solo se commitea installer/*.go e installer/*.iss; el setup se compila al liberar.
 installer/payload/
 installer/Bythos-Setup.exe
+installer/Output/
 Bythos-Setup*.exe
 # Extension: nunca subir clave privada ni artefacto empaquetado
 extension.pem
