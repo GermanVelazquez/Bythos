@@ -53,18 +53,21 @@ func main() {
 	// ¿Por qué goroutine? ListenAndServe BLOQUEA (nunca vuelve); sin go,
 	// la ventana jamás abriría. La ventana es la que manda a cerrar: si el
 	// usuario la cierra, el .exe sigue hasta cerrar la consola (v1 simple).
+	// Su error viaja por el canal: si el puerto está ocupado, el polling
+	// lo ve y muestra el diálogo en vez de esperar a ciegas.
+	errServidor := make(chan error, 1)
 	go func() {
 		log.Println("Bythos listo.")
 		log.Println("BD en:", ruta)
 		log.Println("API en: http://localhost:8080/api/salud")
-		if err := http.ListenAndServe("localhost:8080", srv.Rutas()); err != nil {
-			fallarArranque("No se pudo prender el servidor local: " + err.Error())
-		}
+		errServidor <- http.ListenAndServe("localhost:8080", srv.Rutas())
 	}()
 
-	// Esperar a que el puerto despierte antes de abrir la ventana:
-	// sin esto Edge llegaría a una puerta cerrada 1 de cada 3 veces.
-	time.Sleep(800 * time.Millisecond)
+	// Esperar salud, no segundos fijos: la ventana abre APENAS responde.
+	if err := esperarSalud("http://localhost:8080/api/salud",
+		100*time.Millisecond, 10*time.Second, errServidor); err != nil {
+		fallarArranque("No se pudo iniciar Bythos: " + err.Error())
+	}
 	if err := ventana.Abrir("http://localhost:8080"); err != nil {
 		// Abrir ya mostró su propio aviso nativo (falta Edge):
 		// no duplicar diálogos, solo dejar rastro y salir.
