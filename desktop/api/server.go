@@ -40,6 +40,7 @@ type Servidor struct {
 // - salud: ¿sigo vivo? (la UI lo usa al arrancar)
 // - carpetas: crear y listar temas
 // - recursos: guardar link, listar, cambiar estado, borrar
+// - agenda: notas del calendario + actividad (puntos de historia)
 func (s *Servidor) Rutas() http.Handler {
 	mux := http.NewServeMux()
 
@@ -53,6 +54,18 @@ func (s *Servidor) Rutas() http.Handler {
 	mux.HandleFunc("POST /api/recursos", s.guardarRecurso)
 	mux.HandleFunc("PATCH /api/recursos/{id}", s.cambiarEstado)
 	mux.HandleFunc("DELETE /api/recursos/{id}", s.borrarRecurso)
+
+	// Agenda: calendario de la vista Todos (rango) + historia (actividad).
+	mux.HandleFunc("GET /api/agenda", s.listarAgenda)
+	mux.HandleFunc("POST /api/agenda", s.crearAgenda)
+	mux.HandleFunc("DELETE /api/agenda/{id}", s.borrarAgenda)
+	mux.HandleFunc("GET /api/actividad", s.actividad)
+	mux.HandleFunc("POST /api/agenda/import", s.importarAgenda)
+	// Lotes: el MD importado persiste como fuente editable/eliminable.
+	mux.HandleFunc("GET /api/agenda/imports", s.listarLotes)
+	mux.HandleFunc("GET /api/agenda/imports/{id}", s.obtenerLote)
+	mux.HandleFunc("PUT /api/agenda/imports/{id}", s.actualizarLote)
+	mux.HandleFunc("DELETE /api/agenda/imports/{id}", s.borrarLote)
 
 	// Termómetro: % por carpeta (barra) y general (gráfico portada).
 	// Van ANTES de montarUI: son /api/... (específico gana a "/" general).
@@ -259,7 +272,7 @@ func conCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return

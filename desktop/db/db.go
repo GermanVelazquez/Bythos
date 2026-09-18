@@ -74,9 +74,13 @@ func Abrir(ruta string) (*sql.DB, error) {
 	return base, nil
 }
 
-// crearTablas define el modelo mínimo. Solo 2 tablas, a propósito:
+// crearTablas define el modelo mínimo. Solo 3 tablas, a propósito:
 // - folders: tus temas ("Go Backend", "React"...)
 // - resources: tus links con su estado de estudio
+// - agenda: tus notas en el calendario (fecha + hora opcional + texto)
+//   La agenda NO cuelga de carpetas: carpeta_id es NULL cuando la nota
+//   es suelta, y ON DELETE SET NULL la suelta si borras su carpeta
+//   (tus notas sobreviven: borrar un tema no borra tus planes).
 //
 // ¿Por qué NO hay tabla users como antes con Postgres?
 // Porque es app de escritorio de 1 usuario: TÚ. No hay login,
@@ -100,13 +104,31 @@ func crearTablas(base *sql.DB) error {
 			progreso INTEGER NOT NULL DEFAULT 0 CHECK(progreso BETWEEN 0 AND 100),
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
+		`CREATE TABLE IF NOT EXISTS agenda (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			fecha TEXT NOT NULL,
+			hora_inicio TEXT NULL,
+			hora_fin TEXT NULL,
+			texto TEXT NOT NULL DEFAULT '',
+			carpeta_id INTEGER NULL REFERENCES folders(id) ON DELETE SET NULL,
+			lote_id INTEGER NULL REFERENCES import_lotes(id) ON DELETE CASCADE
+		);`,
+		`CREATE TABLE IF NOT EXISTS import_lotes (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			nombre TEXT NOT NULL,
+			markdown TEXT NOT NULL,
+			creado TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+		);`,
 	}
 	for _, q := range tablas {
 		if _, err := base.Exec(q); err != nil {
 			return err
 		}
 	}
-	return migrarProgreso(base)
+	if err := migrarProgreso(base); err != nil {
+		return err
+	}
+	return migrarImportLotes(base)
 }
 
 // migrarProgreso adds resources.progreso on databases created before v0.2.
@@ -141,5 +163,43 @@ func migrarProgreso(base *sql.DB) error {
 	}
 	// Backfill: rows completed before the column existed are 100% by definition.
 	_, err = base.Exec(`UPDATE resources SET progreso = 100 WHERE status = 'completado'`)
+	return err
+}
+
+// migrarImportLotes adds import_lotes + agenda.lote_id on databases
+// created before v1.1. New installs already have both via CREATE TABLE.
+// Same style as migrarProgreso: PRAGMA table_info first, so Abrir stays
+// idempotent and old .db files keep every row.
+func migrarImportLotes(base *sql.DB) error {
+	if _, err := base.Exec(`CREATE TABLE IF NOT EXISTS import_lotes (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		nombre TEXT NOT NULL,
+		markdown TEXT NOT NULL,
+		creado TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+	);`); err != nil {
+		return err
+	}
+	rows, err := base.Query(`PRAGMA table_info(agenda)`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull int
+		var dflt interface{}
+		var pk int
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return err
+		}
+		if name == "lote_id" {
+			return rows.Err()
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	_, err = base.Exec(`ALTER TABLE agenda ADD COLUMN lote_id INTEGER NULL REFERENCES import_lotes(id) ON DELETE CASCADE`)
 	return err
 }

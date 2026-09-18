@@ -93,4 +93,67 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ markdown }),
     }).then(leer),
+
+  // AGENDA: notas del calendario en un rango + historia de creaciones.
+  // Mismos nombres que Go: agendaRango ↔ /agenda, actividad ↔ /actividad.
+  agendaRango: (desde, hasta) => {
+    const q = new URLSearchParams()
+    if (desde) q.set('desde', desde)
+    if (hasta) q.set('hasta', hasta)
+    const s = q.toString()
+    return fetch(`${BASE}/api/agenda${s ? `?${s}` : ''}`).then(leer)
+  },
+
+  crearAgenda: (payload) =>
+    fetch(`${BASE}/api/agenda`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(leer),
+
+  borrarAgenda: (id) =>
+    fetch(`${BASE}/api/agenda/${id}`, { method: 'DELETE' }).then(leer),
+
+  // IMPORT MD: pega compromisos en markdown, dry=true solo previsualiza.
+  // nombre viaja solo al confirmar (el preview no crea lote).
+  // decisiones asigna carpeta por bloque al confirmar:
+  // [{bloque (1-based), accion: auto|usar|crear|suelta, carpeta_id?, nombre?}].
+  importarAgendaMD: (markdown, dry = false, nombre = '', decisiones = []) => {
+    const body = { markdown }
+    if (!dry && nombre && nombre.trim()) body.nombre = nombre.trim()
+    if (!dry && Array.isArray(decisiones) && decisiones.length > 0) body.decisiones = decisiones
+    return fetch(`${BASE}/api/agenda/import${dry ? '?dry=true' : ''}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(leer)
+  },
+
+  // LOTES: el MD importado persiste como fuente editable/eliminable.
+  listarLotes: () =>
+    fetch(`${BASE}/api/agenda/imports`).then(leer),
+
+  obtenerLote: (id) =>
+    fetch(`${BASE}/api/agenda/imports/${id}`).then(leer),
+
+  actualizarLote: (id, { nombre, markdown, decisiones }) => {
+    const body = { nombre, markdown }
+    if (Array.isArray(decisiones) && decisiones.length > 0) body.decisiones = decisiones
+    return fetch(`${BASE}/api/agenda/imports/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(leer)
+  },
+
+  borrarLote: (id) =>
+    fetch(`${BASE}/api/agenda/imports/${id}`, { method: 'DELETE' }).then(leer),
+
+  actividad: (desde, hasta) => {
+    const q = new URLSearchParams()
+    if (desde) q.set('desde', desde)
+    if (hasta) q.set('hasta', hasta)
+    const s = q.toString()
+    return fetch(`${BASE}/api/actividad${s ? `?${s}` : ''}`).then(leer)
+  },
 }
