@@ -124,7 +124,7 @@ Permisos mínimos a propósito: `activeTab` (solo la pestaña que clicas) + `sto
 
 | Método | Ruta | Hace |
 |---|---|---|
-| GET | /api/salud | ¿sigo vivo? `{"ok":true,"version":"1.0.2"}` |
+| GET | /api/salud | ¿sigo vivo? `{"ok":true,"version":"1.0.3"}` |
 | GET/POST | /api/carpetas | listar / crear `{nombre}` |
 | DELETE | /api/carpetas/{id} | borrar (con sus recursos) |
 | GET | /api/carpetas/{id}/progreso | `{total, completados, porcentaje, promedio}` |

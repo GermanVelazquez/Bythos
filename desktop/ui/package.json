@@ -1,6 +1,6 @@
 {
   "name": "bythos-ui",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "Cara de Bythos: React que corre dentro del .exe (no es web desplegada)",
   "packageManager": "pnpm@9.12.0",

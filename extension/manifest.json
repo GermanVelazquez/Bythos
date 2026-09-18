@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Bythos — Guardar en mi PC",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Guarda la pestaña actual en tu app Bythos de escritorio, sin copiar links.",
   "action": {
     "default_popup": "popup.html",

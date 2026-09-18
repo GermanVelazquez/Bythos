@@ -21,7 +21,7 @@
 ; - Output goes to installer\Output (git-ignored); release copies the
 ;   compiled setup elsewhere, never into the repo.
 
-#define AppVersion "1.0.2"
+#define AppVersion "1.0.3"
 
 [Setup]
 AppId={{AEEA0123-59D0-4FFD-89D0-13AA666C70C4}}

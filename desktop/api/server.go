@@ -25,7 +25,7 @@ import (
 
 // Version es la única fuente en Go. Unifica App.jsx, package.json y manifest.
 // Al cambiarla, cambia también esos 3 lugares (son 4 líneas en total).
-const Version = "1.0.2"
+const Version = "1.0.3"
 
 // Servidor guarda lo único que necesita: la conexión ya abierta.
 // NO abre otra (recuerda: 1 conexión para no bloquear el .db).
