@@ -63,6 +63,11 @@ go build -o bythos.exe .
 .\bythos.exe
 ```
 
+> `go run .` y `go build` sin flags dejan la consola visible: ves los logs en
+> la terminal. El release se compila con `-ldflags "-H=windowsgui"` (sin
+> consola); ahí todo error de arranque muestra un diálogo nativo de Windows
+> en vez de morir en silencio (ver `desktop/ventana/ventana.go`: `Error`).
+
 Sin `pnpm build`, la raíz `/` te avisa en español qué hacer (no un 404 mudo).
 
 ## Instalador Windows (Inno Setup, recomendado)
@@ -74,7 +79,7 @@ El setup con asistente gráfico se compila con Inno Setup 6: bienvenida, licenci
 cd desktop/ui
 npm run build
 cd ..
-go build -o bythos.exe .
+go build -ldflags "-H=windowsgui" -o bythos.exe .
 # 2. Compilar el setup (requiere Inno Setup 6: winget install -e --id JRSoftware.InnoSetup)
 cd ..\installer
 & "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" bythos.iss
@@ -92,7 +97,7 @@ Si no puedes instalar Inno Setup, queda `installer/main.go`: Go puro, sin depend
 cd desktop/ui
 npm run build
 cd ..
-go build -o bythos.exe .
+go build -ldflags "-H=windowsgui" -o bythos.exe .
 Copy-Item bythos.exe ..\installer\payload\bythos.exe -Force
 cd ..\installer
 go build -o Bythos-Setup.exe .

@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"bythos-desktop/api"
@@ -31,7 +32,7 @@ func main() {
 	ruta := db.RutaPorDefecto()
 	base, err := db.Abrir(ruta)
 	if err != nil {
-		log.Fatal("No se pudo abrir bythos.db:", err)
+		fallarArranque("No se pudo abrir bythos.db: " + err.Error())
 	}
 	defer base.Close()
 
@@ -41,7 +42,8 @@ func main() {
 	// Si aún no hiciste pnpm build, solo hay .gitkeep y montarUI avisará.
 	sub, err := fs.Sub(distUI, "ui/dist")
 	if err != nil {
-		log.Fatal("No se pudo leer la UI embebida:", err)
+		base.Close()
+		fallarArranque("No se pudo leer la UI embebida: " + err.Error())
 	}
 
 	// 3. Cerebro: sirve la API para la UI y la extensión (+ la cara en "/")
@@ -55,16 +57,30 @@ func main() {
 		log.Println("Bythos listo.")
 		log.Println("BD en:", ruta)
 		log.Println("API en: http://localhost:8080/api/salud")
-		log.Fatal(http.ListenAndServe("localhost:8080", srv.Rutas()))
+		if err := http.ListenAndServe("localhost:8080", srv.Rutas()); err != nil {
+			fallarArranque("No se pudo prender el servidor local: " + err.Error())
+		}
 	}()
 
 	// Esperar a que el puerto despierte antes de abrir la ventana:
 	// sin esto Edge llegaría a una puerta cerrada 1 de cada 3 veces.
 	time.Sleep(800 * time.Millisecond)
 	if err := ventana.Abrir("http://localhost:8080"); err != nil {
+		// Abrir ya mostró su propio aviso nativo (falta Edge):
+		// no duplicar diálogos, solo dejar rastro y salir.
 		log.Println("No se pudo abrir la ventana, abre el navegador en http://localhost:8080:", err)
+		os.Exit(1)
 	}
 
 	// El director no se va: bloquea para siempre (la ventana y el server viven).
 	select {}
+}
+
+// fallarArranque deja rastro en la terminal (dev con `go run .`) Y muestra
+// un diálogo nativo (instalado sin consola con -H=windowsgui, donde el log
+// no se ve en ningún lado). Siempre termina con código 1.
+func fallarArranque(detalle string) {
+	log.Println(detalle)
+	ventana.Error("Bythos", detalle)
+	os.Exit(1)
 }

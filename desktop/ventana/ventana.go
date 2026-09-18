@@ -21,6 +21,12 @@ import (
 	"unsafe"
 )
 
+// Estilos de MessageBoxW (winuser.h): OK solo + icono de error.
+const (
+	mbAceptar    = 0x00000000
+	mbIconoError = 0x00000010
+)
+
 // Abrir lanza la ventana y vuelve al instante (no bloquea al servidor).
 // Sin Edge/Chrome: aviso nativo + error (main lo loguea). Nunca pestañas.
 func Abrir(url string) error {
@@ -68,20 +74,33 @@ func textoAviso() (titulo, mensaje string) {
 // Go puro, sin CGO: user32.dll ya está en todo Windows.
 func avisarSinNavegador() {
 	titulo, mensaje := textoAviso()
-	t, _ := syscall.UTF16PtrFromString(titulo)
-	m, _ := syscall.UTF16PtrFromString(mensaje)
-	mostrarMensajeNativo(t, m)
+	Aviso(titulo, mensaje)
 }
 
-// mostrarMensajeNativo llama a MessageBoxW con botón Aceptar (MB_OK = 0).
-func mostrarMensajeNativo(titulo, mensaje *uint16) {
+// Aviso muestra un diálogo nativo informativo (botón Aceptar).
+func Aviso(titulo, mensaje string) {
+	t, _ := syscall.UTF16PtrFromString(titulo)
+	m, _ := syscall.UTF16PtrFromString(mensaje)
+	mostrarMensajeNativo(t, m, mbAceptar)
+}
+
+// Error muestra un diálogo nativo de error (icono de error, botón Aceptar).
+// Es la vía visible cuando el .exe corre SIN consola (-H=windowsgui):
+// ahí log.Fatal no se ve en ningún lado, este diálogo sí.
+func Error(titulo, mensaje string) {
+	t, _ := syscall.UTF16PtrFromString(titulo)
+	m, _ := syscall.UTF16PtrFromString(mensaje)
+	mostrarMensajeNativo(t, m, mbAceptar|mbIconoError)
+}
+
+// mostrarMensajeNativo llama a MessageBoxW con el estilo pedido.
+func mostrarMensajeNativo(titulo, mensaje *uint16, estilo uint32) {
 	user32 := syscall.NewLazyDLL("user32.dll")
 	mensajeBox := user32.NewProc("MessageBoxW")
-	const mbAceptar = 0x00000000
 	mensajeBox.Call(0, // sin ventana dueña: el diálogo va al frente
 		uintptr(unsafe.Pointer(mensaje)),
 		uintptr(unsafe.Pointer(titulo)),
-		uintptr(mbAceptar))
+		uintptr(estilo))
 }
 
 // perfilBythos guarda cookies/estado de la ventana aparte de tu Edge normal.

@@ -41,9 +41,11 @@ jobs:
           go vet ./...
           go test ./...
 
-      - name: Build exe (UI embebida)
+      - name: Build exe (UI embebida, sin consola)
         working-directory: desktop
-        run: go build -o bythos.exe .
+        # -H=windowsgui: el .exe corre SIN ventana de consola (los logs de
+        # arranque no se ven: todo error fatal muestra diálogo nativo).
+        run: go build -ldflags '-H=windowsgui' -o bythos.exe .
 
       - name: Upload exe sin firmar
         id: upload-unsigned
