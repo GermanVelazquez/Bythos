@@ -72,7 +72,7 @@ Sin `pnpm build`, la raíz `/` te avisa en español qué hacer (no un 404 mudo).
 
 ## Instalador Windows (Inno Setup, recomendado)
 
-El setup con asistente gráfico se compila con Inno Setup 6: bienvenida, licencia, carpeta destino (`%LocalAppData%\Bythos`, sin admin), icono de Escritorio opcional, entrada "Bythos" en el menú inicio y desinstalador registrado en el Panel de control. Tu base de datos NO viaja: se crea sola en `%APPDATA%\Bythos\bythos.db` al abrir la app.
+El setup con asistente gráfico se compila con Inno Setup 6: bienvenida, licencia, carpeta destino (`%LocalAppData%\Bythos`, sin admin), icono de Escritorio opcional, grupo "Bythos" en el menú inicio (app + "Extensión para Chrome", que abre su carpeta) y desinstalador registrado en el Panel de control. Además deja la extensión en `Bythos-Extension` en tu Escritorio, con su guía (`LEEME.txt`): al desinstalar pregunta si borrarla. Tu base de datos NO viaja: se crea sola en `%APPDATA%\Bythos\bythos.db` al abrir la app.
 
 ```powershell
 # 1. App fresca (la UI va DENTRO del .exe)
@@ -107,11 +107,16 @@ Instalar: doble clic en `Bythos-Setup.exe` (o `Bythos-Setup.exe /S` en silencio)
 
 ## Extensión (guardar sin copiar links)
 
-1. Prende la app (`go run .` o el `.exe`): `localhost:8080` eres tú mismo, debe estar vivo.
-2. Abre `chrome://extensions` → activa el **modo desarrollador** → **"Cargar descomprimida"** → elige la carpeta `extension/` de este repo.
+Si instalaste con el setup, ya la tienes: vive en la carpeta
+`Bythos-Extension` de tu Escritorio, con su guía (`LEEME.txt`).
+
+1. Prende la app (acceso directo Bythos): `localhost:8080` eres tú mismo, debe estar vivo.
+2. Abre `chrome://extensions` → activa el **modo desarrollador** → **"Cargar descomprimida"** → elige la carpeta `Bythos-Extension` del Escritorio (los pasos están en `LEEME.txt`).
 3. Fija el icono 🅱️ en tu barra para tenerlo a mano.
 4. En cualquier video o artículo pulsa 💾 **Guardar esta página** (elige la carpeta, la ves en la app) o el botón Bythos que aparece en la propia página.
 5. Si la app está apagada, el popup te lo dice ("Abre primero tu app") en vez de fallar en silencio.
+
+¿Desarrollo o instalación manual? Carga la carpeta `extension/` de este repo en vez de la del Escritorio (es la misma, byte por byte). Si mueves la carpeta, repite el paso 2 apuntando a la nueva ubicación: nada se desengancha solo, solo hay que recargarla.
 
 Permisos mínimos a propósito: `activeTab` (solo la pestaña que clicas) + `storage` (tu carpeta favorita) + `http://localhost:8080/*` (solo tu PC, nadie más).
 
