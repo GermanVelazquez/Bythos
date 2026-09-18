@@ -33,6 +33,11 @@ OutputBaseFilename=Bythos-Setup
 SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64compatible
+; Icono del setup y del Panel de control: el .ico fuente vive en assets/.
+; Los accesos directos usan el icono EMBEBIDO del .exe (IconFilename abajo),
+; así no se instala ningún archivo extra de icono junto a la app.
+SetupIconFile={#SourcePath}\..\assets\bythos.ico
+UninstallDisplayIcon={app}\bythos.exe
 
 [Languages]
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
@@ -44,5 +49,5 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#SourcePath}\..\desktop\bythos.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\Bythos"; Filename: "{app}\bythos.exe"; WorkingDir: "{app}"
-Name: "{autodesktop}\Bythos"; Filename: "{app}\bythos.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{autoprograms}\Bythos"; Filename: "{app}\bythos.exe"; WorkingDir: "{app}"; IconFilename: "{app}\bythos.exe"
+Name: "{autodesktop}\Bythos"; Filename: "{app}\bythos.exe"; WorkingDir: "{app}"; Tasks: desktopicon; IconFilename: "{app}\bythos.exe"

@@ -160,7 +160,7 @@ Reglas que cumplimos: `main` flaco · SQL solo en `db/` · la UI y la extensión
 ## Roadmap
 
 - [x] Guardar con metadata + carpetas + progreso + export 4 formatos + UI + extensión + `.exe` + tests + iconos
-- [ ] Instalador con icono en el `.exe` (ver `assets/README.md`)
+- [x] Instalador con icono en el `.exe` (logo Bythos embebido, ver `assets/README.md`)
 - [ ] Chequeo de actualizaciones desde la app
 - [ ] Tests de UI (vitest)
 
