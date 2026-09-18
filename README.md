@@ -59,6 +59,25 @@ go build -o bythos.exe .
 
 Sin `pnpm build`, la raíz `/` te avisa en español qué hacer (no un 404 mudo).
 
+## Instalador Windows
+
+El instalador copia la app a `%LocalAppData%\Bythos`, crea el acceso directo "Bythos" en el Escritorio + entrada en el menú inicio, y deja `uninstall.bat` para quitarlo. Tu base de datos NO viaja: se crea sola en `%APPDATA%\Bythos\bythos.db` al abrir la app.
+
+Es Go puro a propósito (`installer/main.go`, sin dependencias ni Inno Setup): los accesos directos se crean con WSH, que resuelve el Escritorio real aunque esté redirigido a OneDrive.
+
+```powershell
+# Compilar el instalador (el setup pesa ~21 MB y no se commitea, ver .gitignore)
+cd desktop/ui
+npm run build
+cd ..
+go build -o bythos.exe .
+Copy-Item bythos.exe ..\installer\payload\bythos.exe -Force
+cd ..\installer
+go build -o Bythos-Setup.exe .
+```
+
+Instalar: doble clic en `Bythos-Setup.exe` (o `Bythos-Setup.exe /S` en silencio). Probar sin tocar tu Escritorio: `Bythos-Setup.exe -dir <carpeta-temp> -no-shortcuts -silent`.
+
 ## Extensión (guardar sin copiar links)
 
 1. Prende la app (`go run .` o el `.exe`): `localhost:8080` eres tú mismo, debe estar vivo.

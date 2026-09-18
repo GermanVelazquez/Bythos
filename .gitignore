@@ -8,6 +8,12 @@ desktop/bythos.exe
 desktop/bythos
 desktop/bythos-demo.exe
 desktop/bythos-demo
+desktop/bythos-test.exe
+# Instalador: el .exe compilado embebe bythos.exe (pesado, no va al repo).
+# Solo se commitea installer/*.go; el setup se compila al liberar.
+installer/payload/
+installer/Bythos-Setup.exe
+Bythos-Setup*.exe
 # Extension: nunca subir clave privada ni artefacto empaquetado
 extension.pem
 extension.crx
@@ -16,5 +22,6 @@ extension.crx
 .atl/
 # React (dist/ se ignora, MENOS .gitkeep: sin él go:embed no compila)
 desktop/ui/node_modules/
+desktop/ui/*.log
 desktop/ui/dist/*
 !desktop/ui/dist/.gitkeep
