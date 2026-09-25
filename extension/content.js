@@ -1,18 +1,19 @@
 // content.js — Bythos floating save button, injected on every page (MV3 content_scripts).
 // Same backend contract as popup.js and the desktop UI: GET /api/carpetas, POST /api/recursos.
 // Shadow DOM keeps our styles off the host page; no external CSS files (simple .exe/repo).
+//
+// ¿Por qué NO hace fetch directo a :8080 como antes? Porque este script corre
+// en el contexto de la página visitada (ej. youtube.com), así que su Origin
+// sería ese sitio. Go ahora rechaza Origins que no reconoce (conGuardia en
+// desktop/api/server.go), así que delegamos la red a background.js, que
+// corre como chrome-extension://<id> y sí está permitido.
 (() => {
   // Guard against double injection (e.g. SPA navigations re-running the script).
   if (window.__bythosInjected) return
   window.__bythosInjected = true
 
-  const API = 'http://localhost:8080'
-
-  // Go structs have no `json:` tags, so keys arrive capitalized (ID, Nombre).
-  const normCarpeta = (c) => ({
-    id: c.ID ?? c.id,
-    nombre: c.Nombre ?? c.nombre ?? c.name ?? '',
-  })
+  // Envuelve el mensaje al service worker en una Promise (su API es callback).
+  const preguntarleAlFondo = (msg) => new Promise((resolve) => chrome.runtime.sendMessage(msg, resolve))
 
   // Shadow host: a single div; everything else lives inside the shadow root.
   const host = document.createElement('div')
@@ -107,9 +108,13 @@
     sendBtn.disabled = true
     select.innerHTML = ''
     try {
-      const res = await fetch(`${API}/api/carpetas`)
-      const data = await res.json()
-      const carpetas = (Array.isArray(data) ? data : []).map(normCarpeta)
+      const resp = await preguntarleAlFondo({ tipo: 'listarCarpetas' })
+      if (!resp?.ok) {
+        // background.js solo falla así cuando la app de escritorio está apagada.
+        msg.textContent = 'Abre primero tu app Bythos (.exe en :8080).'
+        return
+      }
+      const carpetas = resp.carpetas || []
       if (carpetas.length === 0) {
         msg.textContent = 'Crea primero una carpeta en la app.'
         return
@@ -125,7 +130,7 @@
       msg.textContent = ''
       sendBtn.disabled = false
     } catch {
-      // fetch only fails like this when the desktop app is off.
+      // chrome.runtime.sendMessage truena así si el service worker no responde.
       msg.textContent = 'Abre primero tu app Bythos (.exe en :8080).'
     }
   }
@@ -158,15 +163,14 @@
     msg.textContent = 'Guardando…'
     try {
       // Same contract as the desktop UI: {carpeta_id, url}. Born pendiente in Go.
-      const res = await fetch(`${API}/api/recursos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ carpeta_id, url: location.href }),
-      })
-      const data = await res.json().catch(() => ({}))
-      msg.textContent = res.ok
+      const resp = await preguntarleAlFondo({ tipo: 'guardarRecurso', carpeta_id, url: location.href })
+      if (resp?.offline) {
+        msg.textContent = 'Abre primero tu app Bythos (.exe en :8080).'
+        return
+      }
+      msg.textContent = resp?.ok
         ? 'Guardado en tu PC.'
-        : `${data.error || 'Carpeta inexistente (créala en la app).'}`
+        : `${resp?.error || 'Carpeta inexistente (créala en la app).'}`
     } catch {
       msg.textContent = 'Abre primero tu app Bythos (.exe en :8080).'
     }

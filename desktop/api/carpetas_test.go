@@ -92,6 +92,7 @@ func TestBorrarCarpetaRutaWire(t *testing.T) {
 
 	// DELETE an existing folder through the real mux (no :8080, no network).
 	req := httptest.NewRequest(http.MethodDelete, "/api/carpetas/"+itoa(c.ID), nil)
+	req.Host = "localhost:8080" // conGuardia exige Host permitido
 	rec := httptest.NewRecorder()
 	s.Rutas().ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -100,6 +101,7 @@ func TestBorrarCarpetaRutaWire(t *testing.T) {
 
 	// Same mux, missing id → 404 Spanish {error}.
 	req2 := httptest.NewRequest(http.MethodDelete, "/api/carpetas/9999", nil)
+	req2.Host = "localhost:8080"
 	rec2 := httptest.NewRecorder()
 	s.Rutas().ServeHTTP(rec2, req2)
 	if rec2.Code != http.StatusNotFound {

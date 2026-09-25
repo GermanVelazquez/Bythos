@@ -23,6 +23,7 @@ func TestMetadataFallbackSinRed(t *testing.T) {
 func TestMontarUIAvisaSinDist(t *testing.T) {
 	s := basePrueba(t)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Host = "localhost:8080" // conGuardia exige Host permitido
 	rec := httptest.NewRecorder()
 	s.Rutas().ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {

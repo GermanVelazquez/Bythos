@@ -154,6 +154,7 @@ func TestAgendaRutasWire(t *testing.T) {
 	// POST por el mux real (sin :8080, sin red).
 	req := httptest.NewRequest(http.MethodPost, "/api/agenda",
 		strings.NewReader(`{"fecha":"2026-09-12","texto":"Rutas"}`))
+	req.Host = "localhost:8080" // conGuardia exige Host permitido
 	rec := httptest.NewRecorder()
 	s.Rutas().ServeHTTP(rec, req)
 	if rec.Code != http.StatusCreated {
@@ -162,6 +163,7 @@ func TestAgendaRutasWire(t *testing.T) {
 
 	// GET actividad por el mux real.
 	req2 := httptest.NewRequest(http.MethodGet, "/api/actividad?desde=2026-09-01&hasta=2026-09-30", nil)
+	req2.Host = "localhost:8080"
 	rec2 := httptest.NewRecorder()
 	s.Rutas().ServeHTTP(rec2, req2)
 	if rec2.Code != http.StatusOK {
@@ -170,6 +172,7 @@ func TestAgendaRutasWire(t *testing.T) {
 
 	// GET agenda por el mux real trae la nota creada.
 	req3 := httptest.NewRequest(http.MethodGet, "/api/agenda?desde=2026-09-01&hasta=2026-09-30", nil)
+	req3.Host = "localhost:8080"
 	rec3 := httptest.NewRecorder()
 	s.Rutas().ServeHTTP(rec3, req3)
 	if rec3.Code != http.StatusOK || !strings.Contains(rec3.Body.String(), "Rutas") {
@@ -178,6 +181,7 @@ func TestAgendaRutasWire(t *testing.T) {
 
 	// DELETE ausente por el mux real es 404.
 	req4 := httptest.NewRequest(http.MethodDelete, "/api/agenda/9999", nil)
+	req4.Host = "localhost:8080"
 	rec4 := httptest.NewRecorder()
 	s.Rutas().ServeHTTP(rec4, req4)
 	if rec4.Code != http.StatusNotFound {

@@ -338,6 +338,7 @@ func TestLotesRutasWire(t *testing.T) {
 
 	// POST through the real mux (no :8080, no network).
 	req := httptest.NewRequest(http.MethodPost, "/api/agenda/import", strings.NewReader(string(payload)))
+	req.Host = "localhost:8080" // conGuardia requires an allowed Host
 	rec := httptest.NewRecorder()
 	s.Rutas().ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "lote_id") {
@@ -349,6 +350,7 @@ func TestLotesRutasWire(t *testing.T) {
 
 	// GET list through the mux.
 	reqList := httptest.NewRequest(http.MethodGet, "/api/agenda/imports", nil)
+	reqList.Host = "localhost:8080"
 	recList := httptest.NewRecorder()
 	s.Rutas().ServeHTTP(recList, reqList)
 	if recList.Code != http.StatusOK || !strings.Contains(recList.Body.String(), "Wire") {
@@ -357,15 +359,17 @@ func TestLotesRutasWire(t *testing.T) {
 
 	// GET detail through the mux.
 	reqGet := httptest.NewRequest(http.MethodGet, "/api/agenda/imports/"+id, nil)
+	reqGet.Host = "localhost:8080"
 	recGet := httptest.NewRecorder()
 	s.Rutas().ServeHTTP(recGet, reqGet)
 	if recGet.Code != http.StatusOK || !strings.Contains(recGet.Body.String(), "markdown") {
 		t.Fatalf("Rutas GET detalle mal: status=%d body=%s", recGet.Code, recGet.Body.String())
 	}
 
-	// PUT through the mux (proves the method is registered + CORS allows it).
+	// PUT through the mux (proves the method is registered + the guard allows it).
 	nuevo, _ := json.Marshal(map[string]string{"markdown": loteMDUno})
 	reqPut := httptest.NewRequest(http.MethodPut, "/api/agenda/imports/"+id, strings.NewReader(string(nuevo)))
+	reqPut.Host = "localhost:8080"
 	recPut := httptest.NewRecorder()
 	s.Rutas().ServeHTTP(recPut, reqPut)
 	if recPut.Code != http.StatusOK || !strings.Contains(recPut.Body.String(), "creadas") {
@@ -374,6 +378,7 @@ func TestLotesRutasWire(t *testing.T) {
 
 	// DELETE through the mux.
 	reqDel := httptest.NewRequest(http.MethodDelete, "/api/agenda/imports/"+id, nil)
+	reqDel.Host = "localhost:8080"
 	recDel := httptest.NewRecorder()
 	s.Rutas().ServeHTTP(recDel, reqDel)
 	if recDel.Code != http.StatusOK || !strings.Contains(recDel.Body.String(), "borradas") {

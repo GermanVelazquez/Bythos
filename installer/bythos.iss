@@ -63,6 +63,7 @@ Source: "{#SourcePath}\..\extension\manifest.json"; DestDir: "{userdesktop}\Byth
 Source: "{#SourcePath}\..\extension\popup.html"; DestDir: "{userdesktop}\Bythos-Extension"; Flags: ignoreversion restartreplace uninsneveruninstall
 Source: "{#SourcePath}\..\extension\popup.js"; DestDir: "{userdesktop}\Bythos-Extension"; Flags: ignoreversion restartreplace uninsneveruninstall
 Source: "{#SourcePath}\..\extension\content.js"; DestDir: "{userdesktop}\Bythos-Extension"; Flags: ignoreversion restartreplace uninsneveruninstall
+Source: "{#SourcePath}\..\extension\background.js"; DestDir: "{userdesktop}\Bythos-Extension"; Flags: ignoreversion restartreplace uninsneveruninstall
 Source: "{#SourcePath}\..\extension\icons\icon16.png"; DestDir: "{userdesktop}\Bythos-Extension\icons"; Flags: ignoreversion restartreplace uninsneveruninstall
 Source: "{#SourcePath}\..\extension\icons\icon48.png"; DestDir: "{userdesktop}\Bythos-Extension\icons"; Flags: ignoreversion restartreplace uninsneveruninstall
 Source: "{#SourcePath}\..\extension\icons\icon128.png"; DestDir: "{userdesktop}\Bythos-Extension\icons"; Flags: ignoreversion restartreplace uninsneveruninstall

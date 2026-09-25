@@ -214,9 +214,9 @@ func TestImportAgendaHandlerPreviewYVacio(t *testing.T) {
 		t.Fatalf("preview status=%d body=%s", rec.Code, rec.Body.String())
 	}
 	var resp struct {
-		Total       int             `json:"total"`
+		Total       int            `json:"total"`
 		Ocurrencias []ocurrenciaMD `json:"ocurrencias"`
-		Avisos      []string        `json:"avisos"`
+		Avisos      []string       `json:"avisos"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("preview no JSON: %v", err)
@@ -240,6 +240,7 @@ func TestImportAgendaRutasWire(t *testing.T) {
 	s := basePrueba(t)
 	cuerpo, _ := json.Marshal(map[string]string{"markdown": "## Compromiso: X\n- Tipo: puntual\n- Fecha: 2026-04-10\n- Horario: 10-11\n"})
 	req := httptest.NewRequest(http.MethodPost, "/api/agenda/import", strings.NewReader(string(cuerpo)))
+	req.Host = "localhost:8080" // conGuardia exige Host permitido
 	rec := httptest.NewRecorder()
 	s.Rutas().ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "creadas") {

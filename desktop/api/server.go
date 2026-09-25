@@ -11,7 +11,10 @@ package api
 //
 // ¿Por qué SIN login/JWT como antes?
 // Porque es tu PC, un solo usuario. El .db ya es tuyo.
-// Poner login a localhost es como ponerle candado a tu cajón desde adentro.
+// OJO: "sin login" no es "sin defensas". Cualquier pestaña que tengas
+// abierta puede intentar hablarle a este puerto (ver conGuardia más abajo):
+// el candado real es filtrar QUIÉN puede tocar la puerta, no ponerle
+// otra puerta adentro.
 
 import (
 	"database/sql"
@@ -19,6 +22,7 @@ import (
 	"io/fs"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"bythos-desktop/db"
 )
@@ -82,10 +86,12 @@ func (s *Servidor) Rutas() http.Handler {
 	// se traga la API. Orden = especifico primero, general al final.
 	s.montarUI(mux)
 
-	// CORS abierto SOLO porque UI y extensión corren en otro origen
-	// (ventana file://, extensión chrome-extension://).
-	// En localhost es seguro; en internet sería otra historia.
-	return conCORS(mux)
+	// Guardia de Host+Origin, no CORS abierto: cualquier web que abras
+	// puede mandar fetch() a este puerto (CSRF) o resolver un dominio a
+	// 127.0.0.1 (DNS rebinding) — "es localhost" no te protege de eso.
+	// Por eso se rechaza Host ajeno y se responde 403 sin ACAO al Origin
+	// que no está en la lista, en vez de contestar "*" a cualquiera.
+	return conGuardia(mux)
 }
 
 // --- Carpetas ---
@@ -266,13 +272,64 @@ func responderError(w http.ResponseWriter, codigo int, mensaje string) {
 	json.NewEncoder(w).Encode(map[string]string{"error": mensaje})
 }
 
-// conCORS deja pasar a la ventana y a la extensión.
-// Sin esto el navegador bloquea todo con "CORS policy".
-func conCORS(next http.Handler) http.Handler {
+// hostsPermitidos son los ÚNICOS Host: que se aceptan. Sin esto, un dominio
+// atacante que resuelva a 127.0.0.1 (DNS rebinding) sería "same-origin" para
+// el navegador aunque el Host: que llega diga otra cosa (ej. evil.com:8080).
+var hostsPermitidos = map[string]bool{
+	"localhost:8080": true, // ventana (ventana/) y curl/esperarSalud directo
+	"127.0.0.1:8080": true, // mismo server, por IP en vez de nombre
+	"localhost:5173": true, // Vite dev (pnpm dev): sin changeOrigin en
+	// vite.config.js, el proxy reenvía el Host tal cual llegó del navegador.
+}
+
+// origenesPermitidos son los orígenes exactos que pueden LEER la respuesta.
+// chrome-extension:// se compara por prefijo porque el id de una extensión
+// "unpacked" (dev, sin firmar) cambia en cada instalación.
+var origenesPermitidos = []string{
+	"http://localhost:8080", // UI embebida, misma ventana que sirve Go
+	"http://localhost:5173", // UI en Vite dev, proxeada a :8080
+}
+
+func origenPermitido(origin string) bool {
+	if origin == "" {
+		return false
+	}
+	if strings.HasPrefix(origin, "chrome-extension://") {
+		return true
+	}
+	for _, o := range origenesPermitidos {
+		if origin == o {
+			return true
+		}
+	}
+	return false
+}
+
+// conGuardia reemplaza el CORS abierto de antes. Deja pasar a la ventana,
+// a Vite dev y a la extensión, y RECHAZA todo lo demás en vez de confiar
+// en el navegador: un POST con Content-Type: text/plain (que salta el
+// preflight) igual llega aquí, así que la defensa tiene que estar en el
+// servidor, no solo en los headers de CORS.
+func conGuardia(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		if !hostsPermitidos[r.Host] {
+			responderError(w, http.StatusForbidden, "Host no permitido")
+			return
+		}
+
+		// Sin Origin (curl, esperarSalud, navegación same-origin normal):
+		// no es una lectura cross-site, se deja pasar sin cabeceras CORS.
+		if origin := r.Header.Get("Origin"); origin != "" {
+			if !origenPermitido(origin) {
+				responderError(w, http.StatusForbidden, "Origen no permitido")
+				return
+			}
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Vary", "Origin")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		}
+
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
