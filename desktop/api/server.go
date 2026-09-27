@@ -19,6 +19,7 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"io/fs"
 	"net/http"
 	"strconv"
@@ -113,7 +114,11 @@ func (s *Servidor) crearCarpeta(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Nombre string `json:"nombre"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := leerJSON(w, r, &body); err != nil {
+		if esBodyDemasiadoGrande(err) {
+			responderError(w, http.StatusRequestEntityTooLarge, "El body es demasiado grande (máximo 1MB)")
+			return
+		}
 		responderError(w, 400, "JSON inválido. Manda {\"nombre\":\"React\"}")
 		return
 	}
@@ -167,7 +172,11 @@ func (s *Servidor) guardarRecurso(w http.ResponseWriter, r *http.Request) {
 		Descripcion string `json:"descripcion"`
 		Tipo        string `json:"tipo"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := leerJSON(w, r, &body); err != nil {
+		if esBodyDemasiadoGrande(err) {
+			responderError(w, http.StatusRequestEntityTooLarge, "El body es demasiado grande (máximo 1MB)")
+			return
+		}
 		responderError(w, 400, "JSON inválido")
 		return
 	}
@@ -204,7 +213,10 @@ func (s *Servidor) cambiarEstado(w http.ResponseWriter, r *http.Request) {
 		Estado   string `json:"estado"`
 		Progreso *int   `json:"progreso"`
 	}
-	json.NewDecoder(r.Body).Decode(&body)
+	if err := leerJSON(w, r, &body); err != nil && esBodyDemasiadoGrande(err) {
+		responderError(w, http.StatusRequestEntityTooLarge, "El body es demasiado grande (máximo 1MB)")
+		return
+	}
 	// Progress-first: {"progreso":N} syncs estado for compatibility.
 	// {"estado":...} still works alone and wins when both are sent.
 	if body.Progreso != nil {
@@ -260,6 +272,31 @@ func (s *Servidor) statsGeneral(w http.ResponseWriter, r *http.Request) {
 }
 
 // --- Helpers (siempre igual, cópialos de memoria) ---
+
+// limiteBodyJSON es el techo de tamaño para cualquier body JSON que la API
+// decodifica. 1MB sobra para nombres, urls o notas cortas; sin techo, un
+// cliente hostil (o buggy) puede tirar el proceso mandando gigabytes al
+// Decode antes de que el JSON siquiera se valide.
+const limiteBodyJSON = 1 << 20
+
+// leerJSON decodifica el body de la request con el techo de arriba
+// (http.MaxBytesReader). Los handlers la usan en vez de
+// json.NewDecoder(r.Body).Decode directo, así el límite es uno solo y no
+// hay que repetirlo en cada ruta.
+// JSON inválido sigue devolviendo el mismo error de Decode que antes (cada
+// handler lo traduce a su 400 de siempre); solo cuando el body excede el
+// techo, err es un *http.MaxBytesError que esBodyDemasiadoGrande reconoce.
+func leerJSON(w http.ResponseWriter, r *http.Request, destino interface{}) error {
+	r.Body = http.MaxBytesReader(w, r.Body, limiteBodyJSON)
+	return json.NewDecoder(r.Body).Decode(destino)
+}
+
+// esBodyDemasiadoGrande distingue el 413 (body por encima del techo) de un
+// 400 común de JSON mal formado.
+func esBodyDemasiadoGrande(err error) bool {
+	var demasiadoGrande *http.MaxBytesError
+	return errors.As(err, &demasiadoGrande)
+}
 
 func responder(w http.ResponseWriter, dato interface{}) {
 	w.Header().Set("Content-Type", "application/json")

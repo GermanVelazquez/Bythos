@@ -11,7 +11,6 @@ package api
 // cada recurso = su archivo. El menú no cocina.
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -41,7 +40,11 @@ func (s *Servidor) crearAgenda(w http.ResponseWriter, r *http.Request) {
 		HoraFin    string `json:"hora_fin"`
 		CarpetaID  *int64 `json:"carpeta_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := leerJSON(w, r, &body); err != nil {
+		if esBodyDemasiadoGrande(err) {
+			responderError(w, http.StatusRequestEntityTooLarge, "El body es demasiado grande (máximo 1MB)")
+			return
+		}
 		responderError(w, 400, "JSON inválido. Manda {\"fecha\":\"YYYY-MM-DD\",\"texto\":\"...\"}")
 		return
 	}
