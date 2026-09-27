@@ -137,6 +137,7 @@ Permisos mínimos a propósito: `activeTab` (solo la pestaña que clicas) + `sto
 | GET | /api/carpetas/{id}/export?format= | `markdown` · `gemini` · `notebooklm` · `drive` |
 | POST | /api/carpetas/{id}/import-avance | trae el % de vuelta desde el texto repasado |
 | GET | /api/eventos?limite=&origen= | historial: quién tocó los datos y qué cambió |
+| POST | /api/agente/terminal | abre una terminal en el workspace del agente (ver abajo) |
 | GET | / | tu biblioteca (o aviso si falta `pnpm build`) |
 
 ## Conectar tu agente (MCP)
@@ -181,6 +182,18 @@ Config genérica para cualquier cliente MCP (OpenCode, Codex, Gemini CLI...):
 
 Sin herramientas de borrado todavía (a propósito): el agente puede agregar y actualizar, no destruir.
 
+### Botón "Abrir agente" (un click, sin configurar nada a mano)
+
+En vez de armar `.mcp.json` a mano (arriba), el botón **Abrir agente** del sidebar (grupo Acciones) hace todo esto por ti:
+
+1. Prepara `%APPDATA%\Bythos\agente\` con `AGENTS.md`/`CLAUDE.md` (instrucciones + reglas para el agente), `LEEME.txt` (bienvenida) y la config de MCP de proyecto para Claude Code (`.mcp.json`), OpenCode (`opencode.json`) y Gemini CLI (`.gemini/settings.json`), todas apuntando al `.exe` que está corriendo. Se regenera cada vez que abrís (para que la ruta del `.exe` nunca quede vieja) sin borrar archivos tuyos.
+2. Abre una terminal ahí (Windows Terminal si lo tienes, si no `cmd.exe`) — Bythos **nunca** lanza `claude`/`opencode`/`gemini` por ti, solo te deja la terminal lista. Escribes el que quieras.
+
+Notas:
+- **Claude Code** te va a pedir aprobar el servidor de proyecto la primera vez (`.mcp.json`).
+- **Codex CLI** no se configura solo: su config de proyecto (`.codex/config.toml`, que Bythos también escribe) solo se carga si confías en la carpeta la primera vez que corres `codex` ahí. Si prefieres no usar carpetas de proyecto, agrega el bloque `[mcp_servers.bythos]` a mano en tu `~/.codex/config.toml` (mismo formato que arriba, sin el paso de confianza).
+- El botón solo funciona desde la ventana de Bythos (Origin exacto): la extensión de Chrome no puede pedirlo.
+
 ## Repaso (a dónde va cada export)
 
 - **Markdown**: lista `[título](url)` con % para tus notas/Obsidian (botón Copiar en la UI).
@@ -206,6 +219,7 @@ bythos/
     db/                           → memoria (SQL solo aquí) + tests
     api/                          → cerebro (HTTP, sin SQL) + tests
     agentes/                      → servidor MCP (`bythos.exe mcp`), cliente HTTP delgado, workspace del agente, sin SQL
+    terminal/                     → abre wt.exe/cmd.exe en el workspace del agente (sin SQL, sin HTTP)
     ui/                           → cara: React + Vite (src/{api.js, App.jsx, ...})
     ventana/                      → abre la app en modo ventana (Edge --app)
   extension/                      → brazo: manifest.json + popup + content script + iconos

@@ -87,6 +87,12 @@ func (s *Servidor) Rutas() http.Handler {
 	// por MCP) y qué cambió. Ver db/eventos.go y api/origen.go.
 	mux.HandleFunc("GET /api/eventos", s.listarEventos)
 
+	// Agente: abre una terminal en el workspace del agente MCP, lista
+	// para que el usuario escriba claude/opencode/gemini. Ver agente.go
+	// (más estricto que conGuardia a propósito: Origin EXACTO, la
+	// extensión nunca puede pedir esto).
+	mux.HandleFunc("POST /api/agente/terminal", s.abrirTerminalAgente)
+
 	// Despertar la UI: "/" sirve ui/dist SIN pisar "/api/..."
 	// Va AL FINAL porque "/" es el cajón de sastre. Si la pones arriba,
 	// se traga la API. Orden = especifico primero, general al final.
@@ -444,6 +450,13 @@ func origenPermitido(origin string) bool {
 // servidor, no solo en los headers de CORS.
 func conGuardia(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Anti-clickjacking en TODA respuesta (incluidos los 403/429 de
+		// abajo): nadie debe poder meter Bythos en un <iframe> ajeno.
+		// No rompe nada real: la ventana (ventana/) abre top-level
+		// (--app=url) y la extensión nunca la enmarca.
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Content-Security-Policy", "frame-ancestors 'none'")
+
 		if !hostPermitido(r.Host) {
 			responderError(w, http.StatusForbidden, "Host no permitido")
 			return

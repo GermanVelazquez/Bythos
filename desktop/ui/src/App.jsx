@@ -112,6 +112,7 @@ const Icon = ({ name, size = 14 }) => {
     trash: (<><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></>),
     x: (<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>),
     external: (<><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></>),
+    terminal: (<><polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" /></>),
   }
   return (
     <svg
@@ -126,7 +127,10 @@ const Icon = ({ name, size = 14 }) => {
 }
 
 /* ───────── SIDEBAR ───────── */
-function Sidebar({ currentView, onChangeView, counts }) {
+// agente-terminal es una ACCIÓN (llama a onAbrirAgente), no una vista:
+// a diferencia del resto de nav-item, su onClick no navega. agenteEstado
+// (null | {ok, mensaje}) es el feedback visible del último intento.
+function Sidebar({ currentView, onChangeView, counts, onAbrirAgente, agenteEstado }) {
   const navGroups = [
     {
       label: 'Biblioteca',
@@ -141,6 +145,7 @@ function Sidebar({ currentView, onChangeView, counts }) {
       items: [
         { id: 'export', label: 'Exportar', icon: 'download' },
         { id: 'historial', label: 'Historial', icon: 'clock' },
+        { id: 'agente-terminal', label: 'Abrir agente', icon: 'terminal', accion: true },
         { id: 'settings', label: 'Ajustes', icon: 'settings' },
       ],
     },
@@ -157,12 +162,13 @@ function Sidebar({ currentView, onChangeView, counts }) {
           {group.items.map((item) => {
             const isActive = currentView === item.id
             const count = counts?.[item.id]
-            const isAction = item.id === 'export' || item.id === 'historial' || item.id === 'settings'
+            const isAction = item.accion || item.id === 'export' || item.id === 'historial' || item.id === 'settings'
             return (
               <button
                 key={item.id}
-                onClick={() => onChangeView(item.id)}
-                className={`nav-item${isActive ? ' active' : ''}`}
+                onClick={() => (item.accion ? onAbrirAgente() : onChangeView(item.id))}
+                className={`nav-item${!item.accion && isActive ? ' active' : ''}`}
+                title={item.accion ? `${item.label} en una terminal nueva` : undefined}
               >
                 <Icon name={item.icon} size={14} />
                 <span>{item.label}</span>
@@ -172,6 +178,9 @@ function Sidebar({ currentView, onChangeView, counts }) {
               </button>
             )
           })}
+          {group.label === 'Acciones' && agenteEstado && (
+            <p className={`agente-feedback ${agenteEstado.ok ? 'ok' : 'error'}`}>{agenteEstado.mensaje}</p>
+          )}
         </div>
       ))}
       <div className="sidebar-foot">v1.0.3 · Local</div>
@@ -2194,6 +2203,10 @@ export default function App() {
   const [historialError, setHistorialError] = useState('')
   const [historialFiltro, setHistorialFiltro] = useState('')
 
+  // Botón "Abrir agente" del sidebar: feedback visible (ok o error) que
+  // se borra solo a los pocos segundos, sin bloquear el resto de la UI.
+  const [agenteEstado, setAgenteEstado] = useState(null)
+
   async function recargar() {
     try {
       setError('')
@@ -2370,6 +2383,21 @@ export default function App() {
     if (await copiarTexto(exportado)) setCopiado(true)
   }
 
+  // "Abrir agente": Bythos abre una terminal en su workspace del agente,
+  // el usuario escribe claude/opencode/gemini a mano ahí (ver README).
+  async function handleAbrirAgente() {
+    setAgenteEstado(null)
+    try {
+      const res = await api.abrirTerminalAgente()
+      const terminal = res?.terminal ?? res?.Terminal ?? 'terminal'
+      setAgenteEstado({ ok: true, mensaje: `Terminal abierta (${terminal}). Escribí claude, opencode o gemini ahí.` })
+    } catch (e) {
+      setAgenteEstado({ ok: false, mensaje: e.message || 'No se pudo abrir la terminal' })
+    } finally {
+      setTimeout(() => setAgenteEstado(null), 6000)
+    }
+  }
+
   async function handleImportar() {
     if (!exportCarpetaId || !importTexto.trim()) return
     try {
@@ -2391,7 +2419,13 @@ export default function App() {
 
   return (
     <div className="app">
-      <Sidebar currentView={view} onChangeView={changeView} counts={counts} />
+      <Sidebar
+        currentView={view}
+        onChangeView={changeView}
+        counts={counts}
+        onAbrirAgente={handleAbrirAgente}
+        agenteEstado={agenteEstado}
+      />
       <main className="main">
         <Topbar query={query} onQueryChange={setQuery} onAdd={() => setModalOpen(true)} showSearch={view !== 'all'} />
         <div className="content">

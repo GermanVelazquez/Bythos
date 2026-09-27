@@ -172,4 +172,10 @@ export const api = {
     const s = q.toString()
     return fetch(`${BASE}/api/eventos${s ? `?${s}` : ''}`, { headers: CABECERAS_ORIGEN }).then(leer)
   },
+
+  // AGENTE: abre una terminal en el workspace del agente MCP (botón
+  // "Abrir agente" del sidebar). Sin body: el backend no acepta parámetros
+  // acá (ver api/agente.go), solo el Origin exacto de esta ventana.
+  abrirTerminalAgente: () =>
+    fetch(`${BASE}/api/agente/terminal`, { method: 'POST', headers: CABECERAS_ORIGEN }).then(leer),
 }
