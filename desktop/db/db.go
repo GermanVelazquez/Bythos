@@ -85,6 +85,13 @@ func Abrir(ruta string) (*sql.DB, error) {
 // ¿Por qué NO hay tabla users como antes con Postgres?
 // Porque es app de escritorio de 1 usuario: TÚ. No hay login,
 // no hay JWT, no hay bcrypt. El .db ya es tuyo en tu disco.
+// Convención de zonas horarias (importa para cualquier lectura por fecha):
+//   - folders.created_at y resources.created_at usan CURRENT_TIMESTAMP, que
+//     en SQLite es UTC. Se guardan así a propósito (no se migran datos viejos)
+//     y se convierten a hora local SOLO al leer, con DATE(created_at,'localtime')
+//     o datetime(created_at,'localtime'). Ver db.ActividadPorDia.
+//   - eventos.creado e import_lotes.creado usan datetime('now','localtime'):
+//     nacen en hora local, se leen tal cual, sin conversión.
 func crearTablas(base *sql.DB) error {
 	tablas := []string{
 		`CREATE TABLE IF NOT EXISTS folders (

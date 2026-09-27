@@ -8,7 +8,7 @@ package db
 // ¿Por qué fecha como TEXT 'YYYY-MM-DD' y no DATETIME?
 // Porque el calendario piensa en DÍAS, no en instantes.
 // 'YYYY-MM-DD' se ordena y se compara como string sin parsear nada,
-// y DATE(created_at) de las otras tablas ya habla ese idioma.
+// y DATE(created_at,'localtime') de las otras tablas ya habla ese idioma.
 
 import (
 	"database/sql"
@@ -31,8 +31,8 @@ type Agenda struct {
 }
 
 // Actividad es un punto del calendario: cuántas cosas CREASTE ese día.
-// Suma recursos + carpetas (DATE(created_at) de ambas) porque las dos
-// son "ruido de estudio": guardar un link o abrir un tema cuentan igual.
+// Suma recursos + carpetas (DATE(created_at,'localtime') de ambas) porque
+// las dos son "ruido de estudio": guardar un link o abrir un tema cuentan igual.
 type Actividad struct {
 	Fecha string // 'YYYY-MM-DD'
 	Total int
@@ -242,11 +242,16 @@ func BorrarAgenda(base *sql.DB, id int64) (bool, error) {
 // ActividadPorDia cuenta creaciones por día (recursos + carpetas).
 // UNION ALL y no 2 queries: un solo viaje agrupa todo por fecha.
 // desde/hasta vacíos = todo el historial.
+//
+// created_at de resources/folders se guarda en UTC (CURRENT_TIMESTAMP,
+// ver comentario en db.go): sin convertir, algo creado a las 22:00 en
+// UTC-3 cae en el día siguiente del calendario. DATE(created_at,'localtime')
+// lee la hora de la PC (misma que usa el usuario) en vez de UTC crudo.
 func ActividadPorDia(base *sql.DB, desde, hasta string) ([]Actividad, error) {
 	query := `SELECT fecha, SUM(n) AS total FROM (
-	            SELECT DATE(created_at) AS fecha, COUNT(*) AS n FROM resources GROUP BY DATE(created_at)
+	            SELECT DATE(created_at,'localtime') AS fecha, COUNT(*) AS n FROM resources GROUP BY DATE(created_at,'localtime')
 	            UNION ALL
-	            SELECT DATE(created_at) AS fecha, COUNT(*) AS n FROM folders GROUP BY DATE(created_at)
+	            SELECT DATE(created_at,'localtime') AS fecha, COUNT(*) AS n FROM folders GROUP BY DATE(created_at,'localtime')
 	          ) WHERE fecha IS NOT NULL`
 	args := []interface{}{}
 	if desde != "" {

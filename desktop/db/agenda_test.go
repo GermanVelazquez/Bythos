@@ -6,6 +6,7 @@ package db
 
 import (
 	"testing"
+	"time"
 )
 
 func TestCrearYListarAgenda(t *testing.T) {
@@ -148,6 +149,42 @@ func TestActividadPorDia(t *testing.T) {
 	recorte, _ := ActividadPorDia(base, "2026-09-12", "2026-09-12")
 	if len(recorte) != 1 || recorte[0].Total != 1 {
 		t.Fatalf("recorte mal: %+v", recorte)
+	}
+}
+
+// TestActividadPorDiaConvierteAHoraLocal cubre el bug de zona horaria:
+// created_at nace en UTC (CURRENT_TIMESTAMP), y sin convertir a hora local
+// un recurso guardado tarde en la noche (hora local) aparecía en el
+// calendario un día después del real en máquinas con UTC negativo.
+//
+// Determinista sin importar la zona de esta PC: se fija un instante UTC
+// exacto y la fecha esperada se calcula con time.Local desde ESE MISMO
+// instante (instant.In(time.Local)), igual que hace SQLite con 'localtime'.
+func TestActividadPorDiaConvierteAHoraLocal(t *testing.T) {
+	base := basePrueba(t)
+	c, _ := CrearCarpeta(base, "React")
+	r, _ := Guardar(base, c.ID, "http://a/1", "A", "", "", "otro")
+
+	// 2026-01-05 02:30:00 UTC: en cualquier zona con offset negativo (ej.
+	// UTC-3) esto es 2026-01-04 en hora local, el caso que fallaba.
+	instante := time.Date(2026, 1, 5, 2, 30, 0, 0, time.UTC)
+	fechaEsperada := instante.In(time.Local).Format("2006-01-02")
+
+	if _, err := base.Exec(`UPDATE resources SET created_at = ? WHERE id = ?`,
+		instante.Format("2006-01-02 15:04:05"), r.ID); err != nil {
+		t.Fatalf("fijar created_at: %v", err)
+	}
+
+	got, err := ActividadPorDia(base, "2000-01-01", "2100-01-01")
+	if err != nil {
+		t.Fatalf("ActividadPorDia: %v", err)
+	}
+	porFecha := map[string]int{}
+	for _, x := range got {
+		porFecha[x.Fecha] = x.Total
+	}
+	if porFecha[fechaEsperada] != 1 {
+		t.Fatalf("esperaba 1 en %s (hora local del instante UTC), salió %+v", fechaEsperada, got)
 	}
 }
 
