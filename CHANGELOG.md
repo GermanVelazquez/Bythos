@@ -9,6 +9,51 @@ y este proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
 Sin cambios pendientes.
 
+## [1.1.0] - 2026-09-27
+
+### Added
+
+- Servidor MCP (`bythos.exe mcp`) para conectar agentes de IA (Claude
+  Code, OpenCode, Codex, Gemini CLI...) por terminal: 14 herramientas
+  para listar carpetas, guardar links, actualizar progreso y armar la
+  agenda, todavía sin borrado.
+- Historial de cambios: cada carpeta, recurso, nota de agenda o import
+  queda registrado con quién lo hizo (app, extensión o agente) y qué
+  cambió, visible en la nueva vista Historial.
+- Botón "Abrir agente" en la barra lateral: prepara la carpeta del
+  agente en `%APPDATA%/Bythos/agente` (instrucciones + configuración
+  MCP) y abre una terminal ahí, lista para usar.
+
+### Fixed
+
+- La actividad del calendario ahora se agrupa por el día local del
+  usuario (antes podía aparecer un día después si vivías en una zona
+  con offset negativo).
+
+### Changed
+
+- El README se rediseñó para quien descarga la app; la documentación
+  técnica (compilación, arquitectura, API, seguridad) se mudó a
+  `docs/`.
+- La extensión de Chrome ahora usa un service worker en segundo plano
+  en vez de que el content script llame a la API directo.
+
+### Security
+
+- Host y Origin ahora se validan estrictamente en cada petición, para
+  cerrar CSRF y DNS rebinding (antes se aceptaba cualquier origen).
+- Nueva protección contra SSRF al leer la metadata de un link: ya no
+  se puede usar Bythos como proxy hacia la red interna de tu propia
+  PC.
+- Los JSON que recibe la API tienen un límite de 1 MB, para que un
+  body gigante no se coma la memoria antes de validarse.
+- El puerto de desarrollo de Vite (`:5173`) solo se acepta con
+  `BYTHOS_DEV=1`; en una instalación normal queda cerrado.
+- La extensión cierra su shadow DOM y solo responde a clics reales del
+  usuario, para que una página no pueda manipular su panel flotante.
+- Cabeceras anti-clickjacking en toda respuesta: Bythos ya no se puede
+  meter en un `<iframe>` ajeno.
+
 ## [1.0.3] - 2026-09-18
 
 ### Added
@@ -106,7 +151,8 @@ Primera versión pública: biblioteca personal 100 % local en tu PC.
 - `README.md` presentable con logo, problema que resuelve, guía de
   uso y tabla de API (`/api/salud`, `/api/carpetas`, progreso...).
 
-[Unreleased]: https://github.com/GermanVelazquez/Bythos/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/GermanVelazquez/Bythos/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/GermanVelazquez/Bythos/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/GermanVelazquez/Bythos/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/GermanVelazquez/Bythos/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/GermanVelazquez/Bythos/compare/v1.0.0...v1.0.1

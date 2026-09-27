@@ -159,7 +159,7 @@ guardia de Host+Origin, ver Seguridad más abajo).
 
 | Método | Ruta | Hace |
 |---|---|---|
-| GET | /api/salud | ¿sigo vivo? `{"ok":true,"version":"1.0.3"}` |
+| GET | /api/salud | ¿sigo vivo? `{"ok":true,"version":"1.1.0"}` |
 | GET/POST | /api/carpetas | listar / crear `{nombre}` |
 | DELETE | /api/carpetas/{id} | borrar (con sus recursos) |
 | GET | /api/carpetas/{id}/progreso | `{total, completados, porcentaje, promedio}` |
