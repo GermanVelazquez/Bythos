@@ -5,6 +5,7 @@ package main
 // Conecta 4 piezas: memoria (.db) + cara embebida (dist) + cerebro (:8080) + ventana.
 
 import (
+	"context"
 	"embed"
 	"io/fs"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"os"
 	"time"
 
+	"bythos-desktop/agentes"
 	"bythos-desktop/api"
 	"bythos-desktop/db"
 	"bythos-desktop/ventana"
@@ -26,6 +28,19 @@ import (
 var distUI embed.FS
 
 func main() {
+	// 0. Modo agente: `bythos.exe mcp` habla MCP por stdio con un agente
+	// de IA (Claude Code, OpenCode...) y listo, no abre nada más.
+	// Tiene que ir ANTES de abrir la .db o el puerto: es un proceso
+	// aparte que solo le habla por HTTP al Bythos que ya esté corriendo
+	// (ver desktop/agentes/). Nunca escribe a stdout salvo el protocolo.
+	if len(os.Args) > 1 && os.Args[1] == "mcp" {
+		if err := agentes.Ejecutar(context.Background(), api.Version); err != nil {
+			log.Println("Error en modo mcp:", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	// 1. Memoria: abre (o crea) %APPDATA%/Bythos/bythos.db
 	// ¿Por qué aquí y no dentro de api? Porque el dueño del recurso
 	// es quien lo cierra. Main abre, main cierra con defer.

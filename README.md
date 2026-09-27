@@ -138,6 +138,47 @@ Permisos mínimos a propósito: `activeTab` (solo la pestaña que clicas) + `sto
 | POST | /api/carpetas/{id}/import-avance | trae el % de vuelta desde el texto repasado |
 | GET | / | tu biblioteca (o aviso si falta `pnpm build`) |
 
+## Conectar tu agente (MCP)
+
+Bythos también habla el protocolo [MCP](https://modelcontextprotocol.io/) (Model Context Protocol): un agente de IA en tu terminal (Claude Code, OpenCode, Codex, Gemini CLI...) puede listar tus carpetas, guardar links, actualizar tu progreso y armar tu agenda por su cuenta. `bythos.exe mcp` levanta ese servidor por stdin/stdout; por dentro habla HTTP con `localhost:8080`, igual que la ventana y la extensión — **la app tiene que estar abierta**. Si no lo está, cada herramienta te avisa en español ("Bythos no está abierto...") en vez de fallar en silencio.
+
+Registrar en Claude Code (ajusta la ruta si no instalaste con el setup):
+
+```powershell
+claude mcp add bythos -- "%LOCALAPPDATA%\Bythos\bythos.exe" mcp
+```
+
+Config genérica para cualquier cliente MCP (OpenCode, Codex, Gemini CLI...):
+
+```json
+{
+  "mcpServers": {
+    "bythos": {
+      "command": "C:\\Users\\TU_USUARIO\\AppData\\Local\\Bythos\\bythos.exe",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+| Herramienta | Hace |
+|---|---|
+| `listar_carpetas` | carpetas + progreso (total, completados, en curso, pendientes, %) |
+| `listar_recursos` | recursos guardados, opcionalmente filtrados por `carpeta_id` |
+| `leer_recurso` | detalle de un recurso por `id` |
+| `ver_progreso_carpeta` | termómetro de una sola carpeta |
+| `ver_stats` | termómetro general (todas las carpetas) |
+| `ver_agenda` | notas del calendario, con `desde`/`hasta` opcionales |
+| `ver_actividad` | historial de creación por día |
+| `exportar_carpeta` | texto para repasar (`markdown` · `gemini` · `notebooklm` · `drive`) |
+| `actualizar_progreso` | cambia el % (0–100) de un recurso |
+| `cambiar_estado` | `pendiente` / `en_curso` / `completado` |
+| `crear_carpeta` | carpeta nueva |
+| `guardar_link` | link nuevo (Bythos completa título/imagen/tipo solo) |
+| `crear_nota_agenda` | nota nueva en el calendario |
+
+Sin herramientas de borrado todavía (a propósito): el agente puede agregar y actualizar, no destruir.
+
 ## Repaso (a dónde va cada export)
 
 - **Markdown**: lista `[título](url)` con % para tus notas/Obsidian (botón Copiar en la UI).
@@ -162,6 +203,7 @@ bythos/
     main.go                       → director: abre .db + incrusta UI + prende :8080
     db/                           → memoria (SQL solo aquí) + tests
     api/                          → cerebro (HTTP, sin SQL) + tests
+    agentes/                      → servidor MCP (`bythos.exe mcp`), cliente HTTP delgado, workspace del agente, sin SQL
     ui/                           → cara: React + Vite (src/{api.js, App.jsx, ...})
     ventana/                      → abre la app en modo ventana (Edge --app)
   extension/                      → brazo: manifest.json + popup + content script + iconos
