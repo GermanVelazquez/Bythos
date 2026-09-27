@@ -19,7 +19,11 @@
   const host = document.createElement('div')
   host.id = 'bythos-root'
   ;(document.body || document.documentElement).appendChild(host)
-  const shadow = host.attachShadow({ mode: 'open' })
+  // 'closed' (no 'open'): la página anfitriona NO puede llamar
+  // host.shadowRoot para meter la mano adentro y, por ejemplo, clickear
+  // el botón Enviar en nombre del usuario. La raíz queda solo en esta
+  // clausura (variable shadow), nunca expuesta afuera.
+  const shadow = host.attachShadow({ mode: 'closed' })
 
   // All styles inline here (no extra files). Every selector is bythos- prefixed
   // as a second layer of isolation on top of the shadow DOM.
@@ -135,12 +139,16 @@
     }
   }
 
-  fab.addEventListener('click', () => {
+  fab.addEventListener('click', (e) => {
+    // Ignora clicks sintéticos (page script disparando .click() a mano):
+    // con shadow 'closed' ya no puede alcanzar el botón, esto es la segunda capa.
+    if (!e.isTrusted) return
     panel.hidden = !panel.hidden
     if (!panel.hidden) cargarCarpetas()
   })
 
-  cancelBtn.addEventListener('click', () => {
+  cancelBtn.addEventListener('click', (e) => {
+    if (!e.isTrusted) return
     panel.hidden = true
   })
 
@@ -148,7 +156,8 @@
     if (e.key === 'Escape') panel.hidden = true
   })
 
-  sendBtn.addEventListener('click', async () => {
+  sendBtn.addEventListener('click', async (e) => {
+    if (!e.isTrusted) return
     const carpeta_id = Number(select.value)
     if (!carpeta_id) {
       msg.textContent = 'Elige una carpeta para guardar.'
