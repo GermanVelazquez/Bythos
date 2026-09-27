@@ -88,6 +88,7 @@ func TestGuardiaOrigenesPermitidos(t *testing.T) {
 	}
 	for _, origen := range origenes {
 		t.Run(origen, func(t *testing.T) {
+			t.Setenv("BYTHOS_DEV", "1") // :5173 solo vale en modo dev
 			s := basePrueba(t)
 			req := httptest.NewRequest(http.MethodGet, "/api/carpetas", nil)
 			req.Host = "localhost:8080"
@@ -104,5 +105,38 @@ func TestGuardiaOrigenesPermitidos(t *testing.T) {
 				t.Fatalf("faltó Vary: Origin, salió %q", rec.Header().Get("Vary"))
 			}
 		})
+	}
+}
+
+// Sin BYTHOS_DEV, :5173 es un puerto Vite cualquiera: no debe pasar ni
+// como Origin ni como Host, y mucho menos abrir la terminal del agente.
+func TestGuardiaViteSoloEnModoDev(t *testing.T) {
+	t.Setenv("BYTHOS_DEV", "")
+	s := basePrueba(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/carpetas", nil)
+	req.Host = "localhost:8080"
+	req.Header.Set("Origin", "http://localhost:5173")
+	rec := httptest.NewRecorder()
+	s.Rutas().ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("Origin :5173 sin modo dev debía dar 403, salió %d", rec.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/api/carpetas", nil)
+	req.Host = "localhost:5173"
+	rec = httptest.NewRecorder()
+	s.Rutas().ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("Host :5173 sin modo dev debía dar 403, salió %d", rec.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodPost, "/api/agente/terminal", nil)
+	req.Host = "localhost:8080"
+	req.Header.Set("Origin", "http://localhost:5173")
+	rec = httptest.NewRecorder()
+	s.Rutas().ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("terminal desde :5173 sin modo dev debía dar 403, salió %d", rec.Code)
 	}
 }

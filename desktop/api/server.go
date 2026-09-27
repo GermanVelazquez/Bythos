@@ -22,6 +22,7 @@ import (
 	"errors"
 	"io/fs"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -315,8 +316,6 @@ func responderError(w http.ResponseWriter, codigo int, mensaje string) {
 var hostsPermitidos = map[string]bool{
 	"localhost:8080": true, // ventana (ventana/) y curl/esperarSalud directo
 	"127.0.0.1:8080": true, // mismo server, por IP en vez de nombre
-	"localhost:5173": true, // Vite dev (pnpm dev): sin changeOrigin en
-	// vite.config.js, el proxy reenvía el Host tal cual llegó del navegador.
 }
 
 // origenesPermitidos son los orígenes exactos que pueden LEER la respuesta.
@@ -324,7 +323,22 @@ var hostsPermitidos = map[string]bool{
 // "unpacked" (dev, sin firmar) cambia en cada instalación.
 var origenesPermitidos = []string{
 	"http://localhost:8080", // UI embebida, misma ventana que sirve Go
-	"http://localhost:5173", // UI en Vite dev, proxeada a :8080
+}
+
+// Vite dev (pnpm dev) sirve la UI en :5173 y proxea a :8080 sin
+// changeOrigin: llegan Host y Origin de :5173. Solo se aceptan con
+// BYTHOS_DEV=1. En un release, :5173 es el puerto por defecto de
+// CUALQUIER proyecto Vite: aceptarlo dejaría que una página ajena en ese
+// puerto lea tu biblioteca o abra la terminal del agente.
+const (
+	hostVite   = "localhost:5173"
+	origenVite = "http://localhost:5173"
+)
+
+func modoDev() bool { return os.Getenv("BYTHOS_DEV") == "1" }
+
+func hostPermitido(host string) bool {
+	return hostsPermitidos[host] || (modoDev() && host == hostVite)
 }
 
 func origenPermitido(origin string) bool {
@@ -332,6 +346,9 @@ func origenPermitido(origin string) bool {
 		return false
 	}
 	if strings.HasPrefix(origin, "chrome-extension://") {
+		return true
+	}
+	if modoDev() && origin == origenVite {
 		return true
 	}
 	for _, o := range origenesPermitidos {
@@ -349,7 +366,7 @@ func origenPermitido(origin string) bool {
 // servidor, no solo en los headers de CORS.
 func conGuardia(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !hostsPermitidos[r.Host] {
+		if !hostPermitido(r.Host) {
 			responderError(w, http.StatusForbidden, "Host no permitido")
 			return
 		}

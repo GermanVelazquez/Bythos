@@ -51,6 +51,8 @@ cd desktop
 go run .
 
 # 2. UI en desarrollo → http://localhost:5173 (proxy a :8080, cero cambios de código)
+#    El Go de arriba tiene que arrancar con $env:BYTHOS_DEV="1": sin eso,
+#    la guardia rechaza :5173 (en un release es el puerto de cualquier Vite).
 cd desktop/ui
 pnpm install
 pnpm dev
