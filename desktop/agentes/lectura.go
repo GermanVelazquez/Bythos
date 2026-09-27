@@ -260,6 +260,61 @@ func registrarVerActividad(s *mcp.Server, c *Cliente) {
 	})
 }
 
+// --- ver_historial ---
+
+var origenesHistorial = map[string]bool{
+	"app": true, "extension": true, "agente": true, "desconocido": true,
+}
+
+type entradaVerHistorial struct {
+	Limite int    `json:"limite,omitempty" jsonschema:"máximo de eventos a devolver (más nuevos primero); omitido usa el default del servidor"`
+	Origen string `json:"origen,omitempty" jsonschema:"filtra por quién hizo el cambio: app, extension, agente o desconocido; vacío no filtra"`
+}
+
+type salidaVerHistorial struct {
+	Eventos []EventoSalida `json:"eventos" jsonschema:"eventos del historial que cumplen el filtro, más nuevos primero"`
+}
+
+func registrarVerHistorial(s *mcp.Server, c *Cliente) {
+	entrada, err := esquemaEnum[entradaVerHistorial]("origen", "app", "extension", "agente", "desconocido")
+	if err != nil {
+		panic(err)
+	}
+	mcp.AddTool(s, &mcp.Tool{
+		Name: "ver_historial",
+		Description: "Lista el historial de cambios de Bythos: quién hizo qué y cuándo " +
+			"(app, extensión de Chrome o un agente de IA por MCP, con su nombre si lo mandó). " +
+			"Útil para auditar qué hizo un agente. limite acota la cantidad (más nuevos " +
+			"primero); origen filtra por quién hizo el cambio.",
+		Annotations: soloLectura(),
+		InputSchema: entrada,
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in entradaVerHistorial) (*mcp.CallToolResult, salidaVerHistorial, error) {
+		if in.Origen != "" && !origenesHistorial[in.Origen] {
+			return nil, salidaVerHistorial{}, fmt.Errorf("origen inválido %q. Usá: app, extension, agente o desconocido", in.Origen)
+		}
+		q := url.Values{}
+		if in.Limite > 0 {
+			q.Set("limite", strconv.Itoa(in.Limite))
+		}
+		if in.Origen != "" {
+			q.Set("origen", in.Origen)
+		}
+		ruta := "/api/eventos"
+		if len(q) > 0 {
+			ruta += "?" + q.Encode()
+		}
+		var eventos []wireEvento
+		if err := c.obtenerJSON(ctx, ruta, &eventos); err != nil {
+			return nil, salidaVerHistorial{}, err
+		}
+		out := make([]EventoSalida, 0, len(eventos))
+		for _, e := range eventos {
+			out = append(out, aEventoSalida(e))
+		}
+		return nil, salidaVerHistorial{Eventos: out}, nil
+	})
+}
+
 // --- exportar_carpeta ---
 
 var formatosExport = map[string]bool{
@@ -320,5 +375,6 @@ func RegistrarLectura(s *mcp.Server, c *Cliente) {
 	registrarVerStats(s, c)
 	registrarVerAgenda(s, c)
 	registrarVerActividad(s, c)
+	registrarVerHistorial(s, c)
 	registrarExportarCarpeta(s, c)
 }

@@ -15,6 +15,21 @@ import (
 
 func boolPtr(b bool) *bool { return &b }
 
+// actorDeClientInfo lee el nombre del cliente MCP conectado (clientInfo.name
+// del initialize, ver ClientInfo() en el SDK) para que el historial de
+// Bythos registre QUIÉN hizo el cambio, no solo "un agente". Sin nombre
+// (cliente viejo, o simplemente no lo mandó), "agente" es el actor genérico.
+func actorDeClientInfo(req *mcp.CallToolRequest) string {
+	if req == nil {
+		return "agente"
+	}
+	info := req.ClientInfo()
+	if info == nil || info.Name == "" {
+		return "agente"
+	}
+	return info.Name
+}
+
 func noDestructiva(idempotente bool) *mcp.ToolAnnotations {
 	return &mcp.ToolAnnotations{
 		ReadOnlyHint:    false,
@@ -51,6 +66,7 @@ func registrarActualizarProgreso(s *mcp.Server, c *Cliente) {
 		if in.Progreso < 0 || in.Progreso > 100 {
 			return nil, salidaOK{}, fmt.Errorf("el progreso debe estar entre 0 y 100, llegó %d", in.Progreso)
 		}
+		ctx = conActor(ctx, actorDeClientInfo(req))
 		body := map[string]any{"progreso": in.Progreso}
 		if err := c.enviarJSON(ctx, "PATCH", "/api/recursos/"+strconv.FormatInt(in.RecursoID, 10), body, nil); err != nil {
 			return nil, salidaOK{}, err
@@ -82,6 +98,7 @@ func registrarCambiarEstado(s *mcp.Server, c *Cliente) {
 		if !estadosValidos[in.Estado] {
 			return nil, salidaOK{}, fmt.Errorf("estado inválido %q. Usá: pendiente, en_curso o completado", in.Estado)
 		}
+		ctx = conActor(ctx, actorDeClientInfo(req))
 		body := map[string]any{"estado": in.Estado}
 		if err := c.enviarJSON(ctx, "PATCH", "/api/recursos/"+strconv.FormatInt(in.RecursoID, 10), body, nil); err != nil {
 			return nil, salidaOK{}, err
@@ -102,6 +119,7 @@ func registrarCrearCarpeta(s *mcp.Server, c *Cliente) {
 		Description: "Crea una carpeta (tema de estudio) nueva en Bythos, ej. \"Go Backend\". No es idempotente: llamarla dos veces crea dos carpetas.",
 		Annotations: noDestructiva(false),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in entradaCrearCarpeta) (*mcp.CallToolResult, CarpetaSalida, error) {
+		ctx = conActor(ctx, actorDeClientInfo(req))
 		body := map[string]any{"nombre": in.Nombre}
 		var carpeta wireCarpeta
 		if err := c.enviarJSON(ctx, "POST", "/api/carpetas", body, &carpeta); err != nil {
@@ -127,6 +145,7 @@ func registrarGuardarLink(s *mcp.Server, c *Cliente) {
 			"No es idempotente: llamarla dos veces con la misma URL crea dos recursos.",
 		Annotations: noDestructiva(false),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in entradaGuardarLink) (*mcp.CallToolResult, RecursoSalida, error) {
+		ctx = conActor(ctx, actorDeClientInfo(req))
 		body := map[string]any{"carpeta_id": in.CarpetaID, "url": in.URL}
 		var recurso wireRecurso
 		if err := c.enviarJSON(ctx, "POST", "/api/recursos", body, &recurso); err != nil {
@@ -154,6 +173,7 @@ func registrarCrearNotaAgenda(s *mcp.Server, c *Cliente) {
 			"dos veces con los mismos datos crea dos notas.",
 		Annotations: noDestructiva(false),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in entradaCrearNotaAgenda) (*mcp.CallToolResult, AgendaSalida, error) {
+		ctx = conActor(ctx, actorDeClientInfo(req))
 		body := map[string]any{
 			"fecha":       in.Fecha,
 			"texto":       in.Texto,

@@ -12,8 +12,13 @@ const normCarpeta = (c) => ({
   nombre: c.Nombre ?? c.nombre ?? c.name ?? '',
 })
 
+// X-Bythos-Origen: extension en toda petición: así el historial de Bythos
+// (ver vista Historial y db/eventos.go en Go) sabe que el cambio vino de
+// la extensión, no de la UI ni de un agente de IA por MCP.
+const CABECERAS_ORIGEN = { 'X-Bythos-Origen': 'extension' }
+
 async function listarCarpetas() {
-  const res = await fetch(`${API}/api/carpetas`)
+  const res = await fetch(`${API}/api/carpetas`, { headers: CABECERAS_ORIGEN })
   const data = await res.json()
   return (Array.isArray(data) ? data : []).map(normCarpeta)
 }
@@ -21,7 +26,7 @@ async function listarCarpetas() {
 async function guardarRecurso(carpeta_id, url) {
   const res = await fetch(`${API}/api/recursos`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...CABECERAS_ORIGEN },
     body: JSON.stringify({ carpeta_id, url }),
   })
   const data = await res.json().catch(() => ({}))

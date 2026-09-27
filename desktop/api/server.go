@@ -83,6 +83,10 @@ func (s *Servidor) Rutas() http.Handler {
 	mux.HandleFunc("GET /api/carpetas/{id}/export", s.exportarCarpeta)
 	mux.HandleFunc("POST /api/carpetas/{id}/import-avance", s.importarAvance)
 
+	// Historial: quién tocó los datos (app, extensión o un agente de IA
+	// por MCP) y qué cambió. Ver db/eventos.go y api/origen.go.
+	mux.HandleFunc("GET /api/eventos", s.listarEventos)
+
 	// Despertar la UI: "/" sirve ui/dist SIN pisar "/api/..."
 	// Va AL FINAL porque "/" es el cajón de sastre. Si la pones arriba,
 	// se traga la API. Orden = especifico primero, general al final.
@@ -128,12 +132,14 @@ func (s *Servidor) crearCarpeta(w http.ResponseWriter, r *http.Request) {
 		responderError(w, 400, "Nombre inválido o carpeta duplicada")
 		return
 	}
+	s.registrarEvento(r, db.AccionCarpetaCreada, c.ID, c.Nombre)
 	w.WriteHeader(http.StatusCreated)
 	responder(w, c)
 }
 
 func (s *Servidor) borrarCarpeta(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	nombre := nombreCarpetaPorID(s, id) // antes de borrar: después ya no existe
 	borrada, err := db.BorrarCarpeta(s.Base, id)
 	if err != nil {
 		responderError(w, 500, "No se pudo borrar la carpeta")
@@ -143,6 +149,7 @@ func (s *Servidor) borrarCarpeta(w http.ResponseWriter, r *http.Request) {
 		responderError(w, 404, "Carpeta no encontrada")
 		return
 	}
+	s.registrarEvento(r, db.AccionCarpetaBorrada, id, nombre)
 	responder(w, map[string]bool{"ok": true})
 }
 
@@ -204,6 +211,7 @@ func (s *Servidor) guardarRecurso(w http.ResponseWriter, r *http.Request) {
 		responderError(w, 400, "Falta url o carpeta_id, o la carpeta no existe")
 		return
 	}
+	s.registrarEvento(r, db.AccionRecursoGuardado, rec.ID, tituloOUrl(rec))
 	w.WriteHeader(http.StatusCreated)
 	responder(w, rec)
 }
@@ -218,6 +226,11 @@ func (s *Servidor) cambiarEstado(w http.ResponseWriter, r *http.Request) {
 		responderError(w, http.StatusRequestEntityTooLarge, "El body es demasiado grande (máximo 1MB)")
 		return
 	}
+	// Leído ANTES de tocar nada: es el "antes" que el historial necesita
+	// para mostrar "Título": 40% → 80% (ver db.ObtenerRecurso). previo.ok
+	// en false (recurso inexistente) no bloquea nada: los Actualizar*/
+	// CambiarEstado de abajo ya fallan solos, este read es solo para el detalle.
+	previo, previoOk, _ := db.ObtenerRecurso(s.Base, id)
 	// Progress-first: {"progreso":N} syncs estado for compatibility.
 	// {"estado":...} still works alone and wins when both are sent.
 	if body.Progreso != nil {
@@ -225,11 +238,19 @@ func (s *Servidor) cambiarEstado(w http.ResponseWriter, r *http.Request) {
 			responderError(w, 500, "No se pudo actualizar el progreso")
 			return
 		}
+		if previoOk {
+			detalle := tituloOUrl(previo) + ": " + strconv.Itoa(previo.Progreso) + "% → " + strconv.Itoa(*body.Progreso) + "%"
+			s.registrarEvento(r, db.AccionProgresoCambiado, id, detalle)
+		}
 	}
 	if body.Estado != "" {
 		if err := db.CambiarEstado(s.Base, id, body.Estado); err != nil {
 			responderError(w, 400, "Estado inválido. Usa pendiente, en_curso o completado")
 			return
+		}
+		if previoOk {
+			detalle := tituloOUrl(previo) + ": " + previo.Estado + " → " + body.Estado
+			s.registrarEvento(r, db.AccionEstadoCambiado, id, detalle)
 		}
 	}
 	if body.Progreso == nil && body.Estado == "" {
@@ -241,9 +262,13 @@ func (s *Servidor) cambiarEstado(w http.ResponseWriter, r *http.Request) {
 
 func (s *Servidor) borrarRecurso(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	previo, previoOk, _ := db.ObtenerRecurso(s.Base, id) // antes de borrar: después ya no existe
 	if err := db.Borrar(s.Base, id); err != nil {
 		responderError(w, 500, "No se pudo borrar")
 		return
+	}
+	if previoOk {
+		s.registrarEvento(r, db.AccionRecursoBorrado, id, tituloOUrl(previo))
 	}
 	responder(w, map[string]bool{"ok": true})
 }
@@ -272,7 +297,60 @@ func (s *Servidor) statsGeneral(w http.ResponseWriter, r *http.Request) {
 	responder(w, p)
 }
 
+// --- Historial ---
+
+// GET /api/eventos?limite=&origen= → el historial, más nuevo primero.
+// Claves en minúscula (a diferencia de carpetas/recursos/agenda): esta
+// ruta nace después de ellas y no tiene UI vieja que espere Capitalizado.
+func (s *Servidor) listarEventos(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	filtro := db.FiltroEventos{Origen: q.Get("origen")}
+	if v := q.Get("limite"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			filtro.Limite = n
+		}
+	}
+	eventos, err := db.ListarEventos(s.Base, filtro)
+	if err != nil {
+		responderError(w, 500, "No se pudo leer el historial")
+		return
+	}
+	out := make([]map[string]interface{}, 0, len(eventos))
+	for _, e := range eventos {
+		out = append(out, map[string]interface{}{
+			"id": e.ID, "creado": e.Creado, "origen": e.Origen, "actor": e.Actor,
+			"accion": e.Accion, "entidad_id": e.EntidadID, "detalle": e.Detalle,
+		})
+	}
+	responder(w, out)
+}
+
 // --- Helpers (siempre igual, cópialos de memoria) ---
+
+// nombreCarpetaPorID busca el nombre de una carpeta para el detalle del
+// historial. "" si no existe o si falla la lectura: el borrado real ya
+// tiene su propio manejo de error, este helper es solo cosmético.
+func nombreCarpetaPorID(s *Servidor, id int64) string {
+	carpetas, err := db.ListarCarpetas(s.Base)
+	if err != nil {
+		return ""
+	}
+	for _, c := range carpetas {
+		if c.ID == id {
+			return c.Nombre
+		}
+	}
+	return ""
+}
+
+// tituloOUrl es el nombre legible de un recurso para el historial:
+// título si lo tiene, la URL si no (mismo criterio que tituloDe en export.go).
+func tituloOUrl(r db.Recurso) string {
+	if r.Titulo != "" {
+		return r.Titulo
+	}
+	return r.URL
+}
 
 // limiteBodyJSON es el techo de tamaño para cualquier body JSON que la API
 // decodifica. 1MB sobra para nombres, urls o notas cortas; sin techo, un
@@ -380,7 +458,7 @@ func conGuardia(next http.Handler) http.Handler {
 			}
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Vary", "Origin")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Bythos-Origen, X-Bythos-Actor")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		}
 

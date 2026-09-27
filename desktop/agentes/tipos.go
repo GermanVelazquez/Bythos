@@ -53,6 +53,20 @@ type wireActividad struct {
 	Total int
 }
 
+// wireEvento SÍ lleva json tags: a diferencia de carpetas/recursos/agenda,
+// GET /api/eventos ya responde snake_case en minúscula (ver listarEventos
+// en api/server.go), nace después y no tiene UI vieja que espere
+// Capitalizado.
+type wireEvento struct {
+	ID        int64  `json:"id"`
+	Creado    string `json:"creado"`
+	Origen    string `json:"origen"`
+	Actor     string `json:"actor"`
+	Accion    string `json:"accion"`
+	EntidadID int64  `json:"entidad_id"`
+	Detalle   string `json:"detalle"`
+}
+
 // --- Formas que este servidor le devuelve al agente (salida limpia) ---
 
 // CarpetaSalida es una carpeta recién creada o listada sin progreso.
@@ -129,6 +143,17 @@ type ActividadSalida struct {
 	Total int    `json:"total" jsonschema:"carpetas + recursos creados ese día"`
 }
 
+// EventoSalida es una fila del historial de cambios: quién hizo qué y cuándo.
+type EventoSalida struct {
+	ID        int64  `json:"id" jsonschema:"id del evento"`
+	Creado    string `json:"creado" jsonschema:"fecha y hora local del cambio"`
+	Origen    string `json:"origen" jsonschema:"app, extension, agente o desconocido"`
+	Actor     string `json:"actor,omitempty" jsonschema:"nombre de quien hizo el cambio (ej. el cliente MCP), vacío si no se identificó"`
+	Accion    string `json:"accion" jsonschema:"qué se hizo, ej. carpeta_creada, progreso_cambiado"`
+	EntidadID int64  `json:"entidad_id" jsonschema:"id de la carpeta/recurso/nota/lote afectado"`
+	Detalle   string `json:"detalle" jsonschema:"descripción legible del cambio, ej. \"Hooks\": 40% → 80%"`
+}
+
 func aProgresoSalida(w wireProgreso) ProgresoSalida {
 	return ProgresoSalida{
 		Total:       w.Total,
@@ -168,4 +193,16 @@ func aAgendaSalida(w wireAgenda) AgendaSalida {
 
 func aActividadSalida(w wireActividad) ActividadSalida {
 	return ActividadSalida{Fecha: w.Fecha, Total: w.Total}
+}
+
+func aEventoSalida(w wireEvento) EventoSalida {
+	return EventoSalida{
+		ID:        w.ID,
+		Creado:    w.Creado,
+		Origen:    w.Origen,
+		Actor:     w.Actor,
+		Accion:    w.Accion,
+		EntidadID: w.EntidadID,
+		Detalle:   w.Detalle,
+	}
 }

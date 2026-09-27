@@ -135,7 +135,12 @@ func crearTablas(base *sql.DB) error {
 	if err := migrarProgreso(base); err != nil {
 		return err
 	}
-	return migrarImportLotes(base)
+	if err := migrarImportLotes(base); err != nil {
+		return err
+	}
+	// eventos es tabla nueva (v1.1+): CREATE TABLE IF NOT EXISTS alcanza,
+	// no hace falta ALTER TABLE (ver comentario en crearTablaEventos).
+	return crearTablaEventos(base)
 }
 
 // migrarProgreso adds resources.progreso on databases created before v0.2.

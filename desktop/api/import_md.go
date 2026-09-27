@@ -935,6 +935,7 @@ func (s *Servidor) importarAgenda(w http.ResponseWriter, r *http.Request) {
 	}
 
 	creadasN, omitidas, avisos := s.guardarOcurrencias(ocurrencias, &lote.ID, avisos)
+	s.registrarEvento(r, db.AccionLoteImportado, lote.ID, fmt.Sprintf("%s (%d creadas, %d omitidas)", lote.Nombre, creadasN, omitidas))
 	responder(w, map[string]interface{}{
 		"lote_id": lote.ID, "nombre": lote.Nombre,
 		"creadas": creadasN, "omitidas": omitidas, "avisos": avisos, "total": len(ocurrencias),
@@ -1088,6 +1089,7 @@ func (s *Servidor) actualizarLote(w http.ResponseWriter, r *http.Request) {
 		responderError(w, 400, err.Error())
 		return
 	}
+	s.registrarEvento(r, db.AccionLoteActualizado, act.ID, fmt.Sprintf("%s (%d creadas, %d omitidas)", act.Nombre, creadasN, omitidas))
 	responder(w, map[string]interface{}{
 		"lote_id": act.ID, "nombre": act.Nombre,
 		"creadas": creadasN, "omitidas": omitidas, "avisos": avisos, "total": len(ocurrencias),
@@ -1099,6 +1101,7 @@ func (s *Servidor) actualizarLote(w http.ResponseWriter, r *http.Request) {
 // Removes the lote and its rows (loose rows survive) and replies {borradas}.
 func (s *Servidor) borrarLote(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	previo, previoOk, _ := db.ObtenerLote(s.Base, id) // antes de borrar: después ya no existe
 	borradas, existe, err := db.BorrarLote(s.Base, id)
 	if err != nil {
 		responderError(w, 500, "No se pudo borrar el lote")
@@ -1107,6 +1110,9 @@ func (s *Servidor) borrarLote(w http.ResponseWriter, r *http.Request) {
 	if !existe {
 		responderError(w, 404, "Lote no encontrado")
 		return
+	}
+	if previoOk {
+		s.registrarEvento(r, db.AccionLoteBorrado, id, fmt.Sprintf("%s (%d filas)", previo.Nombre, borradas))
 	}
 	responder(w, map[string]interface{}{"borradas": borradas})
 }

@@ -65,6 +65,25 @@ func Guardar(base *sql.DB, carpetaID int64, url, titulo, imagen, descripcion, ti
 	return r, nil
 }
 
+// ObtenerRecurso trae un recurso por id. Segundo valor es false si no
+// existe (sin error), igual que ObtenerLote en import_lotes.go.
+// Lo usa el historial (api/): necesita el estado ANTES de aplicar un
+// cambio para poder mostrar "antes → después" en el detalle del evento.
+func ObtenerRecurso(base *sql.DB, id int64) (Recurso, bool, error) {
+	var r Recurso
+	err := base.QueryRow(
+		`SELECT id, folder_id, url, title, image, description, content_type, status, progreso
+		   FROM resources WHERE id = ?`, id,
+	).Scan(&r.ID, &r.CarpetaID, &r.URL, &r.Titulo, &r.Imagen, &r.Descripcion, &r.Tipo, &r.Estado, &r.Progreso)
+	if err == sql.ErrNoRows {
+		return Recurso{}, false, nil
+	}
+	if err != nil {
+		return Recurso{}, false, err
+	}
+	return r, true, nil
+}
+
 // ListarRecursos trae recursos. Si carpetaID es 0, trae TODOS.
 // ¿Por qué un solo ListarRecursos con filtro y no dos funciones?
 // Porque la query solo cambia en un WHERE. Dos funciones duplicarían

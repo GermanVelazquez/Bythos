@@ -53,6 +53,20 @@ const normActividad = (x) => ({
   total: x?.Total ?? x?.total ?? 0,
 })
 
+// /api/eventos ya responde snake_case en minúscula (nace después de las
+// demás rutas, sin UI vieja que espere Capitalizado), pero normalizamos
+// igual por las dudas y por consistencia con el resto de este archivo.
+const ORIGEN_LABEL = { app: 'App', extension: 'Extensión', agente: 'Agente', desconocido: 'Desconocido' }
+const normEvento = (e) => ({
+  id: e.ID ?? e.id,
+  creado: e.Creado ?? e.creado ?? '',
+  origen: e.Origen ?? e.origen ?? 'desconocido',
+  actor: e.Actor ?? e.actor ?? '',
+  accion: e.Accion ?? e.accion ?? '',
+  entidadId: e.EntidadID ?? e.entidad_id ?? 0,
+  detalle: e.Detalle ?? e.detalle ?? '',
+})
+
 // Backend estados -> card presentation (bar width always comes from progreso real)
 const CARD_STATUS = {
   done: { label: 'Completado', color: '#5FA97B' },
@@ -126,6 +140,7 @@ function Sidebar({ currentView, onChangeView, counts }) {
       label: 'Acciones',
       items: [
         { id: 'export', label: 'Exportar', icon: 'download' },
+        { id: 'historial', label: 'Historial', icon: 'clock' },
         { id: 'settings', label: 'Ajustes', icon: 'settings' },
       ],
     },
@@ -142,7 +157,7 @@ function Sidebar({ currentView, onChangeView, counts }) {
           {group.items.map((item) => {
             const isActive = currentView === item.id
             const count = counts?.[item.id]
-            const isAction = item.id === 'export' || item.id === 'settings'
+            const isAction = item.id === 'export' || item.id === 'historial' || item.id === 'settings'
             return (
               <button
                 key={item.id}
@@ -909,6 +924,75 @@ function SettingsView({ salud, stats, totalCarpetas }) {
       <div className="setting-row">
         <span className="setting-key">Versión</span>
         <span className="setting-val">v1.0.3 · Local</span>
+      </div>
+    </div>
+  )
+}
+
+/* ───────── HISTORIAL VIEW ───────── */
+// Quién tocó tus datos y qué cambió: app, extensión o un agente de IA
+// por MCP (con su nombre si lo mandó). Filtro por origen + recargar.
+function badgeOrigen({ origen, actor }) {
+  const label = ORIGEN_LABEL[origen] ?? 'Desconocido'
+  return actor ? `${label} (${actor})` : label
+}
+
+function fechaHoraLegible(creado) {
+  // creado llega como 'YYYY-MM-DD HH:MM:SS' local (ver db.RegistrarEvento).
+  if (!creado) return ''
+  const [fecha, hora] = creado.split(' ')
+  return hora ? `${fecha} ${hora.slice(0, 5)}` : fecha
+}
+
+function HistorialView({ eventos, cargando, error, filtro, onFiltroChange, onRecargar }) {
+  const filtros = [
+    { id: '', label: 'Todos' },
+    { id: 'app', label: 'App' },
+    { id: 'extension', label: 'Extensión' },
+    { id: 'agente', label: 'Agente' },
+    { id: 'desconocido', label: 'Desconocido' },
+  ]
+  return (
+    <div>
+      <div className="panel">
+        <p className="panel-title">Historial de cambios</p>
+        <p className="panel-sub">
+          Quién tocó tus datos y qué cambió: útil para auditar qué hizo un agente de IA conectado por MCP.
+        </p>
+        <div className="filter-row" style={{ marginBottom: 12 }}>
+          {filtros.map((f) => (
+            <button
+              key={f.id || 'todos'}
+              onClick={() => onFiltroChange(f.id)}
+              className={`filter-pill${filtro === f.id ? ' active' : ''}`}
+            >
+              {f.label}
+            </button>
+          ))}
+          <button className="btn-outline" onClick={onRecargar} style={{ marginLeft: 'auto' }}>
+            Recargar
+          </button>
+        </div>
+        {error && <p className="panel-sub" style={{ color: 'var(--red)' }}>{error}</p>}
+        {cargando ? (
+          <p className="panel-sub">Cargando…</p>
+        ) : eventos.length === 0 ? (
+          <div className="empty">
+            <div className="empty-icon"><Icon name="clock" size={20} /></div>
+            <p className="empty-title">Sin eventos todavía</p>
+            <p className="empty-sub">Los cambios que hagas en la app, la extensión o un agente de IA van a aparecer acá.</p>
+          </div>
+        ) : (
+          <div className="historial-list">
+            {eventos.map((e) => (
+              <div key={e.id} className="historial-row">
+                <span className="historial-fecha">{fechaHoraLegible(e.creado)}</span>
+                <span className={`historial-badge historial-badge-${e.origen}`}>{badgeOrigen(e)}</span>
+                <span className="historial-detalle" title={e.detalle}>{e.detalle || e.accion}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -2105,6 +2189,11 @@ export default function App() {
   const [importResultado, setImportResultado] = useState(null)
   const [salud, setSalud] = useState(null)
 
+  const [eventos, setEventos] = useState([])
+  const [historialCargando, setHistorialCargando] = useState(false)
+  const [historialError, setHistorialError] = useState('')
+  const [historialFiltro, setHistorialFiltro] = useState('')
+
   async function recargar() {
     try {
       setError('')
@@ -2156,6 +2245,24 @@ export default function App() {
     api.salud().then(() => setSalud(true)).catch(() => setSalud(false))
   }, [view])
 
+  async function recargarHistorial() {
+    try {
+      setHistorialCargando(true)
+      setHistorialError('')
+      const items = await api.listarEventos(undefined, historialFiltro || undefined)
+      setEventos((Array.isArray(items) ? items : []).map(normEvento))
+    } catch (e) {
+      setHistorialError(e.message || 'No se pudo leer el historial')
+    } finally {
+      setHistorialCargando(false)
+    }
+  }
+
+  useEffect(() => {
+    if (view !== 'historial') return
+    recargarHistorial()
+  }, [view, historialFiltro]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const folderById = useMemo(() => {
     const mapa = {}
     carpetas.forEach((c) => { mapa[c.id] = c.nombre })
@@ -2169,7 +2276,7 @@ export default function App() {
 
   const pageTitle = {
     all: 'Todos los recursos', dashboard: 'Dashboard', folders: 'Carpetas',
-    export: 'Exportar', settings: 'Ajustes',
+    export: 'Exportar', historial: 'Historial', settings: 'Ajustes',
   }[view] || 'Biblioteca'
 
   const pageSubtitle = (view === 'all')
@@ -2180,7 +2287,9 @@ export default function App() {
       ? `${carpetas.length} carpetas activas`
       : view === 'export'
         ? 'Genera textos para repasar en tu IA favorita'
-        : 'Estado de la aplicación y datos locales'
+        : view === 'historial'
+          ? 'Quién tocó tus datos y qué cambió'
+          : 'Estado de la aplicación y datos locales'
 
   function changeView(v) {
     setView(v)
@@ -2342,6 +2451,15 @@ export default function App() {
               onImportar={handleImportar}
               importando={importando}
               importResultado={importResultado}
+            />
+          ) : view === 'historial' ? (
+            <HistorialView
+              eventos={eventos}
+              cargando={historialCargando}
+              error={historialError}
+              filtro={historialFiltro}
+              onFiltroChange={setHistorialFiltro}
+              onRecargar={recargarHistorial}
             />
           ) : (
             <SettingsView salud={salud} stats={stats} totalCarpetas={carpetas.length} />

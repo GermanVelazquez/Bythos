@@ -53,14 +53,26 @@ func (s *Servidor) crearAgenda(w http.ResponseWriter, r *http.Request) {
 		responderError(w, 400, err.Error())
 		return
 	}
+	s.registrarEvento(r, db.AccionNotaAgendaCreada, a.ID, detalleNota(a))
 	w.WriteHeader(http.StatusCreated)
 	responder(w, a)
+}
+
+// detalleNota es el texto legible de una nota de agenda para el historial:
+// su texto si tiene, la fecha si no (una nota sin texto solo pasa cuando
+// tiene carpeta asociada, ver validarAgenda en db/agenda.go).
+func detalleNota(a db.Agenda) string {
+	if a.Texto != "" {
+		return a.Texto
+	}
+	return a.Fecha
 }
 
 // borrarAgenda atiende DELETE /api/agenda/{id}.
 // 404 en español si no existe (igual que borrarCarpeta).
 func (s *Servidor) borrarAgenda(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	previo, previoOk, _ := db.ObtenerAgenda(s.Base, id) // antes de borrar: después ya no existe
 	borrada, err := db.BorrarAgenda(s.Base, id)
 	if err != nil {
 		responderError(w, 500, "No se pudo borrar la nota")
@@ -69,6 +81,9 @@ func (s *Servidor) borrarAgenda(w http.ResponseWriter, r *http.Request) {
 	if !borrada {
 		responderError(w, 404, "Nota no encontrada")
 		return
+	}
+	if previoOk {
+		s.registrarEvento(r, db.AccionNotaAgendaBorrada, id, detalleNota(previo))
 	}
 	responder(w, map[string]bool{"ok": true})
 }

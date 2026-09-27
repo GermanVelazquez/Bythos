@@ -225,6 +225,33 @@ func ListarAgenda(base *sql.DB, desde, hasta string) ([]Agenda, error) {
 	return out, rows.Err()
 }
 
+// ObtenerAgenda trae una nota por id. Segundo valor es false si no existe
+// (sin error), igual que ObtenerLote. Lo usa el historial (api/): necesita
+// el texto de la nota ANTES de borrarla para el detalle del evento.
+func ObtenerAgenda(base *sql.DB, id int64) (Agenda, bool, error) {
+	var a Agenda
+	var hi, hf sql.NullString
+	var cid sql.NullInt64
+	err := base.QueryRow(
+		`SELECT a.id, a.fecha, a.hora_inicio, a.hora_fin, a.texto, a.carpeta_id, COALESCE(f.name, '')
+		   FROM agenda a LEFT JOIN folders f ON f.id = a.carpeta_id
+		  WHERE a.id = ?`, id,
+	).Scan(&a.ID, &a.Fecha, &hi, &hf, &a.Texto, &cid, &a.CarpetaNombre)
+	if err == sql.ErrNoRows {
+		return Agenda{}, false, nil
+	}
+	if err != nil {
+		return Agenda{}, false, err
+	}
+	a.HoraInicio = hi.String
+	a.HoraFin = hf.String
+	if cid.Valid {
+		id := cid.Int64
+		a.CarpetaID = &id
+	}
+	return a, true, nil
+}
+
 // BorrarAgenda elimina una nota por id.
 // Devuelve true si existía, false si no había nada que borrar (igual que BorrarCarpeta).
 func BorrarAgenda(base *sql.DB, id int64) (bool, error) {

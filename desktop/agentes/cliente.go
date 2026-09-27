@@ -29,6 +29,25 @@ import (
 // español, reusado por toda petición fallida a nivel de transporte.
 const mensajeAppCerrada = "Bythos no está abierto: abrí la app y volvé a intentar"
 
+// claveActor es la key del context.Context donde viaja el nombre del
+// cliente MCP conectado (ver conActor/actorDelContexto), para que
+// peticion() lo mande como X-Bythos-Actor sin que cada tool tenga que
+// pasarlo a mano en cada llamada.
+type claveActor struct{}
+
+// conActor agrega el actor (clientInfo.Name del agente conectado, ver
+// actorDeClientInfo en escritura.go) al contexto de una llamada de
+// escritura, para que el historial de Bythos (db/eventos.go) sepa QUIÉN
+// hizo el cambio, no solo que "un agente" lo hizo.
+func conActor(ctx context.Context, actor string) context.Context {
+	return context.WithValue(ctx, claveActor{}, actor)
+}
+
+func actorDelContexto(ctx context.Context) string {
+	actor, _ := ctx.Value(claveActor{}).(string)
+	return actor
+}
+
 // Cliente es el puente HTTP delgado hacia Bythos.
 // BaseURL y Host van SEPARADOS a propósito: BaseURL es a dónde se conecta
 // (real: localhost:8080; en tests: el puerto que arma httptest.Server),
@@ -73,9 +92,14 @@ func (c *Cliente) peticion(ctx context.Context, metodo, ruta string, cuerpo any)
 		req.Header.Set("Content-Type", "application/json")
 	}
 	// Toda petición de este paquete es de un agente de IA (ver el
-	// comentario del paquete arriba): el header ayuda a Bythos a
-	// distinguir estos cambios de los hechos desde la app o la extensión.
+	// comentario del paquete arriba): el historial de Bythos (ver
+	// db/eventos.go y api/origen.go) necesita saberlo para poder auditar
+	// qué hizo el agente. El actor (nombre del cliente MCP conectado) es
+	// opcional: sin él, la fila queda con origen "agente" y actor vacío.
 	req.Header.Set("X-Bythos-Origen", "agente")
+	if actor := actorDelContexto(ctx); actor != "" {
+		req.Header.Set("X-Bythos-Actor", actor)
+	}
 	// El Host: es lo que conGuardia revisa (ver hostsPermitidos en
 	// api/server.go); NO es la dirección real de conexión, que sigue
 	// siendo BaseURL. Así los tests hablan con httptest.Server pero

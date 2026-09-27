@@ -136,6 +136,7 @@ Permisos mínimos a propósito: `activeTab` (solo la pestaña que clicas) + `sto
 | GET | /api/stats | avance global (dashboard) |
 | GET | /api/carpetas/{id}/export?format= | `markdown` · `gemini` · `notebooklm` · `drive` |
 | POST | /api/carpetas/{id}/import-avance | trae el % de vuelta desde el texto repasado |
+| GET | /api/eventos?limite=&origen= | historial: quién tocó los datos y qué cambió |
 | GET | / | tu biblioteca (o aviso si falta `pnpm build`) |
 
 ## Conectar tu agente (MCP)
@@ -170,6 +171,7 @@ Config genérica para cualquier cliente MCP (OpenCode, Codex, Gemini CLI...):
 | `ver_stats` | termómetro general (todas las carpetas) |
 | `ver_agenda` | notas del calendario, con `desde`/`hasta` opcionales |
 | `ver_actividad` | historial de creación por día |
+| `ver_historial` | quién tocó los datos y qué cambió (`limite`, `origen`) |
 | `exportar_carpeta` | texto para repasar (`markdown` · `gemini` · `notebooklm` · `drive`) |
 | `actualizar_progreso` | cambia el % (0–100) de un recurso |
 | `cambiar_estado` | `pendiente` / `en_curso` / `completado` |

@@ -9,6 +9,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"regexp"
@@ -136,6 +137,9 @@ func (s *Servidor) importarAvance(w http.ResponseWriter, r *http.Request) {
 			}
 			actualizados++
 		}
+		if actualizados > 0 {
+			s.registrarEvento(r, db.AccionAvanceImportado, id, fmt.Sprintf("%d actualizados, %d omitidos", actualizados, omitidos))
+		}
 		responder(w, map[string]int{"actualizados": actualizados, "omitidos": omitidos})
 		return
 	}
@@ -157,6 +161,9 @@ func (s *Servidor) importarAvance(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		actualizados++
+	}
+	if actualizados > 0 {
+		s.registrarEvento(r, db.AccionAvanceImportado, id, fmt.Sprintf("%d actualizados, %d omitidos", actualizados, omitidos))
 	}
 	responder(w, map[string]int{"actualizados": actualizados, "omitidos": omitidos})
 }

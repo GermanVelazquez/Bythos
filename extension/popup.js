@@ -25,7 +25,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // problema y el botón se deshabilita: compat sin romper el flujo anterior.
   btn.disabled = true
   try {
-    const res = await fetch('http://localhost:8080/api/carpetas')
+    const res = await fetch('http://localhost:8080/api/carpetas', {
+      headers: { 'X-Bythos-Origen': 'extension' },
+    })
     const data = await res.json()
     const carpetas = (Array.isArray(data) ? data : []).map(normCarpeta)
     folderEl.innerHTML = ''
@@ -77,7 +79,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // MISMO contrato que la UI web: {carpeta_id, url}. Nace pendiente en Go.
       const res = await fetch('http://localhost:8080/api/recursos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Bythos-Origen': 'extension' },
         body: JSON.stringify({ carpeta_id, url: tab.url }),
       })
       const data = await res.json()

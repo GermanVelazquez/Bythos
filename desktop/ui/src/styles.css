@@ -360,6 +360,28 @@ a { color: var(--ink-accent); }
 .status-dot.on { background: var(--green); }
 .status-dot.off { background: var(--red); }
 
+/* ── Historial (quién tocó los datos) ─────────────────────────── */
+.historial-list { display: flex; flex-direction: column; gap: 6px; }
+.historial-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; background: var(--bg-alt); border: 1px solid var(--border);
+  border-radius: 6px; font-size: 12px;
+}
+.historial-fecha { color: var(--ink-muted); flex-shrink: 0; width: 130px; font-size: 11px; }
+.historial-badge {
+  flex-shrink: 0; padding: 3px 8px; border-radius: 4px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+  border: 1px solid var(--border-strong); color: var(--ink);
+  white-space: nowrap;
+}
+.historial-badge-app { color: var(--ink-accent); border-color: var(--border-strong); }
+.historial-badge-extension { color: var(--amber); border-color: #4a3a1f; }
+.historial-badge-agente { color: var(--green); border-color: #2a4a35; }
+.historial-badge-desconocido { color: var(--red); border-color: #4a1a1a; }
+.historial-detalle {
+  color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
 /* Generic form controls keep the dark theme outside the modal too */
 input:focus-visible, select:focus-visible, button:focus-visible {
   outline: 2px solid var(--ink-dim);
