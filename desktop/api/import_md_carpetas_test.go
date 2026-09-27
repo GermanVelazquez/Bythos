@@ -17,10 +17,10 @@ import (
 
 func TestParseCarpetaNombrePorBloque(t *testing.T) {
 	casos := []struct {
-		nombre      string
-		md          string
-		carpeta     string
-		estado      string
+		nombre       string
+		md           string
+		carpeta      string
+		estado       string
 		quiereBloque string
 	}{
 		{

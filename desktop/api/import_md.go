@@ -528,13 +528,15 @@ func (s *Servidor) resolverImport(markdown string) ([]ocurrenciaMD, []string) {
 // Validation runs BEFORE any write: on error it returns a Spanish message
 // and touches nothing (no folders, no lotes, no rows).
 // Semantics per block (last decision wins when repeated):
-//   auto (or no decision) = current behavior, resolved against live folders
-//     including the ones just created below.
-//   usar = link every row of the block to carpeta_id (must exist now).
-//   crear = create nombre once per normalized name (first raw spelling wins)
-//     and link every requesting block to it; when the normalized name
-//     already exists (race between preview and confirm) it links instead.
-//   suelta = force NULL for every row of the block.
+//
+//	auto (or no decision) = current behavior, resolved against live folders
+//	  including the ones just created below.
+//	usar = link every row of the block to carpeta_id (must exist now).
+//	crear = create nombre once per normalized name (first raw spelling wins)
+//	  and link every requesting block to it; when the normalized name
+//	  already exists (race between preview and confirm) it links instead.
+//	suelta = force NULL for every row of the block.
+//
 // Blocks with explicit usar/crear/suelta decisions never emit "no existe"
 // warnings: the user already chose what to do with them.
 func (s *Servidor) aplicarDecisiones(markdown string, ocurrencias []ocurrenciaMD, decisiones []decisionCarpeta) ([]ocurrenciaMD, []carpetaCreada, []string, error) {
@@ -992,7 +994,7 @@ func (s *Servidor) obtenerLote(w http.ResponseWriter, r *http.Request) {
 		"id": lote.ID, "nombre": lote.Nombre, "markdown": lote.Markdown,
 		"total": lote.Total, "creado": lote.Creado,
 		"carpetas": carpetasLoteJSON(carpetas), "ocurrencias": ocurrencias, "avisos": avisos,
-		"bloques": resolverBloques(extraerBloques(lote.Markdown), carpetasVivas),
+		"bloques":             resolverBloques(extraerBloques(lote.Markdown), carpetasVivas),
 		"carpetas_existentes": carpetasLoteJSON(carpetasVivas),
 	})
 }

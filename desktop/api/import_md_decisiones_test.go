@@ -72,10 +72,10 @@ func TestPreviewTraeBloquesEnOrden(t *testing.T) {
 		t.Fatalf("preview: status=%d body=%s", rec.Code, rec.Body.String())
 	}
 	var resp struct {
-		Total    int       `json:"total"`
-		Bloques  []bloqueMD `json:"bloques"`
+		Total      int          `json:"total"`
+		Bloques    []bloqueMD   `json:"bloques"`
 		Existentes []db.Carpeta `json:"carpetas_existentes"`
-		Avisos   []string  `json:"avisos"`
+		Avisos     []string     `json:"avisos"`
 	}
 	// db.Carpeta has no json tags (ID/Nombre capitalized): decode leniently.
 	var crudo map[string]json.RawMessage
@@ -96,11 +96,11 @@ func TestPreviewTraeBloquesEnOrden(t *testing.T) {
 		t.Fatalf("quería 3 bloques en orden MD, salieron %+v", resp.Bloques)
 	}
 	casos := []struct {
-		indice   int
-		titulo   string
-		pedida   string
-		estado   string
-		conID    bool
+		indice int
+		titulo string
+		pedida string
+		estado string
+		conID  bool
 	}{
 		{1, "Parcial", "Programación II", "vinculada", true},
 		{2, "Final", "Física III", "suelta", false},

@@ -75,12 +75,12 @@ func Abrir(ruta string) (*sql.DB, error) {
 }
 
 // crearTablas define el modelo mínimo. Solo 3 tablas, a propósito:
-// - folders: tus temas ("Go Backend", "React"...)
-// - resources: tus links con su estado de estudio
-// - agenda: tus notas en el calendario (fecha + hora opcional + texto)
-//   La agenda NO cuelga de carpetas: carpeta_id es NULL cuando la nota
-//   es suelta, y ON DELETE SET NULL la suelta si borras su carpeta
-//   (tus notas sobreviven: borrar un tema no borra tus planes).
+//   - folders: tus temas ("Go Backend", "React"...)
+//   - resources: tus links con su estado de estudio
+//   - agenda: tus notas en el calendario (fecha + hora opcional + texto)
+//     La agenda NO cuelga de carpetas: carpeta_id es NULL cuando la nota
+//     es suelta, y ON DELETE SET NULL la suelta si borras su carpeta
+//     (tus notas sobreviven: borrar un tema no borra tus planes).
 //
 // ¿Por qué NO hay tabla users como antes con Postgres?
 // Porque es app de escritorio de 1 usuario: TÚ. No hay login,

@@ -26,19 +26,19 @@ import (
 func (s *Servidor) montarUI(mux *http.ServeMux) {
 	// Modo 1: embebido (produce el descargable de 1 archivo)
 	if s.UI != nil {
-	// dist/ tiene index.html en la raíz del FS embebido
-	// Si solo hay .gitkeep (aún no hiciste pnpm build), el FileServer
-	// mostraría un listado crudo de archivos: confunde. Mismo aviso que disco.
-	if _, err := fs.Stat(s.UI, "index.html"); err != nil {
-		mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-			w.Write([]byte("Bythos API viva. Falta la UI: entra a desktop/ui y corre `pnpm install` + `pnpm build`.\n"))
-		})
+		// dist/ tiene index.html en la raíz del FS embebido
+		// Si solo hay .gitkeep (aún no hiciste pnpm build), el FileServer
+		// mostraría un listado crudo de archivos: confunde. Mismo aviso que disco.
+		if _, err := fs.Stat(s.UI, "index.html"); err != nil {
+			mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				w.Write([]byte("Bythos API viva. Falta la UI: entra a desktop/ui y corre `pnpm install` + `pnpm build`.\n"))
+			})
+			return
+		}
+		mux.Handle("GET /", http.FileServer(http.FS(s.UI)))
 		return
 	}
-	mux.Handle("GET /", http.FileServer(http.FS(s.UI)))
-	return
-}
 
 	// Modo 2: disco (dev, como ayer)
 	dist := filepath.Join("ui", "dist")
