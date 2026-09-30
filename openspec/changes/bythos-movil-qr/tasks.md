@@ -42,11 +42,11 @@ Chain strategy: feature-branch-chain
 
 ## Phase 1 — Unit 1: DB `dispositivos` + `celular` origin
 
-- [ ] 1.1 Create `desktop/db/dispositivos.go`: table DDL, `CrearDispositivo`, `DispositivoPorTokenHash` (excludes revoked), `ListarDispositivos`, `RevocarDispositivo`, `TocarDispositivo` (1/min throttle).
-- [ ] 1.2 Modify `desktop/db/db.go`: wire `crearTablaDispositivos` into `crearTablas` before `crearTablaEventos`.
-- [ ] 1.3 Modify `desktop/db/eventos.go`: add `OrigenCelular="celular"`; update `normalizarOrigen` to accept it, else `desconocido`.
-- [ ] 1.4 Test `desktop/db/dispositivos_test.go`: idempotent creation, hash lookup excludes revoked, throttled touch.
-- [ ] 1.5 Test `desktop/db/eventos_test.go`: `normalizarOrigen` accepts `celular`; malformed header → `desconocido` (spec: Origin Attribution scenarios).
+- [x] 1.1 Create `desktop/db/dispositivos.go`: table DDL, `CrearDispositivo`, `DispositivoPorTokenHash` (excludes revoked), `ListarDispositivos`, `RevocarDispositivo`, `TocarDispositivo` (1/min throttle).
+- [x] 1.2 Modify `desktop/db/db.go`: wire `crearTablaDispositivos` into `crearTablas` before `crearTablaEventos`.
+- [x] 1.3 Modify `desktop/db/eventos.go`: add `OrigenCelular="celular"`; update `normalizarOrigen` to accept it, else `desconocido`.
+- [x] 1.4 Test `desktop/db/dispositivos_test.go`: idempotent creation, hash lookup excludes revoked, throttled touch.
+- [x] 1.5 Test `desktop/db/eventos_test.go`: `normalizarOrigen` accepts `celular`; malformed header → `desconocido` (spec: Origin Attribution scenarios). Also added `desktop/api/eventos_test.go` case confirming `origenDeCabeceras` never accepts `celular` from `X-Bythos-Origen`.
 - Verification: `cd desktop && go test ./db/...`
 - Est. changed lines: ~180
 

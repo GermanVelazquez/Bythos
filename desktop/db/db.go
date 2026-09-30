@@ -156,6 +156,13 @@ func crearTablas(base *sql.DB) error {
 	if err := migrarArchivoID(base); err != nil {
 		return err
 	}
+	// dispositivos (bythos-movil-qr): tabla nueva, CREATE TABLE IF NOT
+	// EXISTS alcanza (igual que eventos/archivos). Va ANTES de eventos
+	// porque no depende de ella; el orden entre ambas no importa para SQL,
+	// pero documenta el diseño (ver desktop/db/dispositivos.go).
+	if err := crearTablaDispositivos(base); err != nil {
+		return err
+	}
 	// eventos es tabla nueva (v1.1+): CREATE TABLE IF NOT EXISTS alcanza,
 	// no hace falta ALTER TABLE (ver comentario en crearTablaEventos).
 	return crearTablaEventos(base)

@@ -16,12 +16,20 @@ import (
 )
 
 // Orígenes válidos de un evento: quién hizo el cambio.
-// Cualquier valor que no sea uno de estos tres cae en OrigenDesconocido
+// Cualquier valor que no sea uno de estos cuatro cae en OrigenDesconocido
 // (ver normalizarOrigen); la fila del historial nunca se pierde por esto.
+//
+// OrigenCelular (bythos-movil-qr): a propósito NO está en la cabecera
+// X-Bythos-Origen que lee api/origen.go — un cliente cualquiera podría
+// mandar esa cabecera y hacerse pasar por un celular emparejado. Solo lo
+// asigna código de servidor (desktop/api/puente_lan.go) que ya verificó
+// el token Bearer del dispositivo contra dispositivos.go, así que llegar
+// hasta acá YA implica que el celular es real.
 const (
 	OrigenApp         = "app"
 	OrigenExtension   = "extension"
 	OrigenAgente      = "agente"
+	OrigenCelular     = "celular"
 	OrigenDesconocido = "desconocido"
 )
 
@@ -95,10 +103,13 @@ func crearTablaEventos(base *sql.DB) error {
 	return err
 }
 
-// normalizarOrigen fuerza uno de los 3 orígenes válidos; cualquier otra
+// normalizarOrigen fuerza uno de los orígenes válidos; cualquier otra
 // cosa (o vacío) es OrigenDesconocido. Misma regla que aplica api/origen.go
 // sobre la cabecera X-Bythos-Origen, repetida aquí porque la BD es la
-// última defensa (no confía en que el caller ya validó).
+// última defensa (no confía en que el caller ya validó) — salvo
+// OrigenCelular, que api/origen.go NUNCA acepta de una cabecera (ver
+// comentario en la constante): solo llega hasta acá desde código de
+// servidor que ya autenticó el token del dispositivo.
 func normalizarOrigen(o string) string {
 	switch strings.ToLower(strings.TrimSpace(o)) {
 	case OrigenApp:
@@ -107,6 +118,8 @@ func normalizarOrigen(o string) string {
 		return OrigenExtension
 	case OrigenAgente:
 		return OrigenAgente
+	case OrigenCelular:
+		return OrigenCelular
 	default:
 		return OrigenDesconocido
 	}
