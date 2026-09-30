@@ -165,7 +165,11 @@ guardia de Host+Origin, ver Seguridad más abajo).
 | GET | /api/carpetas/{id}/progreso | `{total, completados, porcentaje, promedio}` |
 | GET/POST | /api/recursos | listar (`?carpeta_id=`) / guardar `{carpeta_id, url}` |
 | PATCH | /api/recursos/{id} | avance `{progreso: 0-100}` o `{estado}` |
-| DELETE | /api/recursos/{id} | borrar |
+| DELETE | /api/recursos/{id} | borrar (y el archivo si quedó sin dueño, ver Archivos abajo) |
+| POST | /api/archivos | sube un archivo (multipart: `carpeta_id` + `archivo`) y crea el recurso |
+| GET | /api/archivos/{id}/contenido | sirve el archivo (Range/206 para seek de video) |
+| GET | /api/archivos/{id}/miniatura | JPEG chico (≤320px) para la tarjeta; 404 si no hay preview |
+| GET | /api/archivos/{id}/texto | vista de texto de docx/xlsx/pptx/txt/md; 422 si no se pudo generar |
 | GET | /api/stats | avance global (dashboard) |
 | GET | /api/carpetas/{id}/export?format= | `markdown` · `gemini` · `notebooklm` · `drive` |
 | POST | /api/carpetas/{id}/import-avance | trae el % de vuelta desde el texto repasado |
@@ -183,6 +187,75 @@ Cabeceras de auditoría (opcionales, las usan la UI/extensión/agente): cada
 mutación puede mandar `X-Bythos-Origen` (`app` · `extension` · `agente`) y
 `X-Bythos-Actor` (nombre libre, p.ej. el cliente MCP conectado) para que
 quede etiquetada en `/api/eventos`. Ver `desktop/api/origen.go`.
+
+## Archivos (Paso 0)
+
+Bythos guarda archivos enteros (PDF, video, imagen, documento) como recursos,
+no solo un link a ellos — base para una futura app móvil. Ver
+`desktop/archivos` (almacén en disco, sin SQL) y `desktop/db/archivos.go`
+(metadatos, tabla `archivos`).
+
+- **Dónde viven**: `%APPDATA%\Bythos\archivos\<sha256[:2]>\<sha256>.<ext>`
+  (misma base que `bythos.db`, ver `db.CarpetaDatos`). Direccionado por
+  contenido: si subes el mismo archivo dos veces (mismo hash), Bythos
+  reusa el blob — no lo duplica en disco.
+- **Nunca el nombre del cliente**: el nombre que mandó el navegador se
+  guarda solo como texto de display (`nombre_original`, sanitizado y
+  acotado a 150 caracteres), jamás se usa para construir una ruta. Cierra
+  cualquier path traversal de raíz.
+- **Streaming**: `POST /api/archivos` lee el multipart con
+  `r.MultipartReader()` y escribe a un temporal DENTRO del almacén
+  mientras calcula el sha256 al vuelo (nunca vuelca el archivo entero a
+  memoria); al terminar, un `os.Rename` atómico (mismo volumen) lo deja
+  en su ruta final.
+- **Tipo por contenido, lista blanca** (`desktop/archivos`, ver
+  `detectarTipo`): PDF (`%PDF-`), MP4/M4V/MOV (caja `ftyp`), WebM/MKV
+  (magic EBML), PNG/JPEG/GIF/WEBP, DOCX/XLSX/PPTX (ZIP con
+  `[Content_Types].xml` + `word/`/`xl/`/`ppt/`), TXT/MD (UTF-8 válido,
+  sin NUL, y que NO empiece pareciendo markup). Todo lo demás se
+  rechaza — **HTML y SVG incluidos a propósito**: si Bythos los sirviera
+  tal cual, correrían script en el origen de la app. El mime guardado
+  sale de la detección, nunca del `Content-Type` que mandó el cliente.
+- **Límite**: 2 GiB por archivo (`archivos.TamanoMaximo`), aplicado con
+  `http.MaxBytesReader` antes de tocar disco → 413 si se excede.
+- **`url` de un recurso de archivo**: vale `"archivo:<id>"` (una forma
+  interna, nunca una URL real) — UI/export/MCP la tratan como marcador;
+  el contenido real se pide por `GET /api/archivos/{id}/contenido`.
+- **Borrado con refcount**: dos recursos pueden compartir un mismo
+  archivo (dedupe). Borrar un recurso (o su carpeta, que hace cascade en
+  SQL) solo borra el blob + su fila de metadatos si, después, ningún
+  otro recurso lo sigue referenciando (`db.ContarRecursosPorArchivo`).
+
+### Previews: miniatura y vista de texto
+
+Extensión del Paso 0 para que la tarjeta y el visor muestren algo más que
+un ícono (`desktop/archivos/miniaturas.go` y `desktop/archivos/texto.go`).
+
+- **`GET /archivos/{id}/miniatura`**: JPEG (máx. 320px en el lado largo)
+  generado a mano con la std lib (`image`, `image/png`, `image/jpeg`,
+  `image/gif`; downscale por promedio de área, sin `x/image`), cacheado
+  en `<base>/miniaturas/<sha256>.jpg` (se genera una sola vez) y borrado
+  junto con el blob cuando el refcount llega a cero. Solo PNG/JPEG/GIF
+  (WEBP no tiene decoder en la std lib de Go); guardia contra
+  decompression bombs vía `image.DecodeConfig` (rechaza > 50 megapíxeles
+  declarados, sin decodificar los píxeles). Video usa el primer cuadro
+  del propio `<video preload="metadata" muted src="...#t=0.1">` en la
+  tarjeta, sin trabajo de servidor. Cualquier caso sin preview (tipo sin
+  soporte, imagen gigante, decodificación fallida) responde 404 y la UI
+  cae al ícono de tipo.
+- **`GET /archivos/{id}/texto`**: vista de texto de docx (bloques
+  título/párrafo/lista, vía `word/document.xml`), pptx (diapositivas en
+  orden numérico, `ppt/slides/slideN.xml`, párrafos `a:t`), xlsx (primera
+  hoja como filas de texto, resolviendo `sharedStrings.xml`, tope 200
+  filas × 30 columnas) y txt/md (texto plano, tope 300.000 caracteres).
+  Lee cada parte del ZIP con `archive/zip` + `encoding/xml` streaming
+  (nunca carga el árbol completo), acotado a 20 MiB sin comprimir por
+  parte (`io.LimitReader`) como defensa contra zip bombs; al llegar a
+  cualquier techo (bytes, bloques, filas) corta y responde
+  `truncado: true` en vez de seguir. `encoding/xml` nunca resuelve
+  entidades externas (XXE cerrado por diseño de la std lib). Mime no
+  soportado o nada extraíble → 422 en español; el visor cae al botón
+  Descargar de siempre.
 
 ## Seguridad
 
@@ -214,6 +287,13 @@ quede etiquetada en `/api/eventos`. Ver `desktop/api/origen.go`.
   body que la API decodifica pasa por `http.MaxBytesReader`, para que un
   cliente hostil o con un bug no pueda tirar el proceso mandando gigabytes
   antes de que el JSON siquiera se valide.
+- **Archivos: whitelist por contenido + headers al servir** (ver sección
+  Archivos arriba): HTML/SVG nunca se guardan (correrían script en el
+  origen de la app), el mime guardado sale de la detección por bytes
+  (nunca del `Content-Type` del cliente), y `GET /api/archivos/{id}/contenido`
+  responde con `X-Content-Type-Options: nosniff` y
+  `Content-Security-Policy: sandbox; default-src 'none'` — el header más
+  restrictivo que no rompe el visor nativo de PDF de Edge.
 
 ## Mapa (dónde vive cada cosa y por qué)
 
@@ -225,6 +305,7 @@ bythos/
     main.go                       → director: abre .db + incrusta UI + prende :8080
     db/                           → memoria (SQL solo aquí) + tests
     api/                          → cerebro (HTTP, sin SQL) + tests
+    archivos/                     → almacén de archivos en disco (content-addressed, sin SQL) + tests
     agentes/                      → servidor MCP (`bythos.exe mcp`), cliente HTTP delgado, sin SQL
     workspace/                    → prepara %APPDATA%\Bythos\agente (instrucciones + config MCP por cliente)
     terminal/                     → abre wt.exe/cmd.exe en el workspace del agente (sin SQL, sin HTTP)
@@ -244,5 +325,6 @@ con `localhost:8080`, igual que la ventana y la extensión.
 - [x] Guardar con metadata + carpetas + progreso + export 4 formatos + UI + extensión + `.exe` + tests + iconos
 - [x] Instalador con icono en el `.exe` (logo Bythos embebido, ver `assets/README.md`)
 - [x] Historial de cambios (app/extensión/agente) + conexión de agentes de IA por MCP
+- [x] Paso 0: guardar archivos (PDF/video/imagen/documento) como recursos, no solo links — base para la futura app móvil
 - [ ] Chequeo de actualizaciones desde la app
 - [ ] Tests de UI (vitest)

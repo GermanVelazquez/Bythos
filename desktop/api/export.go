@@ -78,6 +78,19 @@ func tituloDe(r db.Recurso) string {
 	return r.URL
 }
 
+// referenciaDe es lo que gemini/notebooklm muestran como "link" de cada
+// recurso. Para un link normal es la URL de siempre; para un recurso de
+// ARCHIVO (r.ArchivoID != 0), r.URL vale la forma interna "archivo:<id>"
+// (ver GuardarArchivo en db/resources.go) — mostrarla tal cual sería un
+// link roto si el usuario la pega en Gemini/NotebookLM, así que en su
+// lugar se explica que es un archivo local guardado en Bythos.
+func referenciaDe(r db.Recurso) string {
+	if r.ArchivoID != 0 {
+		return "(archivo local guardado en Bythos, no es un link — ábrelo desde la app)"
+	}
+	return r.URL
+}
+
 func markdownCarpeta(nombre string, items []db.Recurso) string {
 	var b strings.Builder
 	b.WriteString("# " + nombre + " (exportado desde Bythos)\n\n")
@@ -135,7 +148,7 @@ func geminiRepaso(nombre string, items []db.Recurso) string {
 	b.WriteString("# Repaso con Gemini — " + nombre + "\n\n")
 	b.WriteString("Pega este texto en Gemini para resumen y preguntas.\n\n## Mis recursos\n")
 	for i, it := range items {
-		fmt.Fprintf(&b, "%d. %s — %s\n", i+1, tituloDe(it), it.URL)
+		fmt.Fprintf(&b, "%d. %s — %s\n", i+1, tituloDe(it), referenciaDe(it))
 	}
 	b.WriteString("\n## Pídele a Gemini:\n" +
 		"- Resúmeme por temas estos recursos.\n" +
@@ -160,7 +173,7 @@ func guiaNotebookLM(nombre string, items []db.Recurso) string {
 		"2. Agregar fuente → Sitio web o YouTube.\n" +
 		"3. Pega cada enlace (Bythos ya te ahorró copiarlos a mano):\n\n")
 	for i, it := range items {
-		fmt.Fprintf(&b, "%d. %s\n", i+1, it.URL)
+		fmt.Fprintf(&b, "%d. %s — %s\n", i+1, tituloDe(it), referenciaDe(it))
 	}
 	b.WriteString("\n4. Pide resumen y guía de estudio.\n")
 	return b.String()

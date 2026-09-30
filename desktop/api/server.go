@@ -61,6 +61,13 @@ func (s *Servidor) Rutas() http.Handler {
 	mux.HandleFunc("PATCH /api/recursos/{id}", s.cambiarEstado)
 	mux.HandleFunc("DELETE /api/recursos/{id}", s.borrarRecurso)
 
+	// Archivos: Paso 0 del roadmap — Bythos guarda el archivo entero
+	// (PDF/video/imagen/documento), no solo un link. Ver archivos.go.
+	mux.HandleFunc("POST /api/archivos", s.subirArchivo)
+	mux.HandleFunc("GET /api/archivos/{id}/contenido", s.contenidoArchivo)
+	mux.HandleFunc("GET /api/archivos/{id}/miniatura", s.miniaturaArchivo)
+	mux.HandleFunc("GET /api/archivos/{id}/texto", s.textoArchivo)
+
 	// Agenda: calendario de la vista Todos (rango) + historia (actividad).
 	mux.HandleFunc("GET /api/agenda", s.listarAgenda)
 	mux.HandleFunc("POST /api/agenda", s.crearAgenda)
@@ -145,7 +152,8 @@ func (s *Servidor) crearCarpeta(w http.ResponseWriter, r *http.Request) {
 
 func (s *Servidor) borrarCarpeta(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	nombre := nombreCarpetaPorID(s, id) // antes de borrar: después ya no existe
+	nombre := nombreCarpetaPorID(s, id)                        // antes de borrar: después ya no existe
+	archivosDeCarpeta := archivosReferenciadosEnCarpeta(s, id) // idem: el cascade se lleva los recursos
 	borrada, err := db.BorrarCarpeta(s.Base, id)
 	if err != nil {
 		responderError(w, 500, "No se pudo borrar la carpeta")
@@ -156,6 +164,12 @@ func (s *Servidor) borrarCarpeta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.registrarEvento(r, db.AccionCarpetaBorrada, id, nombre)
+	// ON DELETE CASCADE borró las filas de resources, pero nunca los
+	// archivos que referenciaban (eso es lógica de aplicación, no una
+	// constraint de SQL): cada uno se limpia solo si quedó sin dueño.
+	for _, archivoID := range archivosDeCarpeta {
+		s.limpiarArchivoSiHuerfano(archivoID)
+	}
 	responder(w, map[string]bool{"ok": true})
 }
 
@@ -172,7 +186,7 @@ func (s *Servidor) listarRecursos(w http.ResponseWriter, r *http.Request) {
 		responderError(w, 500, "No se pudieron leer los recursos")
 		return
 	}
-	responder(w, recursos)
+	responder(w, recursosConArchivo(s.Base, recursos))
 }
 
 func (s *Servidor) guardarRecurso(w http.ResponseWriter, r *http.Request) {
@@ -219,7 +233,7 @@ func (s *Servidor) guardarRecurso(w http.ResponseWriter, r *http.Request) {
 	}
 	s.registrarEvento(r, db.AccionRecursoGuardado, rec.ID, tituloOUrl(rec))
 	w.WriteHeader(http.StatusCreated)
-	responder(w, rec)
+	responder(w, recursoConArchivo(s.Base, rec))
 }
 
 func (s *Servidor) cambiarEstado(w http.ResponseWriter, r *http.Request) {
@@ -275,6 +289,12 @@ func (s *Servidor) borrarRecurso(w http.ResponseWriter, r *http.Request) {
 	}
 	if previoOk {
 		s.registrarEvento(r, db.AccionRecursoBorrado, id, tituloOUrl(previo))
+		// Solo borra el blob de disco si NINGÚN otro recurso lo sigue
+		// referenciando (dos recursos pueden compartir un archivo por el
+		// dedupe de CrearArchivo). Ver limpiarArchivoSiHuerfano.
+		if previo.ArchivoID != 0 {
+			s.limpiarArchivoSiHuerfano(previo.ArchivoID)
+		}
 	}
 	responder(w, map[string]bool{"ok": true})
 }

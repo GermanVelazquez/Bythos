@@ -178,4 +178,51 @@ export const api = {
   // acá (ver api/agente.go), solo el Origin exacto de esta ventana.
   abrirTerminalAgente: () =>
     fetch(`${BASE}/api/agente/terminal`, { method: 'POST', headers: CABECERAS_ORIGEN }).then(leer),
+
+  // ARCHIVOS (Paso 0): sube un PDF/video/imagen/documento como recurso.
+  // XHR y no fetch() a propósito: fetch no expone progreso de SUBIDA
+  // (solo de descarga), y con archivos grandes (video) el usuario
+  // necesita ver que algo está pasando. onProgress(pct) es opcional.
+  subirArchivo: (archivo, carpetaId, onProgress) =>
+    new Promise((resolve, reject) => {
+      const form = new FormData()
+      form.append('carpeta_id', String(carpetaId))
+      form.append('archivo', archivo)
+
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', `${BASE}/api/archivos`)
+      xhr.setRequestHeader('X-Bythos-Origen', 'app')
+      if (xhr.upload && onProgress) {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
+        }
+      }
+      xhr.onload = () => {
+        let dato = null
+        try { dato = JSON.parse(xhr.responseText) } catch { /* respuesta no-JSON, dato queda null */ }
+        if (xhr.status >= 200 && xhr.status < 300) resolve(dato)
+        else reject(new Error(dato?.error || `Error ${xhr.status}`))
+      }
+      xhr.onerror = () => reject(new Error('No se pudo conectar con Bythos'))
+      xhr.send(form)
+    }),
+
+  // URL para <iframe>/<video>/<img> o para descargar. archivoId es el id
+  // del ARCHIVO (Recurso.Archivo.ID en la respuesta de la API), no el id
+  // del recurso.
+  contenidoArchivoUrl: (archivoId) => `${BASE}/api/archivos/${archivoId}/contenido`,
+
+  // MINIATURA: preview chico (JPEG, máx. 320px) para las tarjetas de
+  // recurso tipo imagen. 404 si no hay miniatura disponible (webp, tipo
+  // sin soporte, imagen demasiado grande) — el <img> de la tarjeta cae
+  // sola al ícono de tipo con onError (ver ArchivoPreview en
+  // Archivos.jsx), así que esta función solo arma la URL, nunca hace el
+  // fetch ella misma.
+  miniaturaArchivoUrl: (archivoId) => `${BASE}/api/archivos/${archivoId}/miniatura`,
+
+  // TEXTO: vista de texto de un documento de Office (docx/xlsx/pptx) o
+  // texto plano, para el visor. 422 si no se pudo generar — el visor
+  // cae al botón Descargar de siempre (ver FileViewerModal).
+  textoArchivo: (archivoId) =>
+    fetch(`${BASE}/api/archivos/${archivoId}/texto`, { headers: CABECERAS_ORIGEN }).then(leer),
 }

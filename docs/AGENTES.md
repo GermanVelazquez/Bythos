@@ -119,7 +119,7 @@ Nombres y contratos verificados contra `desktop/agentes/lectura.go` y
 | Herramienta | Hace |
 |---|---|
 | `listar_carpetas` | carpetas + progreso (total, completados, en curso, pendientes, %) |
-| `listar_recursos` | recursos guardados, opcionalmente filtrados por `carpeta_id` |
+| `listar_recursos` | recursos guardados (links y archivos), opcionalmente filtrados por `carpeta_id` |
 | `leer_recurso` | detalle de un recurso por `id` |
 | `ver_progreso_carpeta` | termómetro de una sola carpeta |
 | `ver_stats` | termómetro general (todas las carpetas) |
@@ -141,6 +141,18 @@ Nombres y contratos verificados contra `desktop/agentes/lectura.go` y
 **No existen herramientas de borrado, a propósito.** El agente puede
 agregar y actualizar, nunca destruir: si le pides borrar algo, te va a
 decir que lo hagas desde la app o la extensión.
+
+### Recursos de ARCHIVO (PDF, video, imagen, documento)
+
+Desde "Paso 0" del roadmap, un recurso puede ser un archivo subido
+(no solo un link). `listar_recursos` y `leer_recurso` traen, para ese
+caso, un campo `archivo` con `nombre_original`, `mime`, `tamano` y
+`ruta_local`: la ruta **absoluta** del archivo en esta PC. Como el
+servidor MCP corre en la misma máquina, tu agente puede abrir esa ruta
+directo con sus propias herramientas de lectura de archivos (leer un
+PDF, por ejemplo) sin tener que pedirle el contenido a Bythos por HTTP.
+No hay una herramienta para SUBIR archivos por MCP todavía — eso se hace
+desde la app (botón "Añadir archivo" o arrastrando el archivo).
 
 ## Historial y auditoría
 
