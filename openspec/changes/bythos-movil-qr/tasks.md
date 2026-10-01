@@ -64,12 +64,12 @@ Chain strategy: feature-branch-chain
 
 ## Phase 3 — Unit 2b: network-category gate (NLM COM)
 
-- [ ] 2b.1 `desktop/lan/red.go`: `Categoria` type (`privada|publica|dominio|desconocida`), `var categoriaRed func(ip) (Categoria, error)` seam.
-- [ ] 2b.2 `desktop/lan/red_windows.go` (build tag `windows`): COM `INetworkListManager` via `golang.org/x/sys/windows` + `ole32.CoCreateInstance`; `LockOSThread`+`CoInitializeEx(MTA)` per call; match bound IP via `GetAdaptersAddresses`.
-- [ ] 2b.3 `desktop/lan/red_other.go` (build tag `!windows`): stub returns `desconocida`.
-- [ ] 2b.4 Wire gate into `receptor.Start`: `publica`/`dominio` → refuse, `red_no_privada`; `desconocida` → start + warning banner.
-- [ ] 2b.5 `go.mod`: promote `golang.org/x/sys` to direct dependency.
-- [ ] 2b.6 Tests: fake `categoriaRed` table (publica/dominio refuse; desconocida starts+warns); windows-tagged smoke test, skip if COM unavailable.
+- [x] 2b.1 `desktop/lan/red.go`: `Categoria` type (`privada|publica|dominio|desconocida`), `var categoriaRed func(ip) (Categoria, error)` seam.
+- [x] 2b.2 `desktop/lan/red_windows.go` (build tag `windows`): COM `INetworkListManager` via `golang.org/x/sys/windows` + `ole32.CoCreateInstance`; `LockOSThread`+`CoInitializeEx(MTA)` per call; match bound IP via `GetAdaptersAddresses`.
+- [x] 2b.3 `desktop/lan/red_other.go` (build tag `!windows`): stub returns `desconocida`.
+- [x] 2b.4 Wire gate into `receptor.Start`: `publica`/`dominio` → refuse, `red_no_privada`; `desconocida` → start + warning banner.
+- [x] 2b.5 `go.mod`: promote `golang.org/x/sys` to direct dependency.
+- [x] 2b.6 Tests: fake `categoriaRed` table (publica/dominio refuse; desconocida starts+warns); windows-tagged smoke test, skip if COM unavailable.
 - Acceptance: spec "Private profile", "Public profile" (Windows Network Profile Requirement).
 - Verification: `cd desktop && go test ./lan/... -run TestRed`
 - Manual: real-hardware category detection (task 13.5).
