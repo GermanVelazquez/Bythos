@@ -6,7 +6,7 @@ LAN-only HTTPS listener in `bythos.exe` for receiving links/files from paired mo
 ## ADDED Requirements
 
 ### Requirement: Listener Lifecycle
-The system MUST start the LAN listener only while reception is enabled on the "Recibir del celular" screen, and MUST stop it when the screen is closed, when the user explicitly disables reception, after 30 minutes of inactivity (no requests received while enabled), or when the app exits.
+The system MUST start the LAN listener only while reception is enabled on the "Recibir del celular" screen, and MUST stop it when the screen is closed, when the user explicitly disables reception, when no successful request happens within 10 minutes of start (no pairing/use), when at least one successful request has happened and 2 minutes pass without another successful request, or when the app exits. Only requests answered with status < 400 count as activity; error responses (403 guard rejection, 401, bad code, others) MUST NOT extend the window. To receive again the user reopens "Recibir del celular" (new QR); already-paired phones reconnect with their token while the listener is open.
 
 #### Scenario: Reception enabled
 - GIVEN the screen is opened and reception enabled
@@ -18,10 +18,20 @@ The system MUST start the LAN listener only while reception is enabled on the "R
 - WHEN a client attempts to connect
 - THEN the connection is refused; no route is reachable
 
-#### Scenario: Idle auto-off
-- GIVEN reception has been enabled with no requests received for 30 minutes
-- WHEN the idle timeout elapses
+#### Scenario: No use after start
+- GIVEN reception has been enabled and no successful request has happened for 10 minutes
+- WHEN the 10-minute window elapses
 - THEN the listener stops automatically and the QR/LAN address are hidden
+
+#### Scenario: Idle after activity
+- GIVEN at least one successful request has happened
+- WHEN 2 minutes pass without another successful request
+- THEN the listener stops automatically and the QR/LAN address are hidden
+
+#### Scenario: Error responses do not extend the window
+- GIVEN reception is enabled
+- WHEN requests answered with an error status (403, 401, bad code, etc.) arrive
+- THEN the window is not extended and the listener still stops on schedule
 
 ### Requirement: Private Network Enforcement
 The system MUST reject any LAN request whose source IPv4 address is not inside the subnet of the network interface the listener is bound to. This is stricter than accepting any RFC1918 private address: a private-range address outside the bound interface's subnet MUST be rejected.

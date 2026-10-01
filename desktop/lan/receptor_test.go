@@ -195,7 +195,20 @@ func TestReceptorStopEsperaRequestEnVuelo(t *testing.T) {
 	}
 }
 
-func TestReceptorIdleApagaSolo(t *testing.T) {
+// esperarApagado sondea hasta que el receptor se apaga (poll corto, el
+// reloj es falso: nunca se duerme el lapso real).
+func esperarApagado(rc *Receptor) bool {
+	for i := 0; i < 100; i++ {
+		if !rc.Activo() {
+			return true
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	return false
+}
+
+func receptorConRelojFalso(t *testing.T) (*Receptor, *relojFalso) {
+	t.Helper()
 	conCarpetaLANTemporal(t)
 	reloj := &relojFalso{ahora: time.Now()}
 	rc := NuevoReceptor()
@@ -205,17 +218,60 @@ func TestReceptorIdleApagaSolo(t *testing.T) {
 	if err := rc.Start(ifazLoopback("127.0.0.1/32")); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	defer rc.Stop(context.Background())
+	t.Cleanup(func() { rc.Stop(context.Background()) })
+	return rc, reloj
+}
 
-	reloj.avanzar(TiempoInactividad + time.Minute)
-
-	for i := 0; i < 100; i++ {
-		if !rc.Activo() {
-			return // apagado solo: escenario "Idle auto-off"
-		}
-		time.Sleep(10 * time.Millisecond)
+func TestReceptorSinUsoApagaA10Min(t *testing.T) {
+	rc, reloj := receptorConRelojFalso(t)
+	reloj.avanzar(VentanaSinUso - time.Minute)
+	time.Sleep(60 * time.Millisecond)
+	if !rc.Activo() {
+		t.Fatalf("no debía apagarse antes de VentanaSinUso")
 	}
-	t.Fatalf("el listener debía apagarse solo tras superar TiempoInactividad")
+	reloj.avanzar(2 * time.Minute)
+	if !esperarApagado(rc) {
+		t.Fatalf("debía apagarse tras VentanaSinUso sin requests exitosas")
+	}
+}
+
+func TestReceptorTrasUsoApagaA2Min(t *testing.T) {
+	rc, reloj := receptorConRelojFalso(t)
+	huella, _ := rc.Huella()
+	resp, err := clientePineado(huella).Get("https://" + rc.Direccion() + "/v1/salud")
+	if err != nil {
+		t.Fatalf("GET salud: %v", err)
+	}
+	resp.Body.Close()
+
+	reloj.avanzar(VentanaTrasUso - 30*time.Second)
+	time.Sleep(60 * time.Millisecond)
+	if !rc.Activo() {
+		t.Fatalf("no debía apagarse antes de VentanaTrasUso")
+	}
+	reloj.avanzar(time.Minute)
+	if !esperarApagado(rc) {
+		t.Fatalf("debía apagarse tras VentanaTrasUso sin requests exitosas")
+	}
+}
+
+func TestReceptorErroresNoExtiendenVentana(t *testing.T) {
+	rc, reloj := receptorConRelojFalso(t)
+	huella, _ := rc.Huella()
+	reloj.avanzar(VentanaSinUso - time.Minute)
+	// 404 (ruta inexistente) es error: no cuenta como actividad.
+	resp, err := clientePineado(huella).Get("https://" + rc.Direccion() + "/v1/no-existe")
+	if err != nil {
+		t.Fatalf("GET: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode < 400 {
+		t.Fatalf("se esperaba error, status=%d", resp.StatusCode)
+	}
+	reloj.avanzar(2 * time.Minute)
+	if !esperarApagado(rc) {
+		t.Fatalf("una respuesta de error no debía extender la ventana")
+	}
 }
 
 // La estabilidad de la huella entre arranques (misma clave persistida)

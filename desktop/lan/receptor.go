@@ -28,11 +28,48 @@ const PuertoPorDefecto = 48080
 // ErrPuertoOcupado: Start cuando el puerto ya está en uso.
 var ErrPuertoOcupado = errors.New("puerto_ocupado")
 
-// TiempoInactividad apaga el listener si nadie lo tocó en este lapso.
-const TiempoInactividad = 30 * time.Minute
+// Ventana de recepción corta (enmienda 3b): el listener solo está abierto
+// mientras se usa de verdad.
+// VentanaSinUso: si nadie completó una request exitosa desde Start, se
+// apaga (iguala el TTL del código de emparejamiento).
+// VentanaTrasUso: con al menos una request exitosa, se apaga tras este
+// lapso sin otra exitosa.
+const (
+	VentanaSinUso  = 10 * time.Minute
+	VentanaTrasUso = 2 * time.Minute
+)
+
+// registraEstado captura el status de la respuesta para decidir si la
+// request cuenta como actividad (solo < 400).
+type registraEstado struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *registraEstado) WriteHeader(c int) {
+	if w.status == 0 {
+		w.status = c
+	}
+	w.ResponseWriter.WriteHeader(c)
+}
+
+func (w *registraEstado) Write(b []byte) (int, error) {
+	if w.status == 0 {
+		w.status = http.StatusOK
+	}
+	return w.ResponseWriter.Write(b)
+}
+
+func (w *registraEstado) Flush() {
+	if f, ok := w.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+func (w *registraEstado) Unwrap() http.ResponseWriter { return w.ResponseWriter }
 
 // Reloj abstrae time.Now para testear el apagado por inactividad sin
-// esperar 30 minutos de verdad.
+// esperar minutos de verdad.
 type Reloj interface{ Ahora() time.Time }
 
 type relojReal struct{}
@@ -50,8 +87,10 @@ type Receptor struct {
 	servidor   *http.Server
 	pararIdle  chan struct{}
 	interfaz   Interfaz
-	actividad  time.Time
-	direccion  string // ln.Addr().String(): el puerto real, útil si Puerto=0
+	inicio     time.Time // momento del Start
+	actividad  time.Time // última request exitosa
+	huboUso    bool      // ya hubo al menos una request exitosa
+	direccion  string    // ln.Addr().String(): el puerto real, útil si Puerto=0
 	categoria  Categoria
 	certActual tls.Certificate
 }
@@ -96,16 +135,21 @@ func (rc *Receptor) Start(iface Interfaz) error {
 	rc.interfaz = iface
 	rc.direccion = ln.Addr().String()
 	rc.certActual = cert
-	rc.actividad = rc.Reloj.Ahora()
-	// Cualquier request (aceptada o rechazada por la guardia) cuenta como
-	// actividad: un intento de conexión ya demuestra uso ("Idle auto-off"
-	// es sin requests, no sin requests válidas).
+	rc.inicio = rc.Reloj.Ahora()
+	rc.huboUso = false
+	// Solo cuenta como actividad una respuesta con status < 400: los 403
+	// de la guardia, 401 y demás errores NO extienden la ventana, así un
+	// extraño en la LAN no puede mantener el puerto abierto.
 	marcaActividad := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			rc.mu.Lock()
-			rc.actividad = rc.Reloj.Ahora()
-			rc.mu.Unlock()
-			next.ServeHTTP(w, r)
+			rw := &registraEstado{ResponseWriter: w}
+			next.ServeHTTP(rw, r)
+			if rw.status < 400 {
+				rc.mu.Lock()
+				rc.actividad = rc.Reloj.Ahora()
+				rc.huboUso = true
+				rc.mu.Unlock()
+			}
 		})
 	}
 	rc.servidor = &http.Server{
@@ -123,8 +167,9 @@ func (rc *Receptor) Start(iface Interfaz) error {
 	return nil
 }
 
-// vigilarInactividad revisa cada IntervaloRevision (1 min por defecto) si
-// pasaron TiempoInactividad desde la última actividad, y se para sola.
+// vigilarInactividad revisa cada IntervaloRevision (1 min por defecto) las
+// dos ventanas (VentanaSinUso desde Start, VentanaTrasUso desde la última
+// request exitosa) y se para sola.
 // parar corta el loop desde un Stop externo sin esperar la revisión.
 func (rc *Receptor) vigilarInactividad(parar chan struct{}) {
 	intervalo := rc.IntervaloRevision
@@ -139,7 +184,15 @@ func (rc *Receptor) vigilarInactividad(parar chan struct{}) {
 			return
 		case <-ticker.C:
 			rc.mu.Lock()
-			inactivo := rc.servidor != nil && rc.Reloj.Ahora().Sub(rc.actividad) >= TiempoInactividad
+			inactivo := false
+			if rc.servidor != nil {
+				ahora := rc.Reloj.Ahora()
+				if rc.huboUso {
+					inactivo = ahora.Sub(rc.actividad) >= VentanaTrasUso
+				} else {
+					inactivo = ahora.Sub(rc.inicio) >= VentanaSinUso
+				}
+			}
 			rc.mu.Unlock()
 			if inactivo {
 				_ = rc.Stop(context.Background())
