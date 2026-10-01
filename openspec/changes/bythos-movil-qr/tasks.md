@@ -97,8 +97,8 @@ Chain strategy: feature-branch-chain
 
 ## Phase 5 — Unit 4a: upload store
 
-- [ ] 4a.1 `desktop/lan/subidas_store.go`: sidecar JSON + `.parte` in `%APPDATA%\Bythos\lan\subidas`; running SHA-256 via `MarshalBinary`; crash recovery (truncate `.parte` to sidecar offset on load); cleanup on start/hourly/revoke/completion.
-- [ ] 4a.2 Tests: resume after restart, crash truncation, idle>24h cleanup.
+- [x] 4a.1 `desktop/lan/subidas_store.go`: sidecar JSON + `.parte` in `%APPDATA%\Bythos\lan\subidas`; running SHA-256 via `MarshalBinary`; crash recovery (truncate `.parte` to sidecar offset on load); cleanup on start/hourly/revoke/completion. — Done: `AlmacenSubidas` (Crear/Cargar/Anexar/Actualizar/AbrirParte/Bloquear/Listar/Eliminar/EliminarDispositivo/Limpiar/Vigilar). Not wired to `Receptor`; 4b uses it, 5a calls `EliminarDispositivo` on revoke and runs `Vigilar`.
+- [x] 4a.2 Tests: resume after restart, crash truncation, idle>24h cleanup.
 - Acceptance: spec "Resume after interruption".
 - Verification: `cd desktop && go test ./lan/... -run TestSubidasStore`
 - Est. changed lines: ~270
