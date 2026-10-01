@@ -5,7 +5,6 @@ package lan
 // con ser RFC1918. Rechazo = 403 sin tocar el handler de negocio.
 
 import (
-	"encoding/json"
 	"net"
 	"net/http"
 )
@@ -41,13 +40,4 @@ func conGuardia(rango *net.IPNet, next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
-}
-
-// responderErrorLAN escribe {"error","mensaje"} (wire protocol LAN).
-// Implementación mínima acá; la unidad 3 (respuestas.go) trae la tabla
-// completa de códigos y puede reemplazar/reusar esta función.
-func responderErrorLAN(w http.ResponseWriter, codigo int, codigoErr, mensaje string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(codigo)
-	json.NewEncoder(w).Encode(map[string]string{"error": codigoErr, "mensaje": mensaje})
 }
