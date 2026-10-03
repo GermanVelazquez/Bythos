@@ -72,6 +72,14 @@ export default function ReceptorMovil({
 }) {
   const [ip, setIp] = useState('')
   const [sinRequests, setSinRequests] = useState(false)
+  const [copiado, setCopiado] = useState(false)
+
+  // El texto del QR lleva IP, código de un solo uso y huella: se copia al
+  // portapapeles sin mostrarlo en pantalla. Al renovar el código se reinicia.
+  useEffect(() => { setCopiado(false) }, [estado?.qr_texto])
+  const copiarCodigo = () => {
+    navigator.clipboard.writeText(estado.qr_texto).then(() => setCopiado(true), () => setCopiado(false))
+  }
 
   const activo = !!estado?.activo
   const sinActividad = activo && estado.dispositivos.length === 0 && estado.solicitudes.length === 0
@@ -106,7 +114,7 @@ export default function ReceptorMovil({
           <div className="inline-form">
             {interfaces.length > 1 && (
               <select value={ipElegida} onChange={(e) => setIp(e.target.value)} className="receptor-select">
-                {interfaces.map((i) => <option key={i.ip} value={i.ip}>{i.nombre} · {i.ip}</option>)}
+                {interfaces.map((i) => <option key={i.ip} value={i.ip}>{i.nombre}</option>)}
               </select>
             )}
             <button className="btn-primary" disabled={ocupado} onClick={() => onActivar(interfaces.length > 1 ? ipElegida : '')}>
@@ -122,10 +130,11 @@ export default function ReceptorMovil({
               {estado.qr_png && <img src={estado.qr_png} alt="Código QR para emparejar el celular" width="220" height="220" />}
               <div className="receptor-qr-info">
                 <p className="panel-sub">Escanea el QR con la app de Bythos del celular. Sirve para un solo emparejamiento y vence en 10 min.</p>
-                <p className="panel-sub">Dirección: {estado.ip}:{estado.puerto}</p>
-                <p className="panel-sub">Si no puedes escanear, copia este texto en la app:</p>
-                <textarea className="import-area" readOnly rows={3} value={estado.qr_texto} onFocus={(e) => e.target.select()} />
+                <p className="panel-sub">Si no puedes escanear, copia el código y pégalo en la app.</p>
                 <div className="export-grid">
+                  <button className="btn-outline" disabled={!estado.qr_texto} onClick={copiarCodigo}>
+                    {copiado ? 'Código copiado' : 'Copiar código manual'}
+                  </button>
                   <button className="btn-outline" disabled={ocupado} onClick={onRenovar}>Renovar código</button>
                   <button className="btn-outline" disabled={ocupado} onClick={onDesactivar}>Desactivar</button>
                 </div>
