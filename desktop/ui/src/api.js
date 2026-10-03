@@ -28,7 +28,42 @@ async function leer(res) {
   return dato
 }
 
+// leerReceptor() es como leer() pero conserva el código de error de cable
+// ({error: "red_no_privada", mensaje}): la UI del receptor decide la guía
+// por código, no por texto. El Error trae .codigo y message = mensaje humano.
+async function leerReceptor(res) {
+  const dato = await res.json().catch(() => null)
+  if (!res.ok) {
+    const e = new Error(dato?.mensaje || `Error ${res.status}`)
+    e.codigo = dato?.error || ''
+    throw e
+  }
+  return dato
+}
+
+// Todo el control del receptor LAN es POST (incluso el estado): el backend
+// exige el Origin exacto de esta ventana, ver desktop/api/receptor.go.
+const postReceptor = (ruta, opciones = {}) =>
+  fetch(`${BASE}/api/receptor/${ruta}`, { method: 'POST', headers: CABECERAS_ORIGEN, ...opciones }).then(leerReceptor)
+
 export const api = {
+  // RECEPTOR LAN ("Recibir del celular"). desactivarReceptor usa keepalive
+  // para que el apagado sobreviva al cierre de la pantalla/ventana (pagehide);
+  // por eso no espera ni lee la respuesta.
+  receptorEstado: () => postReceptor('estado'),
+  receptorActivar: (ip) =>
+    postReceptor('activar', ip ? { headers: CABECERAS_JSON, body: JSON.stringify({ ip }) } : {}),
+  receptorDesactivar: () => {
+    fetch(`${BASE}/api/receptor/desactivar`, { method: 'POST', headers: CABECERAS_ORIGEN, keepalive: true }).catch(() => {})
+  },
+  // Apagado explícito (botón Desactivar): esta sí espera la respuesta.
+  receptorApagar: () => postReceptor('desactivar'),
+  receptorRenovarCodigo: () => postReceptor('codigo/renovar'),
+  receptorAprobar: (id) => postReceptor(`solicitudes/${encodeURIComponent(id)}/aprobar`),
+  receptorRechazar: (id) => postReceptor(`solicitudes/${encodeURIComponent(id)}/rechazar`),
+  receptorRevocar: (id) =>
+    fetch(`${BASE}/api/receptor/dispositivos/${id}`, { method: 'DELETE', headers: CABECERAS_ORIGEN }).then(leerReceptor),
+
   salud: () =>
     fetch(`${BASE}/api/salud`, { headers: CABECERAS_ORIGEN }).then(leer),
 

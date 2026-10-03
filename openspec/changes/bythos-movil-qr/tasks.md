@@ -126,10 +126,10 @@ Chain strategy: feature-branch-chain
 
 ## Phase 8 — Unit 5b: UI + Private guide
 
-- [ ] 5b.1 `desktop/ui/src/ReceptorMovil.jsx` (copy: reception closes after 10 min without pairing/use or 2 min after last use; reopen for a new QR): states Desactivado→Activando→Activo (QR+`qr_texto` copy+interface picker+renew)→Solicitud(SAS)→Dispositivos/Transferencias; poll `estado` every 1.5s; unmount/`pagehide` → `POST desactivar` (`fetch keepalive:true`).
-- [ ] 5b.2 `desktop/ui/src/App.jsx`: add `recibir` sidebar entry, own API calls, presentational component.
-- [ ] 5b.3 `desktop/ui/src/api.js`: add `receptor*` client functions.
-- [ ] 5b.4 `desktop/ui/src/styles.css`: guide panel for `puerto_ocupado`/`red_no_privada`/`desconocida` ("Marcar la red como Privada" + Reintentar); 60s no-request checklist hint.
+- [x] 5b.1 `desktop/ui/src/ReceptorMovil.jsx` (copy: reception closes after 10 min without pairing/use or 2 min after last use; reopen for a new QR): Done: interface picker shown only while inactive (changing network = deactivate then activate). States Desactivado→Activando→Activo (QR+`qr_texto` copy+interface picker+renew)→Solicitud(SAS)→Dispositivos/Transferencias; poll `estado` every 1.5s; unmount/`pagehide` → `POST desactivar` (`fetch keepalive:true`).
+- [x] 5b.2 `desktop/ui/src/App.jsx`: add `recibir` sidebar entry, own API calls, presentational component. Done: container owns polling (1.5s) and cleanup/pagehide keepalive desactivar.
+- [x] 5b.3 `desktop/ui/src/api.js`: add `receptor*` client functions. Done: leerReceptor keeps wire `codigo`; receptorDesactivar is keepalive fire-and-forget, receptorApagar awaited for the button.
+- [x] 5b.4 `desktop/ui/src/styles.css`: guide panel for `puerto_ocupado`/`red_no_privada`/`desconocida` ("Marcar la red como Privada" + Reintentar); 60s no-request checklist hint. Done: styles + guide/hint logic in ReceptorMovil.jsx.
 - Acceptance: spec "Reception enabled", "Public profile" guide, Windows Network Profile Requirement scenarios.
 - Verification: `cd desktop/ui && pnpm build` (no JS test harness in repo — manual visual check of screen states).
 - Est. changed lines: ~320

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from './api.js'
 import { AddFileModal, FileViewerModal, ArchivoPreview } from './Archivos.jsx'
+import ReceptorMovil from './ReceptorMovil.jsx'
 
 // App.jsx — Bythos desktop UI: sidebar + topbar + cards + modal (dark theme).
 // Single-file layout on purpose: the whole product flow fits here.
@@ -167,6 +168,7 @@ function Sidebar({ currentView, onChangeView, counts, onAbrirAgente, agenteEstad
       items: [
         { id: 'export', label: 'Exportar', icon: 'download' },
         { id: 'historial', label: 'Historial', icon: 'clock' },
+        { id: 'recibir', label: 'Recibir del celular', icon: 'download' },
         { id: 'agente-terminal', label: 'Abrir agente', icon: 'terminal', accion: true },
         { id: 'settings', label: 'Ajustes', icon: 'settings' },
       ],
@@ -2270,6 +2272,46 @@ export default function App() {
   // se borra solo a los pocos segundos, sin bloquear el resto de la UI.
   const [agenteEstado, setAgenteEstado] = useState(null)
 
+  // Recibir del celular: este contenedor es dueño de las llamadas; ReceptorMovil
+  // es presentacional. Mientras la vista está abierta se consulta el estado cada
+  // 1.5 s; al salir de la vista (o cerrar la ventana: pagehide) se apaga el
+  // receptor con keepalive para que la petición sobreviva al cierre.
+  const [receptor, setReceptor] = useState(null)
+  const [receptorError, setReceptorError] = useState(null)
+  const [receptorOcupado, setReceptorOcupado] = useState(false)
+
+  useEffect(() => {
+    if (view !== 'recibir') return undefined
+    let vivo = true
+    const consultar = () => api.receptorEstado().then((e) => { if (vivo) setReceptor(e) }).catch(() => {})
+    consultar()
+    const timer = setInterval(consultar, 1500)
+    const apagar = () => api.receptorDesactivar()
+    window.addEventListener('pagehide', apagar)
+    return () => {
+      vivo = false
+      clearInterval(timer)
+      window.removeEventListener('pagehide', apagar)
+      apagar()
+      setReceptor(null)
+      setReceptorError(null)
+    }
+  }, [view])
+
+  async function receptorAccion(fn, { conOcupado = false } = {}) {
+    if (conOcupado) setReceptorOcupado(true)
+    try {
+      const res = await fn()
+      setReceptorError(null)
+      if (res && 'activo' in res) setReceptor(res)
+      else api.receptorEstado().then(setReceptor).catch(() => {})
+    } catch (e) {
+      setReceptorError(e)
+    } finally {
+      if (conOcupado) setReceptorOcupado(false)
+    }
+  }
+
   async function recargar() {
     try {
       setError('')
@@ -2352,7 +2394,7 @@ export default function App() {
 
   const pageTitle = {
     all: 'Todos los recursos', dashboard: 'Dashboard', folders: 'Carpetas',
-    export: 'Exportar', historial: 'Historial', settings: 'Ajustes',
+    export: 'Exportar', historial: 'Historial', recibir: 'Recibir del celular', settings: 'Ajustes',
   }[view] || 'Biblioteca'
 
   const pageSubtitle = (view === 'all')
@@ -2365,7 +2407,9 @@ export default function App() {
         ? 'Genera textos para repasar en tu IA favorita'
         : view === 'historial'
           ? 'Quién tocó tus datos y qué cambió'
-          : 'Estado de la aplicación y datos locales'
+          : view === 'recibir'
+            ? 'Recibe links y archivos de tu celular por la red local'
+            : 'Estado de la aplicación y datos locales'
 
   function changeView(v) {
     setView(v)
@@ -2610,6 +2654,18 @@ export default function App() {
               filtro={historialFiltro}
               onFiltroChange={setHistorialFiltro}
               onRecargar={recargarHistorial}
+            />
+          ) : view === 'recibir' ? (
+            <ReceptorMovil
+              estado={receptor}
+              error={receptorError}
+              ocupado={receptorOcupado}
+              onActivar={(ip) => receptorAccion(() => api.receptorActivar(ip), { conOcupado: true })}
+              onDesactivar={() => receptorAccion(api.receptorApagar)}
+              onRenovar={() => receptorAccion(api.receptorRenovarCodigo)}
+              onAprobar={(id) => receptorAccion(() => api.receptorAprobar(id))}
+              onRechazar={(id) => receptorAccion(() => api.receptorRechazar(id))}
+              onRevocar={(id) => receptorAccion(() => api.receptorRevocar(id))}
             />
           ) : (
             <SettingsView salud={salud} stats={stats} totalCarpetas={carpetas.length} />
