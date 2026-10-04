@@ -40,6 +40,9 @@ const Version = "1.1.0"
 type Servidor struct {
 	Base *sql.DB
 	UI   fs.FS
+	// Receptor es el control del receptor LAN (celular). nil = sin receptor:
+	// las rutas /api/receptor/* no se montan (tests, builds sin LAN).
+	Receptor *ControlReceptor
 }
 
 // Rutas arma el menú HTTP. Leerlo es leer el producto:
@@ -103,6 +106,11 @@ func (s *Servidor) Rutas() http.Handler {
 	// Despertar la UI: "/" sirve ui/dist SIN pisar "/api/..."
 	// Va AL FINAL porque "/" es el cajón de sastre. Si la pones arriba,
 	// se traga la API. Orden = especifico primero, general al final.
+	// Receptor LAN: control desde la UI, Origin exacto (ver receptor.go).
+	if s.Receptor != nil {
+		s.Receptor.montar(mux)
+	}
+
 	s.montarUI(mux)
 
 	// Guardia de Host+Origin, no CORS abierto: cualquier web que abras

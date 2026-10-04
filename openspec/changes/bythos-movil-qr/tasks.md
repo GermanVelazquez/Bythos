@@ -116,10 +116,10 @@ Chain strategy: feature-branch-chain
 
 ## Phase 7 — Unit 5a: control API + wiring + stop triggers
 
-- [ ] 5a.1 `desktop/api/receptor.go`: `ControlReceptor` port impl; routes `POST /api/receptor/{estado,activar,desactivar,codigo/renovar,solicitudes/{id}/aprobar|rechazar}`, `DELETE /api/receptor/dispositivos/{id}`; exact-Origin check.
-- [ ] 5a.2 `desktop/api/server.go`: mount receptor routes.
-- [ ] 5a.3 `desktop/main.go`: wiring (`lan.NuevoReceptor` + adapters) + shutdown hook calling `Receptor.Stop`; completes the remaining stop triggers from 2a.5 (screen close, explicit disable, app exit).
-- [ ] 5a.4 Tests: exact-Origin 403; `desactivar` via keepalive path; puente records origin=`celular`/actor=device name.
+- [x] 5a.1 `desktop/api/receptor.go`: `ControlReceptor` port impl; routes `POST /api/receptor/{estado,activar,desactivar,codigo/renovar,solicitudes/{id}/aprobar|rechazar}`, `DELETE /api/receptor/dispositivos/{id}`; exact-Origin check. — Done: `ControlReceptor` with a `receptorLAN` port; builds Receptor+Emparejador+AlmacenSubidas+Servicio, `Cerrar()` for app exit; revoke calls `RevocarDispositivo` + `EliminarDispositivo`; `ErrRedNoPrivada` -> 503 `red_no_privada`, `ErrPuertoOcupado` -> 409; added `lan.CategoriaDeIP`.
+- [x] 5a.2 `desktop/api/server.go`: mount receptor routes. — Done: `Servidor.Receptor` field; routes mounted before `montarUI` only when non-nil.
+- [x] 5a.3 `desktop/main.go`: wiring (`lan.NuevoReceptor` + adapters) + shutdown hook calling `Receptor.Stop`; completes the remaining stop triggers from 2a.5 (screen close, explicit disable, app exit). — Done: main builds `api.NuevoControlReceptor`, waits on SIGINT/SIGTERM (replaces `select{}`) then `Cerrar()`; screen close and explicit disable = `desactivar`, app exit = `Cerrar`, all via `Receptor.Stop`.
+- [x] 5a.4 Tests: exact-Origin 403; `desactivar` via keepalive path; puente records origin=`celular`/actor=device name. — Done: `api/receptor_test.go` (5 tests: Origin 403 on all 7 routes, activar/desactivar idempotent, error mapping, revoke, 404); puente origin/actor already covered by `puente_lan_test.go` (4b).
 - Acceptance: spec "Reception enabled/off" end-to-end; Origin Attribution "Mobile-originated event".
 - Verification: `cd desktop && go build ./... && go test ./api/...`
 - Est. changed lines: ~270

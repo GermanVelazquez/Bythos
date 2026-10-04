@@ -11,6 +11,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"bythos-desktop/agentes"
@@ -63,6 +65,9 @@ func main() {
 
 	// 3. Cerebro: sirve la API para la UI y la extensión (+ la cara en "/")
 	srv := &api.Servidor{Base: base, UI: sub}
+	// Receptor LAN (apagado por defecto): se enciende desde la UI y se apaga
+	// al cerrar la pantalla, por inactividad o al salir de la app.
+	srv.Receptor = api.NuevoControlReceptor(srv)
 
 	// 4. Ventana: el servidor va en segundo plano y la ventana al frente.
 	// ¿Por qué goroutine? ListenAndServe BLOQUEA (nunca vuelve); sin go,
@@ -90,8 +95,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	// El director no se va: bloquea para siempre (la ventana y el server viven).
-	select {}
+	// El director no se va: espera Ctrl+C / cierre de consola y apaga el
+	// receptor LAN con gracia (disparador "salida de la app").
+	salida := make(chan os.Signal, 1)
+	signal.Notify(salida, os.Interrupt, syscall.SIGTERM)
+	<-salida
+	srv.Receptor.Cerrar()
 }
 
 // fallarArranque deja rastro en la terminal (dev con `go run .`) Y muestra

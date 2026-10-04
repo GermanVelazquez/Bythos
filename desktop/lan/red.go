@@ -36,3 +36,7 @@ func categoriaDe(ip net.IP) Categoria {
 	}
 	return cat
 }
+
+// CategoriaDeIP expone la categoría de red de una IP a la API de control
+// (lista de interfaces de la UI). Nunca falla: ver categoriaDe.
+func CategoriaDeIP(ip net.IP) Categoria { return categoriaDe(ip) }
