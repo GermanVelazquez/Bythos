@@ -7,7 +7,22 @@ y este proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
-Sin cambios pendientes.
+### Added
+
+- Recepción desde el celular: pantalla "Recibir del celular" con QR,
+  emparejamiento con confirmación en el escritorio, subida de archivos
+  (reanudable, con verificación SHA-256) y de links hacia la biblioteca.
+  Está apagada por defecto, solo funciona en redes privadas y se cierra
+  sola tras 10 minutos sin emparejar ni usar, o 2 minutos después del
+  último uso. La app de Android está pendiente.
+- El instalador agrega una regla de firewall de entrada limitada al perfil
+  privado y a la subred local, y la quita al desinstalar.
+
+### Changed
+
+- El instalador ahora requiere permisos de administrador e instala por
+  máquina (`Program Files`). Si hay una instalación previa por usuario, se
+  desinstala en silencio y se conservan tus datos en `%APPDATA%\Bythos`.
 
 ## [1.1.0] - 2026-09-27
 

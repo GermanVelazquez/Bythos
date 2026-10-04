@@ -62,7 +62,7 @@ go build -ldflags "-H=windowsgui" -o bythos.exe .   # release, sin consola
 ## Instalador Windows (Inno Setup, recomendado)
 
 El setup con asistente gráfico se compila con Inno Setup 6: bienvenida,
-licencia, carpeta destino (`%LocalAppData%\Bythos`, sin admin), icono de
+licencia, carpeta destino (`Program Files\Bythos`, requiere admin), icono de
 Escritorio opcional, grupo "Bythos" en el menú inicio (app + "Extensión para
 Chrome", que abre su carpeta) y desinstalador registrado en el Panel de
 control. Además deja la extensión en `Bythos-Extension` en el Escritorio del
@@ -83,7 +83,17 @@ cd ..\installer
 ```
 
 Detalles de layout (ver comentarios en `installer/bythos.iss`):
-- Instalación por usuario (`PrivilegesRequired=lowest`), sin admin.
+- Instalación por máquina (`PrivilegesRequired=admin`, `{autopf}`). Si
+  detecta una instalación previa por usuario (HKCU, mismo `AppId`), la
+  desinstala en silencio en `InitializeSetup` sin tocar `%APPDATA%`.
+- Firewall: `[Run]` borra y agrega la regla `Bythos (celular)` (entrada,
+  TCP 48080, `profile=private remoteip=localsubnet`); `[UninstallRun]` la
+  borra. Nunca existe regla para perfil público o de dominio, y la app no
+  modifica el firewall. La app se lanza con `runasoriginaluser`.
+- Recepción desde el celular (paquete `desktop/lan`): apagada por defecto,
+  escucha en una IP/puerto fijo de la interfaz local, rechaza redes no
+  privadas y orígenes fuera de la subred, y se cierra a los 10 min sin
+  emparejar/usar o 2 min tras el último uso. La app Android es pendiente.
 - `{userdesktop}` (nunca `{commondesktop}`) resuelve el Escritorio real
   incluso con redirección a OneDrive.
 - El icono del `.exe` va embebido (`assets/bythos.ico`); los accesos
@@ -115,6 +125,9 @@ Copy-Item bythos.exe ..\installer\payload\bythos.exe -Force
 cd ..\installer
 go build -o Bythos-Setup.exe .
 ```
+
+Este instalador Go NO crea la regla de firewall ni pide admin: no sirve
+para la recepción desde el celular. Usa el de Inno Setup para ese caso.
 
 Instalar: doble clic en `Bythos-Setup.exe` (o `Bythos-Setup.exe /S` en
 silencio). Probar sin tocar el Escritorio real:

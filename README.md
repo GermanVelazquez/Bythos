@@ -37,12 +37,15 @@
 | 📊 **Ver tu progreso real** | Cada link tiene su %, cada carpeta su promedio. |
 | 📅 **Planear con calendario** | Agenda tus sesiones de estudio y mira tu historia de avance. |
 | 🤖 **Estudiar con IA** | Exporta a Gemini o NotebookLM, y trae el progreso de vuelta. |
+| 📱 **Recibir del celular** | Envía archivos y links desde tu teléfono a tu biblioteca por la red local, escaneando un QR. La app de Android está pendiente; la recepción en el escritorio ya está lista. |
 | 🧑‍💻 **Conectar tu propio agente** | Claude Code, OpenCode, Codex o Gemini CLI pueden ayudarte a organizar tu biblioteca. |
 
 ## Empieza en 3 pasos
 
 **1. Instala la app** — descarga `Bythos-Setup.exe` arriba y ábrelo. Se
-instala en tu usuario, sin admin, y abre tu biblioteca en su propia ventana.
+instala para todo el equipo (Windows te pedirá permiso de administrador,
+necesario para configurar el firewall) y abre tu biblioteca en su propia
+ventana. Tus datos se conservan si ya tenías una versión anterior.
 
 **2. Instala la extensión** — la encuentras ya en tu Escritorio, en la
 carpeta `Bythos-Extension` (con su guía `LEEME.txt`). En Chrome:
@@ -116,8 +119,21 @@ que la app esté corriendo para guardar links.
 <summary>¿Cómo desinstalo Bythos?</summary>
 
 Desde "Agregar o quitar programas" de Windows, busca "Bythos" y
-desinstala. Te va a preguntar si también quieres borrar la carpeta
+desinstala (también se quita la regla de firewall). Te va a preguntar si también quieres borrar la carpeta
 `Bythos-Extension` del Escritorio (puedes conservarla si prefieres).
+</details>
+
+<details>
+<summary>¿Cómo funciona la recepción desde el celular? ¿Es segura?</summary>
+
+La recepción está **apagada por defecto**: solo se activa cuando abres la
+pantalla "Recibir del celular" y se cierra sola si no emparejas ni usas el
+servicio durante 10 minutos, o 2 minutos después del último uso. Solo
+funciona en redes que Windows clasifica como **privadas** (tu casa, no una
+cafetería): el instalador crea una regla de firewall limitada al perfil
+privado y a tu subred local, y nunca abre el perfil público. Si tu red
+está marcada como pública, la app te guía para cambiarla. La app de Android
+que escanea el QR está pendiente de publicación.
 </details>
 
 <details>
