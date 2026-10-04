@@ -52,12 +52,12 @@ Chain strategy: feature-branch-chain
 
 ## Phase 2 — Unit 2a: lan cert/interfaces/listener/guard/lifecycle
 
-- [ ] 2a.1 `desktop/lan/cert.go`: ECDSA P-256 key at `%APPDATA%\Bythos\lan\clave.pem`; self-signed cert reissued per start with current IP SANs; SPKI SHA-256 base64url fingerprint func.
-- [ ] 2a.2 `desktop/lan/interfaces.go`: candidate selection (up, non-loopback RFC1918, exclude VPN/Hyper-V/WSL/etc., rank Wi-Fi>Ethernet>other).
-- [ ] 2a.3 `desktop/lan/receptor.go`: `Receptor` struct, `Start`/`Stop` (`Shutdown` 10s grace then `Close`), fixed port 48080 no fallback → `puerto_ocupado`.
-- [ ] 2a.4 `desktop/lan/guardia.go`: `var remotoPermitido` seam; same-subnet IPv4 check → 403 `origen_no_permitido`, no processing, no event.
-- [ ] 2a.5 Idle-timeout stop trigger (fake clock); stub hooks for the remaining 3 stop triggers (wired in 5a).
-- [ ] 2a.6 Tests: httptest TLS + pinned client; non-subnet remote 403; off = refused; idle auto-off; stop mid-chunk completes then refuses; stop idempotent; key reuse/SPKI-stable golden fixture (shared with Android 7a).
+- [x] 2a.1 `desktop/lan/cert.go`: ECDSA P-256 key at `%APPDATA%\Bythos\lan\clave.pem`; self-signed cert reissued per start with current IP SANs; SPKI SHA-256 base64url fingerprint func.
+- [x] 2a.2 `desktop/lan/interfaces.go`: candidate selection (up, non-loopback RFC1918, exclude VPN/Hyper-V/WSL/etc., rank Wi-Fi>Ethernet>other).
+- [x] 2a.3 `desktop/lan/receptor.go`: `Receptor` struct, `Start`/`Stop` (`Shutdown` 10s grace then `Close`), fixed port 48080 no fallback → `puerto_ocupado`.
+- [x] 2a.4 `desktop/lan/guardia.go`: `var remotoPermitido` seam; same-subnet IPv4 check → 403 `origen_no_permitido`, no processing, no event.
+- [x] 2a.5 Idle-timeout stop trigger (fake clock); stub hooks for the remaining 3 stop triggers (wired in 5a). — Done: `Stop` is the single idempotent hook; unit 5a wires it from 3 call sites (screen close, explicit disable, app exit), no separate stub methods needed.
+- [x] 2a.6 Tests: httptest TLS + pinned client; non-subnet remote 403; off = refused; idle auto-off; stop mid-chunk completes then refuses; stop idempotent; key reuse/SPKI-stable golden fixture (shared with Android 7a). — Done: `cert_test.go`, `interfaces_test.go`, `guardia_test.go`, `receptor_test.go` (9 tests, all pass).
 - Acceptance: spec scenarios "Reception off", "Idle auto-off", "Same-subnet private source", "Private address, different subnet", "Public address", "Cert unchanged/rotated".
 - Verification: `cd desktop && go test ./lan/... -run TestReceptor`
 - Est. changed lines: ~380
