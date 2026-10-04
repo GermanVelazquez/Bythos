@@ -4,7 +4,7 @@ package lan
 // propio, la guardia de subred y el apagado por inactividad. Mux solo
 // trae /v1/salud (placeholder): las rutas de negocio (unidades 3, 4a,
 // 4b) se registran en rc.Mux antes de Start. La categoría de red de
-// Windows (unidad 2b) y los otros 3 disparadores de parada (unidad 5a)
+// Windows se valida en red.go (unidad 2b); los otros 3 disparadores de parada (unidad 5a)
 // no viven acá todavía.
 
 import (
@@ -52,6 +52,7 @@ type Receptor struct {
 	interfaz   Interfaz
 	actividad  time.Time
 	direccion  string // ln.Addr().String(): el puerto real, útil si Puerto=0
+	categoria  Categoria
 	certActual tls.Certificate
 }
 
@@ -73,6 +74,14 @@ func (rc *Receptor) Start(iface Interfaz) error {
 	if rc.servidor != nil {
 		return nil
 	}
+
+	// Compuerta de perfil de red: antes de tocar cert o puerto. Pública o
+	// de Dominio se rechaza; desconocida arranca y queda el aviso.
+	cat := categoriaDe(iface.IP)
+	if cat == CategoriaPublica || cat == CategoriaDominio {
+		return ErrRedNoPrivada
+	}
+	rc.categoria = cat
 
 	cert, err := certificadoParaIPs(CarpetaLAN(), []net.IP{iface.IP})
 	if err != nil {
@@ -169,6 +178,14 @@ func (rc *Receptor) Activo() bool {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 	return rc.servidor != nil
+}
+
+// RedDesconocida dice si el último Start no pudo confirmar que la red es
+// Privada; la UI (unidad 5b) muestra el aviso.
+func (rc *Receptor) RedDesconocida() bool {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return rc.categoria == CategoriaDesconocida
 }
 
 // Direccion es host:puerto real del último Start (útil con Puerto=0).
