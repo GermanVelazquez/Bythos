@@ -131,3 +131,50 @@ func TestRegistrarEventoOrigenDesconocido(t *testing.T) {
 		t.Fatalf("origen ajeno debía caer a desconocido: %+v err=%v", eventos, err)
 	}
 }
+
+// TestNormalizarOrigenAceptaCelular cubre bythos-movil-qr: la BD (última
+// defensa) acepta "celular" igual que app/extension/agente, aunque
+// api/origen.go nunca lo mande desde una cabecera (ver comentario en
+// OrigenCelular). Cualquier variante de mayúsculas/espacios normaliza
+// igual que los otros tres orígenes.
+func TestNormalizarOrigenAceptaCelular(t *testing.T) {
+	base := basePrueba(t)
+	if err := RegistrarEvento(base, "  CELULAR  ", "Pixel de Ana", AccionArchivoSubido, 1, "video.mp4"); err != nil {
+		t.Fatalf("RegistrarEvento: %v", err)
+	}
+	eventos, err := ListarEventos(base, FiltroEventos{})
+	if err != nil || len(eventos) != 1 {
+		t.Fatalf("listar mal: %+v err=%v", eventos, err)
+	}
+	if eventos[0].Origen != OrigenCelular || eventos[0].Actor != "Pixel de Ana" {
+		t.Fatalf("origen celular mal normalizado: %+v", eventos[0])
+	}
+
+	filtrados, err := ListarEventos(base, FiltroEventos{Origen: "celular"})
+	if err != nil || len(filtrados) != 1 {
+		t.Fatalf("filtro por origen=celular mal: %+v err=%v", filtrados, err)
+	}
+}
+
+// TestNormalizarOrigenCeceraMalformadaCaeADesconocido cubre el segundo
+// escenario del spec activity-history (Unknown origin header): una
+// cabecera malformada o ausente normaliza a desconocido y el evento se
+// guarda igual, nunca se pierde la fila del historial.
+func TestNormalizarOrigenCeceraMalformadaCaeADesconocido(t *testing.T) {
+	base := basePrueba(t)
+	casos := []string{"", "  ", "celular-falso", "CELULAR2"}
+	for _, o := range casos {
+		if err := RegistrarEvento(base, o, "", AccionCarpetaCreada, 1, "x"); err != nil {
+			t.Fatalf("RegistrarEvento(%q): %v", o, err)
+		}
+	}
+	eventos, err := ListarEventos(base, FiltroEventos{})
+	if err != nil || len(eventos) != len(casos) {
+		t.Fatalf("listar mal: %+v err=%v", eventos, err)
+	}
+	for _, e := range eventos {
+		if e.Origen != OrigenDesconocido {
+			t.Fatalf("cabecera malformada debía caer a desconocido: %+v", e)
+		}
+	}
+}

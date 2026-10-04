@@ -55,6 +55,11 @@ func TestOrigenAjenoOSinCabeceraCaeADesconocido(t *testing.T) {
 		{"sin cabecera", ""},
 		{"valor inventado", "quien-sabe"},
 		{"valor de otra API", "web"},
+		// bythos-movil-qr: "celular" es un origen válido en db.normalizarOrigen
+		// (ver db/eventos.go), pero origenDeCabeceras NUNCA debe aceptarlo
+		// desde X-Bythos-Origen — solo el código de servidor que ya validó
+		// el token del dispositivo puede asignarlo (ver api/puente_lan.go).
+		{"celular via cabecera (no permitido)", "celular"},
 	}
 	for _, tt := range casos {
 		t.Run(tt.nombre, func(t *testing.T) {
