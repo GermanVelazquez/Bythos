@@ -136,6 +136,23 @@ func (a *AlmacenSubidas) guardar(s *Subida) error {
 // Cargar lee el sidecar y recupera de un crash: trunca el .parte al offset
 // del sidecar (los bytes de más son de una parte que no llegó a verificarse).
 func (a *AlmacenSubidas) Cargar(id string) (*Subida, error) {
+	s, err := a.Consultar(id)
+	if err != nil {
+		return nil, err
+	}
+	if info, err := os.Stat(a.rutaParte(id)); err != nil || info.Size() < s.Offset {
+		a.Eliminar(id) // sidecar sin datos: irrecuperable
+		return nil, ErrSubidaNoExiste
+	}
+	if err := os.Truncate(a.rutaParte(id), s.Offset); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+// Consultar lee el sidecar SIN tocar el .parte: es seguro mientras otra
+// request está escribiendo (Cargar trunca y no lo es).
+func (a *AlmacenSubidas) Consultar(id string) (*Subida, error) {
 	if !idValido(id) {
 		return nil, ErrSubidaNoExiste
 	}
@@ -146,13 +163,6 @@ func (a *AlmacenSubidas) Cargar(id string) (*Subida, error) {
 	var s Subida
 	if err := json.Unmarshal(crudo, &s); err != nil || s.ID != id {
 		return nil, ErrSubidaNoExiste
-	}
-	if info, err := os.Stat(a.rutaParte(id)); err != nil || info.Size() < s.Offset {
-		a.Eliminar(id) // sidecar sin datos: irrecuperable
-		return nil, ErrSubidaNoExiste
-	}
-	if err := os.Truncate(a.rutaParte(id), s.Offset); err != nil {
-		return nil, err
 	}
 	return &s, nil
 }
@@ -246,7 +256,12 @@ func (a *AlmacenSubidas) Bloquear(id string) (liberar func(), ok bool) {
 }
 
 // Listar devuelve las subidas válidas (aplica la recuperación de crash).
-func (a *AlmacenSubidas) Listar() []*Subida {
+func (a *AlmacenSubidas) Listar() []*Subida { return a.listar(a.Cargar) }
+
+// ListarConsulta es Listar sin tocar los .parte: seguro con escrituras en curso.
+func (a *AlmacenSubidas) ListarConsulta() []*Subida { return a.listar(a.Consultar) }
+
+func (a *AlmacenSubidas) listar(leer func(string) (*Subida, error)) []*Subida {
 	entradas, _ := os.ReadDir(a.carpeta)
 	var out []*Subida
 	for _, e := range entradas {
@@ -254,7 +269,7 @@ func (a *AlmacenSubidas) Listar() []*Subida {
 		if !ok {
 			continue
 		}
-		if s, err := a.Cargar(id); err == nil {
+		if s, err := leer(id); err == nil {
 			out = append(out, s)
 		}
 	}
@@ -277,7 +292,7 @@ func (a *AlmacenSubidas) Eliminar(id string) {
 // EliminarDispositivo descarta todas las subidas de un dispositivo. La
 // unidad 5a lo llama al revocar un celular.
 func (a *AlmacenSubidas) EliminarDispositivo(dispositivoID int64) {
-	for _, s := range a.Listar() {
+	for _, s := range a.ListarConsulta() {
 		if s.DispositivoID == dispositivoID {
 			a.Eliminar(s.ID)
 		}
@@ -288,7 +303,7 @@ func (a *AlmacenSubidas) EliminarDispositivo(dispositivoID int64) {
 // huérfanos (.parte sin sidecar).
 func (a *AlmacenSubidas) Limpiar() {
 	limite := a.reloj.Ahora().Add(-IdleSubida)
-	for _, s := range a.Listar() {
+	for _, s := range a.ListarConsulta() {
 		if s.Actualizada.Before(limite) {
 			a.Eliminar(s.ID)
 		}
