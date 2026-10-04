@@ -136,8 +136,8 @@ Chain strategy: feature-branch-chain
 
 ## Phase 9 — Unit 6: installer + docs
 
-- [ ] 6.1 `installer/bythos.iss`: `PrivilegesRequired=admin`; `[Run]` delete+add firewall rule (`profile=private remoteip=localsubnet`, `runhidden`); `[UninstallRun]` delete rule; `InitializeSetup` HKCU migration (silent uninstall, `%APPDATA%` untouched); `runasoriginaluser` launch.
-- [ ] 6.2 `README.md`, `CHANGELOG.md` (`[Unreleased]`), `docs/AGENTES.md`/`docs/DESARROLLO.md`: document mobile-reception feature (Spanish, per project convention).
+- [x] 6.1 (Done: real installer is Inno `bythos.iss`; admin, {autopf}, netsh delete+add/uninstall delete, HKCU migration, runasoriginaluser; structural readback only, no ISCC) `installer/bythos.iss`: `PrivilegesRequired=admin`; `[Run]` delete+add firewall rule (`profile=private remoteip=localsubnet`, `runhidden`); `[UninstallRun]` delete rule; `InitializeSetup` HKCU migration (silent uninstall, `%APPDATA%` untouched); `runasoriginaluser` launch.
+- [x] 6.2 (Done: README, CHANGELOG [Unreleased], docs/DESARROLLO.md; AGENTES.md untouched, MCP-only) `README.md`, `CHANGELOG.md` (`[Unreleased]`), `docs/AGENTES.md`/`docs/DESARROLLO.md`: document mobile-reception feature (Spanish, per project convention).
 - Acceptance: spec "Fresh install", "Uninstall", "Migration".
 - Verification: no installer CI — manual only (tasks 13.1–13.3).
 - Est. changed lines: ~170

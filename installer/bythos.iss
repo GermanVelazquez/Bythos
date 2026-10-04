@@ -14,10 +14,12 @@
 ;   user loads it with "Load unpacked" and reads LEEME.txt right there.
 ;   The file list below is EXPLICIT on purpose: a stray .pem/.crx in
 ;   extension/ is never packaged (exclusion by construction).
-; - Per-user install ({localappdata}\Bythos, PrivilegesRequired=lowest),
-;   so no admin rights are needed and the uninstaller is registered
-;   in the Control Panel for the installing user. {userdesktop} (never
-;   {commondesktop}) resolves the real Desktop incl. OneDrive redirects.
+; - Per-machine install ({autopf}\Bythos, PrivilegesRequired=admin): needed
+;   to add the firewall rule for phone reception (Private profile + local
+;   subnet only; removed on uninstall). A previous per-user (HKCU) install
+;   is silently uninstalled in InitializeSetup; %APPDATA% is preserved.
+;   {userdesktop} (never {commondesktop}) resolves the real Desktop incl.
+;   OneDrive redirects (under over-the-shoulder elevation it is the admin's).
 ; - Output goes to installer\Output (git-ignored); release copies the
 ;   compiled setup elsewhere, never into the repo.
 
@@ -30,8 +32,9 @@ AppVersion={#AppVersion}
 AppVerName=Bythos {#AppVersion}
 UninstallDisplayName=Bythos
 VersionInfoVersion={#AppVersion}
-DefaultDirName={localappdata}\Bythos
-PrivilegesRequired=lowest
+DefaultDirName={autopf}\Bythos
+PrivilegesRequired=admin
+ArchitecturesInstallIn64BitMode=x64compatible
 DisableProgramGroupPage=yes
 LicenseFile={#SourcePath}\..\LICENSE
 OutputDir={#SourcePath}\Output
@@ -76,6 +79,20 @@ Source: "{#SourcePath}\LEEME-Extension.txt"; DestDir: "{userdesktop}\Bythos-Exte
 ; conserva su fijado aunque el .lnk original cambie de lugar.
 Type: files; Name: "{autoprograms}\Bythos.lnk"
 
+[Run]
+; Regla de firewall para la recepción desde el celular: SOLO perfil privado y
+; SOLO la subred local; nunca se crea una regla para perfil público o de
+; dominio. Primero se borra (idempotente en reinstalaciones) y luego se agrega.
+; La app nunca modifica el firewall: lo hace únicamente este instalador.
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""Bythos (celular)"""; Flags: runhidden; StatusMsg: "Configurando el firewall..."
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""Bythos (celular)"" dir=in action=allow program=""{app}\bythos.exe"" protocol=TCP localport=48080 profile=private remoteip=localsubnet"; Flags: runhidden; StatusMsg: "Configurando el firewall..."
+; runasoriginaluser: la app se abre con el usuario que lanzó el setup, no con
+; la cuenta elevada, para que %APPDATA% apunte a sus datos.
+Filename: "{app}\bythos.exe"; Description: "{cm:LaunchProgram,Bythos}"; Flags: nowait postinstall skipifsilent runasoriginaluser
+
+[UninstallRun]
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""Bythos (celular)"""; Flags: runhidden; RunOnceId: "QuitarReglaFirewall"
+
 [Icons]
 Name: "{autoprograms}\Bythos\Bythos"; Filename: "{app}\bythos.exe"; WorkingDir: "{app}"; IconFilename: "{app}\bythos.exe"
 Name: "{autoprograms}\Bythos\Extensión para Chrome"; Filename: "{userdesktop}\Bythos-Extension"
@@ -110,4 +127,26 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if (CurUninstallStep = usUninstall) and BorrarExtension then
     DelTree(ExpandConstant('{userdesktop}\Bythos-Extension'), True, True, True);
+end;
+
+// Migración per-usuario (HKCU) -> per-máquina. Las versiones anteriores
+// se instalaban con PrivilegesRequired=lowest y quedaron registradas en
+// HKCU con este mismo AppId. Se desinstalan en silencio ANTES de instalar
+// (sin tocar %APPDATA%\Bythos: la base de datos del usuario se conserva).
+// /SUPPRESSMSGBOXES hace que la pregunta de borrar la extensión se responda
+// con su botón por defecto ("No"), así la carpeta del Escritorio se conserva.
+// Si no hay registro previo o la desinstalación falla, la instalación sigue.
+function InitializeSetup(): Boolean;
+var
+  Clave, Cadena: String;
+  Codigo: Integer;
+begin
+  Result := True;
+  Clave := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{AEEA0123-59D0-4FFD-89D0-13AA666C70C4}_is1';
+  if RegQueryStringValue(HKCU, Clave, 'UninstallString', Cadena) then
+  begin
+    Cadena := RemoveQuotes(Trim(Cadena));
+    if (Cadena <> '') and FileExists(Cadena) then
+      Exec(Cadena, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, Codigo);
+  end;
 end;
