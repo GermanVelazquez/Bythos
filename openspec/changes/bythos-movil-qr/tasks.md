@@ -77,11 +77,11 @@ Chain strategy: feature-branch-chain
 
 ## Phase 4 — Unit 3: pairing + QR + tokens
 
-- [ ] 3.1 `desktop/lan/qr.go`: `rsc.io/qr` PNG data URI + `bythos://pair?...` text builder.
-- [ ] 3.2 `desktop/lan/emparejar.go`: one-time code (16B base64url, TTL 10min, single-use, max 3 pending, 5 bad/min → rotate+30s lock); SAS = first 20 bits SHA-256(code‖requestID) mod 1e6; `POST /v1/emparejar`, `GET /v1/emparejar/{solicitud}`.
-- [ ] 3.3 `desktop/lan/auth.go`: 32B `crypto/rand` token, SHA-256 hex stored; Bearer middleware via `db.DispositivoPorTokenHash`.
-- [ ] 3.4 `desktop/lan/respuestas.go`: `{error,mensaje}` envelope + full wire-code table.
-- [ ] 3.5 Tests: TTL, single-use, lock, SAS derivation, token issued once, revoked → 401.
+- [x] 3.1 `desktop/lan/qr.go`: `rsc.io/qr` PNG data URI + `bythos://pair?...` text builder.
+- [x] 3.2 `desktop/lan/emparejar.go`: one-time code (16B base64url, TTL 10min, single-use, max 3 pending, 5 bad/min → rotate+30s lock); SAS = first 20 bits SHA-256(code‖requestID) mod 1e6; `POST /v1/emparejar`, `GET /v1/emparejar/{solicitud}`.
+- [x] 3.3 `desktop/lan/auth.go`: 32B `crypto/rand` token, SHA-256 hex stored; Bearer middleware via `db.DispositivoPorTokenHash`.
+- [x] 3.4 `desktop/lan/respuestas.go`: `{error,mensaje}` envelope + full wire-code table.
+- [x] 3.5 Tests: TTL, single-use, lock, SAS derivation, token issued once, revoked → 401.
 - Acceptance: spec "Valid/Expired/Reused code", "Approved/Declined", "Valid/Unpaired/Revoked token".
 - Verification: `cd desktop && go test ./lan/... -run TestEmparejar`
 - Est. changed lines: ~330
