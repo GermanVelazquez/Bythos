@@ -311,6 +311,17 @@ a { color: var(--ink-accent); }
 }
 .btn-outline:hover { border-color: var(--border-strong); }
 .btn-outline:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Recibir del celular: guía de red, QR, SAS */
+.guia-red { border: 1px solid var(--amber); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; font-size: 12px; color: var(--ink); }
+.guia-red-title { margin: 0 0 6px; font-weight: 600; color: var(--amber); }
+.guia-red-steps { margin: 0 0 12px; padding-left: 18px; color: var(--ink-accent); line-height: 1.6; }
+.receptor-select { flex: 1; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font-size: 12px; color: var(--ink); font-family: inherit; }
+.receptor-qr { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+.receptor-qr img { background: #fff; padding: 8px; border-radius: 8px; }
+.receptor-qr-info { flex: 1 1 260px; min-width: 0; }
+.receptor-hint { color: var(--amber); margin: 12px 0 0; }
+.receptor-sas { font-size: 28px; font-weight: 700; letter-spacing: 6px; color: var(--ink); margin: 0 0 12px; }
 .folder-list { display: flex; flex-direction: column; gap: 8px; }
 .folder-card {
   display: flex; align-items: center; gap: 14px;
