@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Bythos</string>
+    <string name="emparejar_titulo">Emparejar con tu PC</string>
+    <string name="emparejar_instruccion">En la PC abre «Recibir del celular» y escanea el QR.</string>
+    <string name="escanear_qr">Escanear QR</string>
+    <string name="pegar_enlace">Pegar enlace manualmente</string>
+    <string name="pegar_pista">bythos://pair?…</string>
+    <string name="usar_enlace">Usar enlace</string>
+    <string name="qr_invalido">El código no es válido: %1$s</string>
+    <string name="qr_leido">Código leído de «%1$s». Falta confirmar en la PC.</string>
+</resources>
