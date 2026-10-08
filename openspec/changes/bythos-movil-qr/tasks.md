@@ -155,10 +155,10 @@ Chain strategy: feature-branch-chain
 
 ## Phase 11 — Unit 7b: HttpsURLConnection client + failure classification
 
-- [ ] 7b.1 `ApiClient.kt`: per-request `HttpsURLConnection` with pinned `SSLContext`+hostnameVerifier; connect 5s/read 60s; `setFixedLengthStreamingMode` for chunk POST; GET/POST only.
-- [ ] 7b.2 `LinksApi.kt`/`FoldersApi.kt`: typed `POST /v1/links`, `GET /v1/carpetas`.
-- [ ] 7b.3 `FailureClassifier.kt`: `clasificarFallo(ex, sdkInt, permisoRedLocal)` → `PIN_CAMBIO|PERMISO_RED_LOCAL|INALCANZABLE|NO_EMPAREJADO`.
-- [ ] 7b.4 Tests vs `com.sun.net.httpserver.HttpsServer` fixture on 127.0.0.1 (Go fixture key/cert): pin match/mismatch, hostname reject, 409 resume, 422 retry, fixed-length streaming; `clasificarFallo` table test.
+- [x] 7b.1 `ApiClient.kt`: per-request `HttpsURLConnection` with pinned `SSLContext`+hostnameVerifier; connect 5s/read 60s; `setFixedLengthStreamingMode` for chunk POST; GET/POST only.
+- [x] 7b.2 `LinksApi.kt`/`FoldersApi.kt`: typed `POST /v1/links`, `GET /v1/carpetas`.
+- [x] 7b.3 `FailureClassifier.kt`: `clasificarFallo(ex, sdkInt, permisoRedLocal)` → `PIN_CAMBIO|PERMISO_RED_LOCAL|INALCANZABLE|NO_EMPAREJADO`.
+- [x] 7b.4 Tests vs `com.sun.net.httpserver.HttpsServer` fixture on 127.0.0.1 (Go fixture key/cert): pin match/mismatch, hostname reject, 409 resume, 422 retry, fixed-length streaming; `clasificarFallo` table test.
 - Acceptance: spec "Permission granted/denied" (classification only), Folder Target Validation (client contract), Certificate Pinning.
 - Verification: `cd mobile/android && ./gradlew :app:testDebugUnitTest`
 - Est. changed lines: ~330
