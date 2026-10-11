@@ -27,4 +27,6 @@ dependencies {
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 
     testImplementation("junit:junit:4.13.2")
+    // android.jar org.json is a stub on the JVM; tests need the real one.
+    testImplementation("org.json:json:20250517")
 }
