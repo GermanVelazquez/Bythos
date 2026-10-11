@@ -1,0 +1,8 @@
+# Per-machine SDK location and Gradle/Android build state
+local.properties
+.gradle/
+build/
+.idea/
+*.iml
+.kotlin/
+captures/
