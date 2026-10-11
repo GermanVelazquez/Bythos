@@ -170,6 +170,7 @@ Chain strategy: feature-branch-chain
 - [x] 7c.3 `UploadWorker.kt`: unique work per envio, `UNMETERED` constraint, `setForeground` `dataSync` FGS; sha256 before create; `/estado` on resume; 401 → mark unpaired; `onStopped` persists offset.
 - [x] 7c.4 Tests: outbox state-machine transitions; worker resume-from-offset (fake `ApiClient`).
 - [ ] 7c.5 Instrumented smoke (manual/CI-optional): keystore round-trip, share routing, scanner-unavailable fallback.
+  - Note: the androidTest smoke is written and compiles (`:app:assembleDebugAndroidTest`); pending a run with `./gradlew :app:connectedDebugAndroidTest` on a device/emulator, so not marked done.
 - Acceptance: spec "Share to app", "Resume after kill", "Source deleted mid-transfer".
 - Verification: `cd mobile/android && ./gradlew :app:testDebugUnitTest`
 - Est. changed lines: ~370
