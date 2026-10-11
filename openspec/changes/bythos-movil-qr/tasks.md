@@ -169,8 +169,8 @@ Chain strategy: feature-branch-chain
 - [x] 7c.2 `ShareReceiverActivity.kt`: `ACTION_SEND`/`SEND_MULTIPLE`, `takePersistableUriPermission` or cache-copy with free-space check, `ACTION_OPEN_DOCUMENT`.
 - [x] 7c.3 `UploadWorker.kt`: unique work per envio, `UNMETERED` constraint, `setForeground` `dataSync` FGS; sha256 before create; `/estado` on resume; 401 → mark unpaired; `onStopped` persists offset.
 - [x] 7c.4 Tests: outbox state-machine transitions; worker resume-from-offset (fake `ApiClient`).
-- [ ] 7c.5 Instrumented smoke (manual/CI-optional): keystore round-trip, share routing, scanner-unavailable fallback.
-  - Note: the androidTest smoke is written and compiles (`:app:assembleDebugAndroidTest`); pending a run with `./gradlew :app:connectedDebugAndroidTest` on a device/emulator, so not marked done.
+- [x] 7c.5 Instrumented smoke (manual/CI-optional): keystore round-trip, share routing, scanner-unavailable fallback.
+  - Note: `./gradlew :app:connectedDebugAndroidTest` passed on a Samsung SM-A546E (Android 16): 5 tests, 0 failures. The fallback test covers the manual-paste screen, not a real Play Services outage.
 - Acceptance: spec "Share to app", "Resume after kill", "Source deleted mid-transfer".
 - Verification: `cd mobile/android && ./gradlew :app:testDebugUnitTest`
 - Est. changed lines: ~370
@@ -181,6 +181,7 @@ Chain strategy: feature-branch-chain
 - [ ] 13.2 Firewall rule, standard account + UAC elevation: repeat 13.1; document the over-the-shoulder elevation limitation (accepted per design open questions, not solved).
 - [ ] 13.3 Per-user → per-machine install migration: on a machine with a prior HKCU install, confirm silent HKCU uninstall, `%APPDATA%` preserved, no duplicate Start Menu entries.
 - [ ] 13.4 Android local-network permission on a real/emulated device enforcing it: deny → confirm "local network access denied" hint + settings button; grant → confirm normal connection.
+  - Note: not testable on the Samsung SM-A546E while it runs Android 16 (the app requests the permission only on SDK ≥ 37). Pending until the device is updated to Android 17.
 - [ ] 13.5 Windows network-category detection on real hardware: toggle a real adapter Private/Public/Domain; confirm NLM COM detection matches Windows Settings and gates listener start/UI guide correctly.
 
 ## Key Learnings
