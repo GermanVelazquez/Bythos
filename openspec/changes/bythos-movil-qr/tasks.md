@@ -165,10 +165,10 @@ Chain strategy: feature-branch-chain
 
 ## Phase 12 — Unit 7c: outbox/worker/share
 
-- [ ] 7c.1 `EnviosDbHelper.kt` (`SQLiteOpenHelper`): `envios` table (tipo, uri/url, nombre, tamano, sha256, carpeta_id, cliente_id, subida_id, offset, estado, error).
-- [ ] 7c.2 `ShareReceiverActivity.kt`: `ACTION_SEND`/`SEND_MULTIPLE`, `takePersistableUriPermission` or cache-copy with free-space check, `ACTION_OPEN_DOCUMENT`.
-- [ ] 7c.3 `UploadWorker.kt`: unique work per envio, `UNMETERED` constraint, `setForeground` `dataSync` FGS; sha256 before create; `/estado` on resume; 401 → mark unpaired; `onStopped` persists offset.
-- [ ] 7c.4 Tests: outbox state-machine transitions; worker resume-from-offset (fake `ApiClient`).
+- [x] 7c.1 `EnviosDbHelper.kt` (`SQLiteOpenHelper`): `envios` table (tipo, uri/url, nombre, tamano, sha256, carpeta_id, cliente_id, subida_id, offset, estado, error).
+- [x] 7c.2 `ShareReceiverActivity.kt`: `ACTION_SEND`/`SEND_MULTIPLE`, `takePersistableUriPermission` or cache-copy with free-space check, `ACTION_OPEN_DOCUMENT`.
+- [x] 7c.3 `UploadWorker.kt`: unique work per envio, `UNMETERED` constraint, `setForeground` `dataSync` FGS; sha256 before create; `/estado` on resume; 401 → mark unpaired; `onStopped` persists offset.
+- [x] 7c.4 Tests: outbox state-machine transitions; worker resume-from-offset (fake `ApiClient`).
 - [ ] 7c.5 Instrumented smoke (manual/CI-optional): keystore round-trip, share routing, scanner-unavailable fallback.
 - Acceptance: spec "Share to app", "Resume after kill", "Source deleted mid-transfer".
 - Verification: `cd mobile/android && ./gradlew :app:testDebugUnitTest`
