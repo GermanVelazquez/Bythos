@@ -94,7 +94,7 @@ Open PR1 with the manual checklist M.1-M.5 below in its description. PR2 branche
 ## Manual verification checklist (Samsung A54, API 36)
 
 - [ ] M.1 Phone in light mode: all screens (home, share, paste, tutorial) and the folder dialog render dark.
-- [ ] M.2 Gesture navigation: header sits below the status bar/cutout; bottom-most button is fully visible and tappable above the gesture bar.
+- [ ] M.2 Gesture navigation: header sits below the status bar/cutout; bottom-most button is fully visible and tappable above the gesture bar. Partial 2026-10-12: the user confirmed the dark look on the A54 (home, folder dialog); the per-item details are not checked yet.
 - [ ] M.3 3-button navigation: same as M.2 with the three-button bar.
 - [ ] M.4 Folder dialog: dark surface, rounded corners, `ink` text, secondary-styled buttons, rows at least 48dp; link shares show "enlace" text, never a URL.
 - [ ] M.5 Manual paste: keyboard open does not cover the paste field; hint reads "Pega el texto que copiaste de la PC"; nothing pasted is echoed back.
