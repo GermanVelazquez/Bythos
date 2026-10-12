@@ -13,12 +13,21 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /** Humo en dispositivo: ruteo del compartir y el camino de pegado manual cuando no hay escáner. */
 @RunWith(AndroidJUnit4::class)
 class CompartirYFallbackInstrumentedTest {
+
+    /** El escenario abre el lanzador (MAIN): sin esto el tutorial se abriría solo y taparía la pantalla. */
+    @Before
+    fun tutorialYaVisto() {
+        ApplicationProvider.getApplicationContext<android.content.Context>()
+            .getSharedPreferences("bythos", android.content.Context.MODE_PRIVATE)
+            .edit().putBoolean(CLAVE_TUTORIAL_VISTO, true).commit()
+    }
 
     @Test
     fun accionSendResuelveAShareReceiverActivity() {

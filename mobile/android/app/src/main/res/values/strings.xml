@@ -33,4 +33,12 @@
     <string name="conectando">Conectando…</string>
     <string name="pc_no_recibe">La PC no está recibiendo. Abre «Recibir del celular» en la PC y escanea el QR de nuevo.</string>
     <string name="enlace_compartido">enlace</string>
+    <string name="como_enviar">Cómo enviar archivos</string>
+    <string name="tutorial_titulo">Cómo enviar archivos a tu PC</string>
+    <string name="tutorial_paso_1">En la PC abre Bythos &gt; «Recibir del celular» y pulsa «Activar recepción». Usa la misma red Wi-Fi y la red de la PC en Privada.</string>
+    <string name="tutorial_paso_2">En el celular toca «%1$s».</string>
+    <string name="tutorial_paso_3">Comprueba que el código de 6 dígitos coincide con el de la PC y pulsa «Aprobar» en la PC.</string>
+    <string name="tutorial_paso_4">Toca «%1$s», o en cualquier app usa Compartir &gt; %2$s.</string>
+    <string name="tutorial_paso_5">Elige la carpeta y espera el aviso «%1$s».</string>
+    <string name="entendido">Entendido</string>
 </resources>

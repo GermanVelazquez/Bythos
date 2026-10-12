@@ -64,31 +64,31 @@ Open PR1 with the manual checklist M.1-M.5 below in its description. PR2 branche
 
 ### Unit C: Tutorial
 
-- [ ] C.1 RED: create `T/TutorialDecisionTest.kt`: all 16 combinations of `debeAbrirTutorial(desdeLanzador, emparejado, visto, recreada)`; only `(true,false,false,false)` returns true. (spec: First-Launch Auto-Open, Share-Intent Exclusion)
-- [ ] C.2 Create `K/TutorialActivity.kt` with pure `debeAbrirTutorial` and `CLAVE_TUTORIAL_VISTO = "tutorialVisto"` (prefs `bythos`); screen via `Estilo.pantalla`: title, five `tarjeta` steps (numbered, in spec order), primary "Entendido" calling `finish()`; Back closes by default. Text only. (spec: Tutorial Content, Visual Consistency)
-- [ ] C.3 Add strings in `R/values/strings.xml`: `como_enviar` ("Cómo enviar archivos"), `tutorial_titulo`, `tutorial_paso_1..5`, `entendido`. Step 2 uses `getString(R.string.escanear_qr)`, step 4 `getString(R.string.enviar_archivo)` ("Enviar un archivo a la PC"), step 5 `getString(R.string.fase_listo)`, brand via `app_name`; desktop labels ("Recibir del celular", "Activar recepción", "Aprobar") stay literal. Neutral "tú"; no IP, port, URL or link text. (spec: Labels match the UI, Tutorial Text Privacy)
-- [ ] C.4 Modify `K/PairingActivity.kt`: secondary `como_enviar` button in both paired and unpaired modes (48dp, does not replace the primary action; opens the tutorial without touching the flag); auto-open block in `onCreate` computing `desdeLanzador = intent.action == ACTION_MAIN`, `emparejado`, `visto`, `recreada = savedInstanceState != null`; write the flag with `apply()` BEFORE `startActivity`. `ShareReceiverActivity` never calls it. (spec: Permanent Home Entry, Share-Intent Exclusion)
-- [ ] C.5 Modify `M`: register `TutorialActivity` with `exported=false`.
-- [ ] C.6 Modify `AT/CompartirYFallbackInstrumentedTest.kt`: `@Before` sets `tutorialVisto=true` in prefs `bythos` so the launcher scenario does not auto-open the tutorial.
-- [ ] C.7 Verify: `./gradlew :app:testDebugUnitTest` green; `./gradlew :app:connectedDebugAndroidTest` green on the A54.
+- [x] C.1 RED: create `T/TutorialDecisionTest.kt`: all 16 combinations of `debeAbrirTutorial(desdeLanzador, emparejado, visto, recreada)`; only `(true,false,false,false)` returns true. (spec: First-Launch Auto-Open, Share-Intent Exclusion)
+- [x] C.2 Create `K/TutorialActivity.kt` with pure `debeAbrirTutorial` and `CLAVE_TUTORIAL_VISTO = "tutorialVisto"` (prefs `bythos`); screen via `Estilo.pantalla`: title, five `tarjeta` steps (numbered, in spec order), primary "Entendido" calling `finish()`; Back closes by default. Text only. (spec: Tutorial Content, Visual Consistency)
+- [x] C.3 Add strings in `R/values/strings.xml`: `como_enviar` ("Cómo enviar archivos"), `tutorial_titulo`, `tutorial_paso_1..5`, `entendido`. Step 2 uses `getString(R.string.escanear_qr)`, step 4 `getString(R.string.enviar_archivo)` ("Enviar un archivo a la PC"), step 5 `getString(R.string.fase_listo)`, brand via `app_name`; desktop labels ("Recibir del celular", "Activar recepción", "Aprobar") stay literal. Neutral "tú"; no IP, port, URL or link text. (spec: Labels match the UI, Tutorial Text Privacy)
+- [x] C.4 Modify `K/PairingActivity.kt`: secondary `como_enviar` button in both paired and unpaired modes (48dp, does not replace the primary action; opens the tutorial without touching the flag); auto-open block in `onCreate` computing `desdeLanzador = intent.action == ACTION_MAIN`, `emparejado`, `visto`, `recreada = savedInstanceState != null`; write the flag with `apply()` BEFORE `startActivity`. `ShareReceiverActivity` never calls it. (spec: Permanent Home Entry, Share-Intent Exclusion)
+- [x] C.5 Modify `M`: register `TutorialActivity` with `exported=false`.
+- [x] C.6 Modify `AT/CompartirYFallbackInstrumentedTest.kt`: `@Before` sets `tutorialVisto=true` in prefs `bythos` so the launcher scenario does not auto-open the tutorial.
+- [x] C.7 Verify: `./gradlew :app:testDebugUnitTest` green; `./gradlew :app:connectedDebugAndroidTest` green on the A54.
 
 ### Unit D: Inter font and license
 
-- [ ] D.1 Add `assets/licenses/Inter-OFL.txt` (verbatim SIL OFL 1.1 text, in `app/src/main/assets/licenses/`) and keep it in the source tree. (spec: License shipped)
-- [ ] D.2 Binary commit (separate): add `R/font/inter_regular.ttf`, `inter_semibold.ttf`, `inter_bold.ttf` (static 400/600/700).
-- [ ] D.3 Create `R/font/inter.xml` family; in `themes.xml` set `fontFamily` to `@font/inter` in the theme and each TextAppearance (per-role static file, no `fontWeight`; minSdk 26). No Kotlin change. (spec: Typography, Font fallback via resource fallback to `sans-serif`)
-- [ ] D.4 Verify: `./gradlew :app:assembleDebug` succeeds; the license file is present in the built APK assets.
+- [x] D.1 Add `assets/licenses/Inter-OFL.txt` (verbatim SIL OFL 1.1 text, in `app/src/main/assets/licenses/`) and keep it in the source tree. (spec: License shipped)
+- [x] D.2 Binary commit (separate): add `R/font/inter_regular.ttf`, `inter_semibold.ttf`, `inter_bold.ttf` (static 400/600/700).
+- [x] D.3 Create `R/font/inter.xml` family; in `themes.xml` set `fontFamily` to `@font/inter` in the theme and each TextAppearance (per-role static file, no `fontWeight`; minSdk 26). No Kotlin change. (spec: Typography, Font fallback via resource fallback to `sans-serif`)
+- [x] D.4 Verify: `./gradlew :app:assembleDebug` succeeds; the license file is present in the built APK assets.
 
 ### Unit E: Launcher icon
 
-- [ ] E.1 Add color `icono_fondo` (#0B0B0C) to `colors.xml`; create `R/drawable/marca.xml` (vector copying the rectangle/sine geometry of `gen-icons.mjs`), `R/drawable/ic_launcher_marca.xml` (`<inset>` of 27% over `marca.xml`). (spec: Launcher Icon)
-- [ ] E.2 Create `R/mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml` (adaptive: background `@color/icono_fondo`, foreground and monochrome `@drawable/ic_launcher_marca`).
-- [ ] E.3 Modify `M`: `android:icon="@mipmap/ic_launcher"` and `android:roundIcon="@mipmap/ic_launcher_round"`.
-- [ ] E.4 Verify: `./gradlew :app:assembleDebug` succeeds (resource linking passes).
+- [x] E.1 Add color `icono_fondo` (#0B0B0C) to `colors.xml`; create `R/drawable/marca.xml` (vector copying the rectangle/sine geometry of `gen-icons.mjs`), `R/drawable/ic_launcher_marca.xml` (`<inset>` of 27% over `marca.xml`). (spec: Launcher Icon)
+- [x] E.2 Create `R/mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml` (adaptive: background `@color/icono_fondo`, foreground and monochrome `@drawable/ic_launcher_marca`).
+- [x] E.3 Modify `M`: `android:icon="@mipmap/ic_launcher"` and `android:roundIcon="@mipmap/ic_launcher_round"`.
+- [x] E.4 Verify: `./gradlew :app:assembleDebug` succeeds (resource linking passes).
 
 ### PR2 final verification
 
-- [ ] F.1 From `mobile/android`: `./gradlew :app:testDebugUnitTest`, `./gradlew :app:assembleDebug`, and `./gradlew :app:connectedDebugAndroidTest` (A54 connected) are all green.
+- [x] F.1 From `mobile/android`: `./gradlew :app:testDebugUnitTest`, `./gradlew :app:assembleDebug`, and `./gradlew :app:connectedDebugAndroidTest` (A54 connected) are all green.
 - [ ] F.2 Open PR2 with the manual checklist below in its description.
 
 ## Manual verification checklist (Samsung A54, API 36)

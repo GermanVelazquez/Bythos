@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Misma geometría que assets/gen-icons.mjs (lienzo 512): B de rectángulos y una onda por contador.
+     El viewport recorta alrededor de la B (68..448 x 66..446) para que ocupe bien la zona segura. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="380"
+    android:viewportHeight="380">
+    <group android:translateX="-68" android:translateY="-66">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M148,108H196V404H148Z M148,108H368V156H148Z M148,232H368V280H148Z M148,356H368V404H148Z M320,108H368V280H320Z M320,232H368V404H320Z" />
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="14"
+            android:pathData="M200,194Q215.5,222 231,194Q246.5,166 262,194Q277.5,222 293,194Q305,174 316,184 M200,318Q215.5,346 231,318Q246.5,290 262,318Q277.5,346 293,318Q305,298 316,308" />
+    </group>
+</vector>

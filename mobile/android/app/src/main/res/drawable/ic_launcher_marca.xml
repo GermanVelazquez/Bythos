@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Capa frontal y monocromática del icono: la marca dentro de la zona segura del icono adaptativo. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/marca"
+    android:inset="27%" />
