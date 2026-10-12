@@ -16,6 +16,8 @@ All Gradle commands run from `mobile/android`.
 | Chain strategy | stacked (confirmed by the user 2026-10-12) |
 
 Decision needed before apply: No
+
+size:exception (accepted by the user 2026-10-12): PR1 measured 433 changed lines (120 tracked + 313 new XML/Kotlin), 33 over the 400 budget; moving the card pieces to PR2 would save only ~15 lines.
 Chained PRs recommended: Yes
 Chain strategy: stacked-to-main
 400-line budget risk: Medium
@@ -36,23 +38,23 @@ Resolved 2026-10-12: the user chose stacked PRs for the two-PR chain (PR1 `feat/
 
 ### Unit A: Theme resources
 
-- [ ] A.1 Create `R/values/colors.xml` with the 14 spec tokens (bg, bg_alt, surface, surface_2, surface_3, border, border_strong, ink, ink_muted, ink_dim, ink_accent, green, amber, red). (spec: Dark Desktop Theme)
-- [ ] A.2 Create `R/values/dimens.xml`: 24dp screen padding, 12dp card radius, 16dp dialog radius, 8dp button radius, 1dp border, 48dp touch target, text sizes. (spec: Touch Sizing and Insets)
-- [ ] A.3 Create `R/values/themes.xml`: `Tema.Bythos` (parent `@android:style/Theme.Material.NoActionBar`, attrs per design, `fontFamily` = `sans-serif`), `Tema.Bythos.Dialogo`, `Boton`, `Boton.Primario`, `Boton.Secundario`, and 5 TextAppearances (Titulo 22sp/700, Panel 16sp/600, Cuerpo 15sp/400, Tenue 13sp, Micro 11-12sp/600 uppercase). (spec: Typography, Button Styles)
-- [ ] A.4 Create `R/color/texto_boton_primario.xml` and `texto_boton_secundario.xml` (enabled/disabled).
-- [ ] A.5 Create drawables `boton_primario.xml`, `boton_secundario.xml` (selectors: pressed, disabled, default; 8dp radius; secondary has 1dp border_strong), `tarjeta.xml`, `campo.xml` (focused = border_strong), `fondo_dialogo.xml` (inset 16dp, surface, 1dp border_strong, 16dp radius). (spec: Button Styles, Themed Folder Dialog)
-- [ ] A.6 In `M` set `android:theme="@style/Tema.Bythos"` on the application.
-- [ ] A.7 Verify: `./gradlew :app:assembleDebug` succeeds.
+- [x] A.1 Create `R/values/colors.xml` with the 14 spec tokens (bg, bg_alt, surface, surface_2, surface_3, border, border_strong, ink, ink_muted, ink_dim, ink_accent, green, amber, red). (spec: Dark Desktop Theme)
+- [x] A.2 Create `R/values/dimens.xml`: 24dp screen padding, 12dp card radius, 16dp dialog radius, 8dp button radius, 1dp border, 48dp touch target, text sizes. (spec: Touch Sizing and Insets)
+- [x] A.3 Create `R/values/themes.xml`: `Tema.Bythos` (parent `@android:style/Theme.Material.NoActionBar`, attrs per design, `fontFamily` = `sans-serif`), `Tema.Bythos.Dialogo`, `Boton`, `Boton.Primario`, `Boton.Secundario`, and 5 TextAppearances (Titulo 22sp/700, Panel 16sp/600, Cuerpo 15sp/400, Tenue 13sp, Micro 11-12sp/600 uppercase). (spec: Typography, Button Styles)
+- [x] A.4 Create `R/color/texto_boton_primario.xml` and `texto_boton_secundario.xml` (enabled/disabled).
+- [x] A.5 Create drawables `boton_primario.xml`, `boton_secundario.xml` (selectors: pressed, disabled, default; 8dp radius; secondary has 1dp border_strong), `tarjeta.xml`, `campo.xml` (focused = border_strong), `fondo_dialogo.xml` (inset 16dp, surface, 1dp border_strong, 16dp radius). (spec: Button Styles, Themed Folder Dialog)
+- [x] A.6 In `M` set `android:theme="@style/Tema.Bythos"` on the application.
+- [x] A.7 Verify: `./gradlew :app:assembleDebug` succeeds.
 
 ### Unit B: Estilo.kt and screens
 
-- [ ] B.1 Create `K/Estilo.kt`: `Context.dp`, `Tono`, and `Estilo` factory (`titulo`, `panel`, `cuerpo`, `tenue`, `botonPrimario`, `botonSecundario`, `campo`, `tarjeta`, `encabezado`, `tono`, `pantalla`). `pantalla` builds header + `ScrollView` (24dp padding), calls `WindowCompat.setDecorFitsSystemWindows(window,false)` and the `ViewCompat.setOnApplyWindowInsetsListener` for systemBars/displayCutout/ime. Use `ScrollView` so `android.R.id.content` traversal still finds the views. (spec: Brand Header, Touch Sizing and Insets)
-- [ ] B.2 Modify `K/PairingActivity.kt`: use `Estilo.pantalla`; primary "Escanear QR" (unpaired) or "Enviar un archivo a la PC" (paired); everything else secondary; at most one primary per screen; `Tono` in `mostrar`. Keep button class and visible text unchanged for the instrumented test. (spec: Button Styles)
-- [ ] B.3 Modify `K/ShareReceiverActivity.kt`: use `Estilo.pantalla`, `Tono`, green "Listo" via one `ForegroundColorSpan`; show link items as `enlace_compartido` instead of the URL. The folder `AlertDialog.Builder(this)` stays unchanged (themed via `alertDialogTheme`). (spec: Themed Folder Dialog, Privacy)
-- [ ] B.4 Modify `K/ScannerFallback.kt`: use `Estilo.campo` and `Estilo.botonPrimario`; ensure the pasted text is never echoed back. (spec: Privacy)
-- [ ] B.5 Modify `R/values/strings.xml`: `pc_no_recibe` = "La PC no está recibiendo. Abre «Recibir del celular» en la PC y escanea el QR de nuevo."; `pegar_pista` = "Pega el texto que copiaste de la PC"; add `enlace_compartido`. Review all strings for voseo and for IP/port/URL echo. (spec: Neutral Voice, Privacy)
-- [ ] B.6 Verify: `./gradlew :app:testDebugUnitTest` green; `./gradlew :app:assembleDebug` succeeds.
-- [ ] B.7 Verify on the A54: `./gradlew :app:connectedDebugAndroidTest` green (existing `CompartirYFallbackInstrumentedTest`; the tutorial does not exist yet in PR1).
+- [x] B.1 Create `K/Estilo.kt`: `Context.dp`, `Tono`, and `Estilo` factory (`titulo`, `panel`, `cuerpo`, `tenue`, `botonPrimario`, `botonSecundario`, `campo`, `tarjeta`, `encabezado`, `tono`, `pantalla`). `pantalla` builds header + `ScrollView` (24dp padding), calls `WindowCompat.setDecorFitsSystemWindows(window,false)` and the `ViewCompat.setOnApplyWindowInsetsListener` for systemBars/displayCutout/ime. Use `ScrollView` so `android.R.id.content` traversal still finds the views. (spec: Brand Header, Touch Sizing and Insets)
+- [x] B.2 Modify `K/PairingActivity.kt`: use `Estilo.pantalla`; primary "Escanear QR" (unpaired) or "Enviar un archivo a la PC" (paired); everything else secondary; at most one primary per screen; `Tono` in `mostrar`. Keep button class and visible text unchanged for the instrumented test. (spec: Button Styles)
+- [x] B.3 Modify `K/ShareReceiverActivity.kt`: use `Estilo.pantalla`, `Tono`, green "Listo" via one `ForegroundColorSpan`; show link items as `enlace_compartido` instead of the URL. The folder `AlertDialog.Builder(this)` stays unchanged (themed via `alertDialogTheme`). (spec: Themed Folder Dialog, Privacy)
+- [x] B.4 Modify `K/ScannerFallback.kt`: use `Estilo.campo` and `Estilo.botonPrimario`; ensure the pasted text is never echoed back. (spec: Privacy)
+- [x] B.5 Modify `R/values/strings.xml`: `pc_no_recibe` = "La PC no está recibiendo. Abre «Recibir del celular» en la PC y escanea el QR de nuevo."; `pegar_pista` = "Pega el texto que copiaste de la PC"; add `enlace_compartido`. Review all strings for voseo and for IP/port/URL echo. (spec: Neutral Voice, Privacy)
+- [x] B.6 Verify: `./gradlew :app:testDebugUnitTest` green; `./gradlew :app:assembleDebug` succeeds.
+- [x] B.7 Verify on the A54: `./gradlew :app:connectedDebugAndroidTest` green (existing `CompartirYFallbackInstrumentedTest`; the tutorial does not exist yet in PR1).
 
 ### PR1 boundary
 

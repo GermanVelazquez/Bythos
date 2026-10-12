@@ -4,7 +4,7 @@
     <string name="emparejar_instruccion">En la PC abre «Recibir del celular» y escanea el QR.</string>
     <string name="escanear_qr">Escanear QR</string>
     <string name="pegar_enlace">Pegar enlace manualmente</string>
-    <string name="pegar_pista">bythos://pair?…</string>
+    <string name="pegar_pista">Pega el texto que copiaste de la PC</string>
     <string name="usar_enlace">Usar enlace</string>
     <string name="qr_invalido">El código no es válido: %1$s</string>
     <string name="qr_leido">Código leído de «%1$s». Falta confirmar en la PC.</string>
@@ -31,5 +31,6 @@
     <string name="emparejado_con">Emparejado con «%1$s»</string>
     <string name="volver_a_emparejar">Volver a emparejar</string>
     <string name="conectando">Conectando…</string>
-    <string name="pc_no_recibe">La PC no está recibiendo. Abrí «Recibir del celular» en la PC y escaneá el QR de nuevo.</string>
+    <string name="pc_no_recibe">La PC no está recibiendo. Abre «Recibir del celular» en la PC y escanea el QR de nuevo.</string>
+    <string name="enlace_compartido">enlace</string>
 </resources>
