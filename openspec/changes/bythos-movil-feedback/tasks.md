@@ -30,34 +30,34 @@ Base branch: chain tip `feat/bythos-movil-qr-07c-envios`. Risk is Medium because
 
 ## Unit A: Android progress
 
-- [ ] A.1 RED: in `T/ApiClientTest.kt` add `escribirEnTramos` test: bytes identical, cumulative counts per 64 KiB slice.
-- [ ] A.2 RED: in `T/SubidorTest.kt` update the fake `parte` to accept `progreso`; add tests: PREPARANDO during hash, monotonic ENVIANDO ending at `tamano`, VERIFICANDO last, resume starts at offset, small file (<4 MiB) progresses.
-- [ ] A.3 RED: add `LimitadorAvance` tests in `T/SubidorTest.kt` with fake clock: drops within 250 ms, passes phase change and completion.
-- [ ] A.4 In `K/UploadWorker.kt` add `enum Fase`, `progreso` param on `Servidor.parte`, and `escribirEnTramos` (64 KiB), wired in `ServidorHttp.parte`.
-- [ ] A.5 In `K/UploadWorker.kt` add `avance` callback to `Subidor` (hash loop, part slices, verify); add `LimitadorAvance(250 ms)`.
-- [ ] A.6 In `K/UploadWorker.kt` worker: notification with phase text and `setProgress` (indeterminate for VERIFICANDO), plus `setProgressAsync` with keys `fase`, `hechos`, `total`.
-- [ ] A.7 In `K/ShareReceiverActivity.kt` observe `getWorkInfosForUniqueWorkLiveData("envio-$id")` via `observeForever`; show phase and percent; remove observers in `onDestroy`.
-- [ ] A.8 Add `fase_preparando`, `fase_enviando`, `fase_verificando` to `R/values/strings.xml`.
-- [ ] A.9 Verify: `./gradlew :app:testDebugUnitTest` (from `mobile/android`) is green.
+- [x] A.1 RED: in `T/ApiClientTest.kt` add `escribirEnTramos` test: bytes identical, cumulative counts per 64 KiB slice.
+- [x] A.2 RED: in `T/SubidorTest.kt` update the fake `parte` to accept `progreso`; add tests: PREPARANDO during hash, monotonic ENVIANDO ending at `tamano`, VERIFICANDO last, resume starts at offset, small file (<4 MiB) progresses.
+- [x] A.3 RED: add `LimitadorAvance` tests in `T/SubidorTest.kt` with fake clock: drops within 250 ms, passes phase change and completion.
+- [x] A.4 In `K/UploadWorker.kt` add `enum Fase`, `progreso` param on `Servidor.parte`, and `escribirEnTramos` (64 KiB), wired in `ServidorHttp.parte`.
+- [x] A.5 In `K/UploadWorker.kt` add `avance` callback to `Subidor` (hash loop, part slices, verify); add `LimitadorAvance(250 ms)`.
+- [x] A.6 In `K/UploadWorker.kt` worker: notification with phase text and `setProgress` (indeterminate for VERIFICANDO), plus `setProgressAsync` with keys `fase`, `hechos`, `total`.
+- [x] A.7 In `K/ShareReceiverActivity.kt` observe `getWorkInfosForUniqueWorkLiveData("envio-$id")` via `observeForever`; show phase and percent; remove observers in `onDestroy`.
+- [x] A.8 Add `fase_preparando`, `fase_enviando`, `fase_verificando` to `R/values/strings.xml`.
+- [x] A.9 Verify: `./gradlew :app:testDebugUnitTest` (from `mobile/android`) is green.
 
 ## Unit B: Desktop arrival notice
 
-- [ ] B.1 In `desktop/ui/src/App.jsx` add a 2500 ms polling effect over `api.listarEventos(1, 'celular')`: skip when `document.hidden`, poll on `visibilitychange`, first success seeds `ultimoId` (0 if empty) with no toast, errors keep `ultimoId`.
-- [ ] B.2 In `App.jsx` on `ev.id > ultimoId`: set `avisoCelular` (actor, detalle), call `recargar()`, clear after 6 s. Fix the wording for link vs file events.
-- [ ] B.3 Add `.aviso-celular` fixed-position toast to `desktop/ui/src/styles.css`.
-- [ ] B.4 Verify: `cd desktop/ui && pnpm build`, then `git restore desktop/ui/dist/.gitkeep` (build deletes it).
-- [ ] B.5 Verify: `cd desktop && go test ./...` stays green (no Go changes).
+- [x] B.1 In `desktop/ui/src/App.jsx` add a 2500 ms polling effect over `api.listarEventos(1, 'celular')`: skip when `document.hidden`, poll on `visibilitychange`, first success seeds `ultimoId` (0 if empty) with no toast, errors keep `ultimoId`.
+- [x] B.2 In `App.jsx` on `ev.id > ultimoId`: set `avisoCelular` (actor, detalle), call `recargar()`, clear after 6 s. Fix the wording for link vs file events.
+- [x] B.3 Add `.aviso-celular` fixed-position toast to `desktop/ui/src/styles.css`.
+- [x] B.4 Verify: `cd desktop/ui && pnpm build`, then `git restore desktop/ui/dist/.gitkeep` (build deletes it).
+- [x] B.5 Verify: `cd desktop && go test ./...` stays green (no Go changes).
 
 ## Unit C: Pairing UX
 
-- [ ] C.1 RED: add `nombreVisiblePC` tests (null/blank -> default, stored name wins) in `T/QrEmparejamientoTest.kt`.
-- [ ] C.2 Add `nombreVisiblePC(guardado, porDefecto)` to `K/ActividadRedLocal.kt`; replace `leido.host` fallbacks.
-- [ ] C.3 In `K/ApiClient.kt` add optional `conexionMs`/`lecturaMs` params (defaults unchanged); test defaults in `T/ApiClientTest.kt`.
-- [ ] C.4 In `K/PairingActivity.kt` add paired mode ("Emparejado con «X»", "Enviar archivo", "Volver a emparejar", no QR control) and unpaired mode; persist `nombrePC` on success.
-- [ ] C.5 In `PairingActivity.kt` add `ProgressBar` with phase text ("Conectando…", "Confirma el código {sas}"); use a 3000/10000 pairing `ApiClient`; show the "La PC no está recibiendo…" message on timeout/refused; keep the certificate-mismatch message distinct.
-- [ ] C.6 Add `pc_sin_nombre`, `emparejado_con`, `volver_a_emparejar`, `conectando`, `pc_no_recibe` to `R/values/strings.xml`.
-- [ ] C.7 Diagnostic: add `Log.i("Bythos", ...)` with elapsed ms at connect start, `solicitar` return, each poll, and failure (exception class) in `PairingActivity.kt`.
-- [ ] C.8 Verify: `./gradlew :app:testDebugUnitTest` is green.
+- [x] C.1 RED: add `nombreVisiblePC` tests (null/blank -> default, stored name wins) in `T/QrEmparejamientoTest.kt`.
+- [x] C.2 Add `nombreVisiblePC(guardado, porDefecto)` to `K/ActividadRedLocal.kt`; replace `leido.host` fallbacks.
+- [x] C.3 In `K/ApiClient.kt` add optional `conexionMs`/`lecturaMs` params (defaults unchanged); test defaults in `T/ApiClientTest.kt`.
+- [x] C.4 In `K/PairingActivity.kt` add paired mode ("Emparejado con «X»", "Enviar archivo", "Volver a emparejar", no QR control) and unpaired mode; persist `nombrePC` on success.
+- [x] C.5 In `PairingActivity.kt` add `ProgressBar` with phase text ("Conectando…", "Confirma el código {sas}"); use a 3000/10000 pairing `ApiClient`; show the "La PC no está recibiendo…" message on timeout/refused; keep the certificate-mismatch message distinct.
+- [x] C.6 Add `pc_sin_nombre`, `emparejado_con`, `volver_a_emparejar`, `conectando`, `pc_no_recibe` to `R/values/strings.xml`.
+- [x] C.7 Diagnostic: add `Log.i("Bythos", ...)` with elapsed ms at connect start, `solicitar` return, each poll, and failure (exception class) in `PairingActivity.kt`.
+- [x] C.8 Verify: `./gradlew :app:testDebugUnitTest` is green.
 
 ## Manual verification
 
