@@ -100,9 +100,9 @@ Open PR1 with the manual checklist M.1-M.5 below in its description. PR2 branche
 - [ ] M.5 Manual paste: keyboard open does not cover the paste field; hint reads "Pega el texto que copiaste de la PC"; nothing pasted is echoed back.
 - [ ] M.6 Buttons: pressed and disabled states are visibly distinct; one primary per screen; at 200% font scale the screens scroll and every control stays reachable.
 - [ ] M.7 Voice and privacy: stale-QR message reads "La PC no está recibiendo. Abre «Recibir del celular» en la PC y escanea el QR de nuevo."; no voseo and no IP/port/URL anywhere (pairing errors included); legacy pairing shows "Emparejado con tu PC".
-- [ ] M.8 (PR2) Icon: Bythos adaptive icon on the launcher, not clipped under circle and squircle masks; themed (monochrome) icon works if the launcher supports it.
-- [ ] M.9 (PR2) Inter is visible (titles 700, buttons 600, body 400).
+- [x] M.8 (PR2) Icon: Bythos adaptive icon on the launcher, not clipped under circle and squircle masks; themed (monochrome) icon works if the launcher supports it. Verified 2026-10-12 on the A54 (launcher icon looks correct).
+- [x] M.9 (PR2) Inter is visible (titles 700, buttons 600, body 400). Verified 2026-10-12 on the A54.
 - [ ] M.10 (PR2) Tutorial first launch: fresh install, unpaired, launcher open -> tutorial opens once; kill and relaunch -> does not open again.
-- [ ] M.11 (PR2) Tutorial reopen: "Cómo enviar archivos" opens it again in both unpaired and paired home; "Enviar un archivo a la PC" stays the primary action when paired; "Entendido" and Back both close it.
+- [ ] M.11 (PR2) Tutorial reopen: "Cómo enviar archivos" opens it again in both unpaired and paired home; "Enviar un archivo a la PC" stays the primary action when paired; "Entendido" and Back both close it. Partial 2026-10-12: reopen from the paired home and closing confirmed on the A54; unpaired home not tested.
 - [ ] M.12 (PR2) Tutorial not on share: with fresh install (flag unset), share a file from another app -> share flow runs without the tutorial and the flag stays unset; later launcher open still auto-opens it once.
 - [ ] M.13 (PR2) Upgrade case: paired device with flag unset opens from launcher without tutorial.
