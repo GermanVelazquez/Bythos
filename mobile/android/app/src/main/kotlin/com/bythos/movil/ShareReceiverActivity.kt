@@ -31,6 +31,8 @@ class ShareReceiverActivity : ActividadRedLocal() {
     private lateinit var estado: TextView
     private var pendientes: List<Pendiente> = emptyList()
     private val lineas = linkedMapOf<Long, String>()
+    private val terminados = mutableSetOf<Long>()
+    private var esperados = 0
     private val observadores = mutableListOf<Pair<LiveData<List<WorkInfo>>, Observer<List<WorkInfo>>>>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -103,7 +105,7 @@ class ShareReceiverActivity : ActividadRedLocal() {
                     nuevos += guardado.id to guardado.nombre
                 }
                 avisar(getString(R.string.encolados, pendientes.size))
-                runOnUiThread { nuevos.forEach { (id, nombre) -> observarEnvio(id, nombre) } }
+                runOnUiThread { esperados = nuevos.size; nuevos.forEach { (id, nombre) -> observarEnvio(id, nombre) } }
             } catch (e: SinEspacio) {
                 avisar(getString(R.string.sin_espacio))
             } catch (e: Exception) {
@@ -126,6 +128,10 @@ class ShareReceiverActivity : ActividadRedLocal() {
                     "${UploadWorker.porcentaje(w.progress.getLong(UploadWorker.HECHOS, 0), w.progress.getLong(UploadWorker.TOTAL, 0))} %"
             }
             estado.text = lineas.values.joinToString("\n")
+            // Once every item is on the PC, show "Listo" briefly and go back to where the user came from.
+            if (w.state == WorkInfo.State.SUCCEEDED && terminados.add(id) && terminados.size == esperados) {
+                estado.postDelayed({ finish() }, CIERRE_MS)
+            }
         }
         datos.observeForever(observador)
         observadores += datos to observador
@@ -168,5 +174,6 @@ class ShareReceiverActivity : ActividadRedLocal() {
     private companion object {
         const val PEDIDO_DOCUMENTO = 2
         const val MARGEN_LIBRE = 16L shl 20
+        const val CIERRE_MS = 1_500L
     }
 }

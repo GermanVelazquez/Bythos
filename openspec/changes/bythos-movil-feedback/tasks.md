@@ -63,6 +63,6 @@ Base branch: chain tip `feat/bythos-movil-qr-07c-envios`. Risk is Medium because
 
 - [ ] M.1 A54, `adb logcat -s Bythos`: repro (1) QR >2 min after leaving "Recibir del celular", (2) desktop closed, (3) code >10 min with view open. Record elapsed ms per phase.
 - [ ] M.2 If retries dominate, add a wall-clock deadline in the `emparejar` thread (`PairingActivity.kt`); otherwise document the cause in `design.md` Open Questions.
-- [ ] M.3 A54: <4 MiB file shows rising percent; >4 MiB is smooth; notification and share screen match; reopening the share screen shows current state.
-- [ ] M.4 A54: paired launch shows the PC name (legacy pairing shows "tu PC", no IP); "Volver a emparejar" starts the scan; stale QR shows the message within ~3 s.
-- [ ] M.5 Desktop: phone upload shows the toast (device and file name) and the file lists within ~3 s without F5; no OS notification; no toast on startup.
+- [ ] M.3 A54: <4 MiB file shows rising percent; >4 MiB is smooth; notification and share screen match; reopening the share screen shows current state. Partial 2026-10-12: a large file showed rising percent in the notification and share screen; the <4 MiB file and reopening the share screen are not tested yet.
+- [ ] M.4 A54: paired launch shows the PC name (legacy pairing shows "tu PC", no IP); "Volver a emparejar" starts the scan; stale QR shows the message within ~3 s. Partial 2026-10-12: legacy pairing shows "Emparejado con «tu PC»" with no IP; stale QR not tested yet.
+- [x] M.5 Desktop: phone upload shows the toast (device and file name) and the file lists within ~3 s without F5; no OS notification; no toast on startup. Verified 2026-10-12 on the A54 + desktop: toast shown and the folder refreshed without F5.
