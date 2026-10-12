@@ -24,6 +24,13 @@ class QrEmparejamientoTest {
     }
 
     @Test
+    fun nombreVisibleUsaElGuardadoOElPorDefecto() {
+        assertEquals("tu PC", nombreVisiblePC(null, "tu PC"))
+        assertEquals("tu PC", nombreVisiblePC("  ", "tu PC"))
+        assertEquals("ESCRITORIO", nombreVisiblePC("ESCRITORIO", "tu PC"))
+    }
+
+    @Test
     fun nombreEsOpcional() {
         assertEquals("", parsearQr("bythos://pair?v=1&h=h&p=80&k=$huella&c=x").nombrePC)
     }
