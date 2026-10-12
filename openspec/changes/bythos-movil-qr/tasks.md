@@ -182,7 +182,8 @@ Chain strategy: feature-branch-chain
 - [ ] 13.3 Per-user → per-machine install migration: on a machine with a prior HKCU install, confirm silent HKCU uninstall, `%APPDATA%` preserved, no duplicate Start Menu entries.
 - [ ] 13.4 Android local-network permission on a real/emulated device enforcing it: deny → confirm "local network access denied" hint + settings button; grant → confirm normal connection.
   - Note: not testable on the Samsung SM-A546E while it runs Android 16 (the app requests the permission only on SDK ≥ 37). Pending until the device is updated to Android 17.
-- [ ] 13.5 Windows network-category detection on real hardware: toggle a real adapter Private/Public/Domain; confirm NLM COM detection matches Windows Settings and gates listener start/UI guide correctly.
+- [x] 13.5 Windows network-category detection on real hardware: toggle a real adapter Private/Public/Domain; confirm NLM COM detection matches Windows Settings and gates listener start/UI guide correctly.
+  - Note: verified on 2026-10-11 on a real Wi-Fi adapter. Private: the listener started on 192.168.1.33:48080. Public: "Recibir del celular" refused to start and showed the guide to switch to Private. Back to Private: the listener started again. Domain was not tested because the PC is not domain-joined.
 
 ## Key Learnings
 
