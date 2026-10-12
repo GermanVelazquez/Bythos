@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from './api.js'
 import { AddFileModal, FileViewerModal, ArchivoPreview } from './Archivos.jsx'
 import ReceptorMovil from './ReceptorMovil.jsx'
@@ -2337,6 +2337,45 @@ export default function App() {
 
   useEffect(() => { recargar() }, [])
 
+  // Llegadas desde el celular: se consulta el último evento de origen celular
+  // cada 2.5 s mientras la ventana está visible. La primera respuesta fija la
+  // línea base (sin aviso); un id mayor dispara aviso en la app y recarga.
+  const ultimoEventoCelular = useRef(null)
+  const [avisoCelular, setAvisoCelular] = useState(null)
+  useEffect(() => {
+    let vivo = true
+    let timerAviso
+    const consultar = async () => {
+      if (document.hidden) return
+      try {
+        const lista = await api.listarEventos(1, 'celular')
+        if (!vivo) return
+        const ev = Array.isArray(lista) && lista.length > 0 ? normEvento(lista[0]) : null
+        const previo = ultimoEventoCelular.current
+        if (previo === null) {
+          ultimoEventoCelular.current = ev ? ev.id : 0
+        } else if (ev && ev.id > previo) {
+          ultimoEventoCelular.current = ev.id
+          setAvisoCelular({ actor: ev.actor, detalle: ev.detalle, accion: ev.accion })
+          clearTimeout(timerAviso)
+          timerAviso = setTimeout(() => setAvisoCelular(null), 6000)
+          recargar()
+        }
+      } catch {
+        // Sin red o error del servidor: se conserva el último id y se reintenta.
+      }
+    }
+    consultar()
+    const timer = setInterval(consultar, 2500)
+    document.addEventListener('visibilitychange', consultar)
+    return () => {
+      vivo = false
+      clearInterval(timer)
+      clearTimeout(timerAviso)
+      document.removeEventListener('visibilitychange', consultar)
+    }
+  }, [])
+
   // Folder progress bars: fetched when the folders or dashboard view is open
   // (both reuse the same progresos map, no new endpoints).
   useEffect(() => {
@@ -2689,6 +2728,13 @@ export default function App() {
         resource={viewerResource}
         onClose={() => setViewerResource(null)}
       />
+      {avisoCelular && (
+        <div className="aviso-celular" role="status">
+          {avisoCelular.accion === 'archivo_subido' ? 'Archivo recibido' : 'Enlace recibido'}
+          {avisoCelular.actor ? ` de ${avisoCelular.actor}` : ''}
+          {avisoCelular.detalle ? `: ${avisoCelular.detalle}` : ''}
+        </div>
+      )}
     </div>
   )
 }
