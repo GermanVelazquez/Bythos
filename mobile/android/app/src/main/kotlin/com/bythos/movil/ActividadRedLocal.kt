@@ -39,6 +39,9 @@ abstract class ActividadRedLocal : Activity() {
     }
 }
 
+/** The stored PC name, or [porDefecto] when it is absent (legacy pairing); never the raw host. */
+fun nombreVisiblePC(guardado: String?, porDefecto: String): String = guardado?.takeIf { it.isNotBlank() } ?: porDefecto
+
 /** Client for the stored pairing (target + pin from prefs, token from the Keystore); null when not paired. */
 fun clienteEmparejado(contexto: android.content.Context): ApiClient? {
     val prefs = contexto.getSharedPreferences("bythos", android.content.Context.MODE_PRIVATE)

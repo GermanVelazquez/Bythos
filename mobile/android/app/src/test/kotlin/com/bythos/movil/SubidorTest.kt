@@ -23,8 +23,10 @@ private class ServidorFalso(var recibido: ByteArray = ByteArray(0)) : Servidor {
     override fun estado(id: String) = EstadoRemoto(remoto, recibido.size.toLong(), "")
     override fun enlace(carpetaId: Long, url: String) = Unit
 
-    override fun parte(id: String, offset: Long, sha256: String, datos: ByteArray): Long {
+    override fun parte(id: String, offset: Long, sha256: String, datos: ByteArray, progreso: (Long) -> Unit): Long {
         ofsets += offset
+        // Bytes go out one by one before the PC answers, as with a real rejected chunk.
+        for (n in 1..datos.size) progreso(n.toLong())
         errores.removeFirstOrNull()?.let { throw it }
         assertEquals(sha256Hex(datos), sha256)
         recibido += datos
@@ -42,8 +44,13 @@ class SubidorTest {
         carpetaId = 7, clienteId = "c1", subidaId = subida, offset = offset, estado = estado,
     )
 
-    private fun subidor(srv: Servidor, repo: RepoMemoria, cancelado: () -> Boolean = { false }, fuente: Fuente = Fuente { ByteArrayInputStream(contenido) }) =
-        Subidor(srv, repo, fuente, cancelado, pausa = {}, tamanoParte = 4)
+    private fun subidor(
+        srv: Servidor, repo: RepoMemoria, cancelado: () -> Boolean = { false },
+        fuente: Fuente = Fuente { ByteArrayInputStream(contenido) },
+        avance: (Fase, Long, Long) -> Unit = { _, _, _ -> },
+    ) = Subidor(srv, repo, fuente, cancelado, pausa = {}, tamanoParte = 4, avance = avance)
+
+    private class Avance(val fase: Fase, val hechos: Long)
 
     @Test
     fun transicionesDelBuzon() {
@@ -124,5 +131,61 @@ class SubidorTest {
         assertEquals(Resultado.REINTENTAR, r)
         assertEquals(EstadoEnvio.PENDIENTE, repo.fila.estado)
         assertEquals(4L, repo.fila.offset)
+    }
+
+    @Test
+    fun avanzaPorFasesYElEnvioTerminaEnElTamano() {
+        val vistos = mutableListOf<Avance>()
+        subidor(ServidorFalso(), RepoMemoria(envio()), avance = { f, h, _ -> vistos += Avance(f, h) }).ejecutar(1)
+        assertEquals(listOf(Fase.PREPARANDO, Fase.ENVIANDO, Fase.VERIFICANDO), vistos.map { it.fase }.distinct())
+        assertEquals(Fase.VERIFICANDO, vistos.last().fase)
+        assertEquals(contenido.size.toLong(), vistos.last { it.fase == Fase.PREPARANDO }.hechos)
+        val enviados = vistos.filter { it.fase == Fase.ENVIANDO }.map { it.hechos }
+        assertEquals(enviados.sorted(), enviados)
+        assertEquals(contenido.size.toLong(), enviados.last())
+    }
+
+    @Test
+    fun reenviarUnaParteNoHaceRetrocederElAvance() {
+        val enviados = mutableListOf<Long>()
+        val srv = ServidorFalso()
+        srv.errores += ErrorApi(422, "hash_parte_invalido", "x")
+        subidor(srv, RepoMemoria(envio()), avance = { f, h, _ -> if (f == Fase.ENVIANDO) enviados += h }).ejecutar(1)
+        assertEquals(enviados.sorted(), enviados)
+        assertEquals(contenido.size.toLong(), enviados.last())
+    }
+
+    @Test
+    fun alReanudarElEnvioArrancaEnElOffset() {
+        val vistos = mutableListOf<Avance>()
+        val srv = ServidorFalso(contenido.copyOf(4))
+        val repo = RepoMemoria(envio(EstadoEnvio.SUBIENDO, subida = "s1", offset = 0))
+        subidor(srv, repo, avance = { f, h, _ -> vistos += Avance(f, h) }).ejecutar(1)
+        assertEquals(4L, vistos.first { it.fase == Fase.ENVIANDO }.hechos)
+    }
+
+    @Test
+    fun unArchivoMasChicoQueUnaParteTambienAvanza() {
+        val vistos = mutableListOf<Long>()
+        val repo = RepoMemoria(envio())
+        Subidor(ServidorFalso(), repo, { ByteArrayInputStream(contenido) }, pausa = {}, tamanoParte = 64,
+            avance = { f, h, _ -> if (f == Fase.ENVIANDO) vistos += h }).ejecutar(1)
+        assertEquals(contenido.size.toLong(), vistos.last())
+        assertEquals(true, vistos.size >= 2 && vistos.first() < vistos.last())
+    }
+
+    @Test
+    fun elLimitadorDescartaDentroDeLosMsYDejaPasarFaseYFinal() {
+        var ahora = 0L
+        val l = LimitadorAvance(250) { ahora }
+        assertEquals(true, l.pasa(Fase.ENVIANDO, 1, 10))
+        ahora = 100
+        assertEquals(false, l.pasa(Fase.ENVIANDO, 2, 10))
+        ahora = 300
+        assertEquals(true, l.pasa(Fase.ENVIANDO, 3, 10))
+        ahora = 310
+        assertEquals(true, l.pasa(Fase.ENVIANDO, 10, 10)) // completion
+        ahora = 320
+        assertEquals(true, l.pasa(Fase.VERIFICANDO, 10, 10)) // phase change
     }
 }
