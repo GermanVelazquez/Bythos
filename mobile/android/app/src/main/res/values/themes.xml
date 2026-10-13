@@ -12,7 +12,7 @@
         <item name="android:textColorHint">@color/ink_dim</item>
         <item name="android:colorAccent">@color/ink_accent</item>
         <item name="android:colorControlActivated">@color/ink_accent</item>
-        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:fontFamily">@font/inter</item>
         <item name="android:buttonStyle">@style/Boton.Primario</item>
         <item name="android:alertDialogTheme">@style/Tema.Bythos.Dialogo</item>
     </style>
@@ -24,7 +24,7 @@
         <item name="android:textColorAlertDialogListItem">@color/ink</item>
         <item name="android:listPreferredItemHeightSmall">@dimen/objetivo_tactil</item>
         <item name="android:buttonBarButtonStyle">@style/Boton.Secundario</item>
-        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:fontFamily">@font/inter</item>
     </style>
 
     <style name="Boton" parent="@android:style/Widget.Material.Button">
@@ -33,7 +33,7 @@
         <item name="android:minHeight">@dimen/objetivo_tactil</item>
         <item name="android:minWidth">@dimen/objetivo_tactil</item>
         <item name="android:textSize">@dimen/texto_boton</item>
-        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/inter_semibold</item>
     </style>
     <style name="Boton.Primario">
         <item name="android:background">@drawable/boton_primario</item>
@@ -47,25 +47,27 @@
     <style name="TextAppearance.Bythos" parent="@android:style/TextAppearance.Material" />
     <style name="TextAppearance.Bythos.Titulo">
         <item name="android:textSize">@dimen/texto_titulo</item>
-        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/inter_bold</item>
         <item name="android:textColor">@color/ink</item>
     </style>
     <style name="TextAppearance.Bythos.Panel">
         <item name="android:textSize">@dimen/texto_panel</item>
-        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/inter_semibold</item>
         <item name="android:textColor">@color/ink</item>
     </style>
     <style name="TextAppearance.Bythos.Cuerpo">
         <item name="android:textSize">@dimen/texto_cuerpo</item>
+        <item name="android:fontFamily">@font/inter_regular</item>
         <item name="android:textColor">@color/ink</item>
     </style>
     <style name="TextAppearance.Bythos.Tenue">
         <item name="android:textSize">@dimen/texto_tenue</item>
+        <item name="android:fontFamily">@font/inter_regular</item>
         <item name="android:textColor">@color/ink_muted</item>
     </style>
     <style name="TextAppearance.Bythos.Micro">
         <item name="android:textSize">@dimen/texto_micro</item>
-        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/inter_semibold</item>
         <item name="android:textAllCaps">true</item>
         <item name="android:textColor">@color/ink_muted</item>
     </style>
