@@ -5,6 +5,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.widget.TextView
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
@@ -37,8 +40,8 @@ class ShareReceiverActivity : ActividadRedLocal() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        estado = TextView(this).apply { setPadding(48, 96, 48, 48) }
-        setContentView(estado)
+        estado = Estilo.cuerpo(this)
+        Estilo.pantalla(this).addView(estado)
         when (intent.action) {
             Intent.ACTION_SEND -> {
                 val uri = flujo(Intent.EXTRA_STREAM)
@@ -83,7 +86,7 @@ class ShareReceiverActivity : ActividadRedLocal() {
                             .setOnCancelListener { finish() }.show()
                     }
                 } catch (e: Exception) {
-                    avisar(textoFallo(e))
+                    avisar(textoFallo(e), Tono.ERROR)
                 }
             }.start()
         }
@@ -102,14 +105,15 @@ class ShareReceiverActivity : ActividadRedLocal() {
                     }
                     val guardado = repo.guardar(envio)
                     UploadWorker.encolar(this, guardado.id)
-                    nuevos += guardado.id to guardado.nombre
+                    // Un enlace nunca se muestra como texto: ni su URL ni su nombre.
+                    nuevos += guardado.id to (if (p.url != null) getString(R.string.enlace_compartido) else guardado.nombre)
                 }
                 avisar(getString(R.string.encolados, pendientes.size))
                 runOnUiThread { esperados = nuevos.size; nuevos.forEach { (id, nombre) -> observarEnvio(id, nombre) } }
             } catch (e: SinEspacio) {
-                avisar(getString(R.string.sin_espacio))
+                avisar(getString(R.string.sin_espacio), Tono.ERROR)
             } catch (e: Exception) {
-                avisar(getString(R.string.fallo_fuente))
+                avisar(getString(R.string.fallo_fuente), Tono.ERROR)
             }
         }.start()
     }
@@ -127,7 +131,7 @@ class ShareReceiverActivity : ActividadRedLocal() {
                 else -> "$nombre: ${getString(UploadWorker.textoFase(fase))} " +
                     "${UploadWorker.porcentaje(w.progress.getLong(UploadWorker.HECHOS, 0), w.progress.getLong(UploadWorker.TOTAL, 0))} %"
             }
-            estado.text = lineas.values.joinToString("\n")
+            estado.text = textoLineas()
             // Once every item is on the PC, show "Listo" briefly and go back to where the user came from.
             if (w.state == WorkInfo.State.SUCCEEDED && terminados.add(id) && terminados.size == esperados) {
                 estado.postDelayed({ finish() }, CIERRE_MS)
@@ -135,6 +139,20 @@ class ShareReceiverActivity : ActividadRedLocal() {
         }
         datos.observeForever(observador)
         observadores += datos to observador
+    }
+
+    /** Una línea por elemento; el "Listo" final va en verde con un único span. */
+    private fun textoLineas(): CharSequence {
+        val listo = getString(R.string.fase_listo)
+        val texto = SpannableStringBuilder()
+        lineas.values.forEachIndexed { i, linea ->
+            if (i > 0) texto.append('\n')
+            texto.append(linea)
+            if (linea.endsWith(": $listo")) {
+                texto.setSpan(ForegroundColorSpan(getColor(R.color.green)), texto.length - listo.length, texto.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
+        return texto
     }
 
     override fun onDestroy() {
@@ -169,7 +187,10 @@ class ShareReceiverActivity : ActividadRedLocal() {
         return Envio(tipo = Envio.TIPO_ARCHIVO, uri = destino.toString(), nombre = nombre, tamano = tamano, carpetaId = carpetaId, clienteId = UUID.randomUUID().toString())
     }
 
-    private fun avisar(texto: String) = runOnUiThread { estado.text = texto }
+    private fun avisar(texto: String, tono: Tono = Tono.NORMAL) = runOnUiThread {
+        estado.text = texto
+        Estilo.tono(estado, tono)
+    }
 
     private companion object {
         const val PEDIDO_DOCUMENTO = 2
