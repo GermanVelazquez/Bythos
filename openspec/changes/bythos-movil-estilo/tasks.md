@@ -89,7 +89,7 @@ Open PR1 with the manual checklist M.1-M.5 below in its description. PR2 branche
 ### PR2 final verification
 
 - [x] F.1 From `mobile/android`: `./gradlew :app:testDebugUnitTest`, `./gradlew :app:assembleDebug`, and `./gradlew :app:connectedDebugAndroidTest` (A54 connected) are all green.
-- [ ] F.2 Open PR2 with the manual checklist below in its description.
+- [x] F.2 Open PR2 with the manual checklist below in its description (PR #16; feedback #14, PR1 #15).
 
 ## Manual verification checklist (Samsung A54, API 36)
 
