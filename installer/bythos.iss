@@ -142,11 +142,28 @@ var
   Codigo: Integer;
 begin
   Result := True;
-  Clave := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{AEEA0123-59D0-4FFD-89D0-13AA666C70C4}_is1';
+  // AppId={{...}} registra la clave con la llave final doble: "{{" escapa
+  // la primera llave, pero "}}" queda literal. La clave real es "...}}_is1".
+  Clave := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{AEEA0123-59D0-4FFD-89D0-13AA666C70C4}}_is1';
+  Log('Migración HKCU: usuario=' + GetUserNameString + ', admin=' + IntToStr(Ord(IsAdmin)));
   if RegQueryStringValue(HKCU, Clave, 'UninstallString', Cadena) then
   begin
+    Log('Migración HKCU: UninstallString leído=' + Cadena);
     Cadena := RemoveQuotes(Trim(Cadena));
     if (Cadena <> '') and FileExists(Cadena) then
-      Exec(Cadena, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, Codigo);
-  end;
+    begin
+      if Exec(Cadena, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, Codigo) then
+        Log('Migración HKCU: desinstalador terminó con código=' + IntToStr(Codigo))
+      else
+        Log('Migración HKCU: no se pudo ejecutar el desinstalador, error=' + IntToStr(Codigo) + ' (' + SysErrorMessage(Codigo) + ')');
+      if RegValueExists(HKCU, Clave, 'UninstallString') then
+        Log('Migración HKCU: la entrada sigue en HKCU después de desinstalar')
+      else
+        Log('Migración HKCU: la entrada ya no está en HKCU');
+    end
+    else
+      Log('Migración HKCU: el desinstalador no existe en la ruta=' + Cadena);
+  end
+  else
+    Log('Migración HKCU: no hay instalación previa por usuario');
 end;
