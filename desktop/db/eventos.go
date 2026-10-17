@@ -44,6 +44,11 @@ const (
 	// (ver api/agente.go) y Bythos abrió una terminal en el workspace del
 	// agente. detalle trae qué terminal se usó y la carpeta.
 	AccionTerminalAgenteAbierta = "terminal_agente_abierta"
+	// AccionArchivoSubido: se subió un archivo (PDF/video/imagen/documento)
+	// y Bythos lo guardó como recurso (ver api/archivos.go). Distinta de
+	// AccionRecursoGuardado (que es para links) para poder auditar cada
+	// caso por separado en el Historial.
+	AccionArchivoSubido = "archivo_subido"
 )
 
 // limiteEventosPorDefecto/Maximo acotan ListarEventos: sin límite pedido

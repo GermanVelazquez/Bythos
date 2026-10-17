@@ -27,6 +27,22 @@ type wireRecurso struct {
 	Tipo        string
 	Estado      string
 	Progreso    int
+	// Archivo viaja solo si el recurso es un ARCHIVO (pdf/video/imagen/
+	// documento), no un link (ver desktop/api/archivos.go: recursoJSON).
+	Archivo *wireArchivo
+}
+
+// wireArchivo es lo que Bythos manda para un recurso de ARCHIVO: nombre,
+// mime, tamaño y la ruta ABSOLUTA en disco. Este proceso (agentes/) nunca
+// abre bythos.db ni toca disco directo (ver comentario del paquete en
+// cliente.go): la ruta absoluta tiene que viajar por HTTP porque es la
+// única forma en que este proceso puede saberla.
+type wireArchivo struct {
+	ID             int64
+	NombreOriginal string
+	Mime           string
+	Tamano         int64
+	RutaLocal      string
 }
 
 type wireAgenda struct {
@@ -87,32 +103,62 @@ type CarpetaConProgreso struct {
 	Porcentaje  int    `json:"porcentaje" jsonschema:"0 a 100, completados/total"`
 }
 
-// RecursoSalida es un link guardado en Bythos.
+// ArchivoSalida es el detalle de un recurso de ARCHIVO (a diferencia de
+// un link): nombre, tamaño y la ruta absoluta en ESTA PC para que un
+// agente de IA en terminal lo abra con sus propias herramientas de
+// lectura de archivos (ej. un PDF), sin tener que pedirle el contenido a
+// Bythos por HTTP.
+type ArchivoSalida struct {
+	ID             int64  `json:"id" jsonschema:"id del archivo"`
+	NombreOriginal string `json:"nombre_original" jsonschema:"nombre del archivo tal como lo subió el usuario"`
+	Mime           string `json:"mime" jsonschema:"tipo MIME detectado por contenido, ej. application/pdf"`
+	Tamano         int64  `json:"tamano" jsonschema:"tamaño en bytes"`
+	RutaLocal      string `json:"ruta_local" jsonschema:"ruta ABSOLUTA del archivo en el disco de esta PC, lista para abrir con herramientas de lectura de archivos"`
+}
+
+func aArchivoSalida(w *wireArchivo) *ArchivoSalida {
+	if w == nil {
+		return nil
+	}
+	return &ArchivoSalida{
+		ID:             w.ID,
+		NombreOriginal: w.NombreOriginal,
+		Mime:           w.Mime,
+		Tamano:         w.Tamano,
+		RutaLocal:      w.RutaLocal,
+	}
+}
+
+// RecursoSalida es un recurso guardado en Bythos: un link, o un archivo
+// (PDF/video/imagen/documento) — en ese caso Archivo trae el detalle
+// para abrirlo desde el agente, y Archivo es nil para un link normal.
 type RecursoSalida struct {
-	ID          int64  `json:"id" jsonschema:"id del recurso"`
-	CarpetaID   int64  `json:"carpeta_id" jsonschema:"id de la carpeta que lo contiene"`
-	URL         string `json:"url" jsonschema:"URL del recurso"`
-	Titulo      string `json:"titulo" jsonschema:"título del recurso"`
-	Imagen      string `json:"imagen" jsonschema:"URL de la miniatura, si Bythos la encontró"`
-	Descripcion string `json:"descripcion" jsonschema:"descripción corta del recurso"`
-	Tipo        string `json:"tipo" jsonschema:"youtube, articulo u otro"`
-	Estado      string `json:"estado" jsonschema:"pendiente, en_curso o completado"`
-	Progreso    int    `json:"progreso" jsonschema:"0 a 100, porcentaje estudiado"`
+	ID          int64          `json:"id" jsonschema:"id del recurso"`
+	CarpetaID   int64          `json:"carpeta_id" jsonschema:"id de la carpeta que lo contiene"`
+	URL         string         `json:"url" jsonschema:"URL del recurso; para un ARCHIVO es una forma interna \"archivo:<id>\", no una URL real — usá Archivo.ruta_local en su lugar"`
+	Titulo      string         `json:"titulo" jsonschema:"título del recurso"`
+	Imagen      string         `json:"imagen" jsonschema:"URL de la miniatura, si Bythos la encontró"`
+	Descripcion string         `json:"descripcion" jsonschema:"descripción corta del recurso"`
+	Tipo        string         `json:"tipo" jsonschema:"youtube, articulo, otro, pdf, video, imagen o documento"`
+	Estado      string         `json:"estado" jsonschema:"pendiente, en_curso o completado"`
+	Progreso    int            `json:"progreso" jsonschema:"0 a 100, porcentaje estudiado"`
+	Archivo     *ArchivoSalida `json:"archivo,omitempty" jsonschema:"presente solo si el recurso es un archivo subido (no un link)"`
 }
 
 // RecursoDetalle es la forma de leer_recurso: igual que RecursoSalida más
 // el nombre de la carpeta (sin que el agente tenga que cruzarlo a mano).
 type RecursoDetalle struct {
-	ID          int64  `json:"id" jsonschema:"id del recurso"`
-	URL         string `json:"url" jsonschema:"URL del recurso"`
-	Titulo      string `json:"titulo" jsonschema:"título del recurso"`
-	Tipo        string `json:"tipo" jsonschema:"youtube, articulo u otro"`
-	Descripcion string `json:"descripcion" jsonschema:"descripción corta del recurso"`
-	Imagen      string `json:"imagen" jsonschema:"URL de la miniatura, si Bythos la encontró"`
-	Progreso    int    `json:"progreso" jsonschema:"0 a 100, porcentaje estudiado"`
-	Estado      string `json:"estado" jsonschema:"pendiente, en_curso o completado"`
-	CarpetaID   int64  `json:"carpeta_id" jsonschema:"id de la carpeta que lo contiene"`
-	Carpeta     string `json:"carpeta" jsonschema:"nombre de la carpeta que lo contiene"`
+	ID          int64          `json:"id" jsonschema:"id del recurso"`
+	URL         string         `json:"url" jsonschema:"URL del recurso; para un ARCHIVO es una forma interna \"archivo:<id>\", no una URL real — usá Archivo.ruta_local en su lugar"`
+	Titulo      string         `json:"titulo" jsonschema:"título del recurso"`
+	Tipo        string         `json:"tipo" jsonschema:"youtube, articulo, otro, pdf, video, imagen o documento"`
+	Descripcion string         `json:"descripcion" jsonschema:"descripción corta del recurso"`
+	Imagen      string         `json:"imagen" jsonschema:"URL de la miniatura, si Bythos la encontró"`
+	Progreso    int            `json:"progreso" jsonschema:"0 a 100, porcentaje estudiado"`
+	Estado      string         `json:"estado" jsonschema:"pendiente, en_curso o completado"`
+	CarpetaID   int64          `json:"carpeta_id" jsonschema:"id de la carpeta que lo contiene"`
+	Carpeta     string         `json:"carpeta" jsonschema:"nombre de la carpeta que lo contiene"`
+	Archivo     *ArchivoSalida `json:"archivo,omitempty" jsonschema:"presente solo si el recurso es un archivo subido (no un link)"`
 }
 
 // AgendaSalida es una nota del calendario.
@@ -176,6 +222,7 @@ func aRecursoSalida(w wireRecurso) RecursoSalida {
 		Tipo:        w.Tipo,
 		Estado:      w.Estado,
 		Progreso:    w.Progreso,
+		Archivo:     aArchivoSalida(w.Archivo),
 	}
 }
 
