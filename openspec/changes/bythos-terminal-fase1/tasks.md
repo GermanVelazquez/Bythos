@@ -111,15 +111,15 @@ Satisfies: ET Origin Check, Host Check, One-Time Ticket, Fixed Command and Limit
 
 Satisfies: TS Navigation Entry, Create Session, Close and Delete Session, Status Chips (terminal chip); ET Reattach and Replay (client side) (design UI Architecture, D5, D6).
 
-- [ ] 4.1 Modify `UI/package.json`: add `@xterm/xterm` 6.0.0 and `@xterm/addon-fit` 0.11.0 (exact versions, no `^`); update `pnpm-lock.yaml` (excluded from the budget). Modify `UI/vite.config.js`: `'/api': {target:'http://localhost:8080', ws:true}`.
-- [ ] 4.2 Modify `S/api.js`: functions for sessions CRUD, ticket, entorno. Add the strings from the design UI Strings table used in this PR: "Terminal", "NUEVO", "Escribe un nombre para la sesión.", "Suelta", "La terminal requiere Windows 10 versión 1809 o superior.". (TS: Entry present, Empty name, Folder deleted)
-- [ ] 4.3 Modify `S/App.jsx` (~25 lines): nav item `{id:'terminal', label:'Terminal', icon:'terminal', badge:'NUEVO'}` directly after Exportar with badge rendering; `lazy(() => import('./terminal/Terminal.jsx'))`; when `view==='terminal'` render `<Suspense><Terminal carpetas={carpetas}/></Suspense>` instead of the `.content` div (no PageHeader, no Topbar, no drop handler). (TS: Entry present)
-- [ ] 4.4 Create `T/Terminal.jsx` (container): sessions list, open tabs and active tab in `localStorage`, create/close/delete flows (delete after confirmation; close only removes from `localStorage`). Sets `window.EXCALIDRAW_ASSET_PATH='/excalidraw/'` is deferred to PR5. (TS: Create, Delete)
-- [ ] 4.5 Create presentational components `T/PestanasSesiones.jsx` (tabs, mode, "Suelta" for folderless), `T/DialogoNuevaSesion.jsx` (nombre, carpeta optional, modo; blank name shows "Escribe un nombre para la sesión."), `T/PanelTerminal.jsx` (xterm + fit addon, ResizeObserver with 100 ms debounce, "Abrir agente" fallback on 501). (TS: Create, Empty name)
-- [ ] 4.6 Create `T/conexionPty.js`: ticket + ws, reconnect backoff 0.5 to 5 s, `TextEncoder` for binary input, resize text frames, handle close 4000 (no reconnect storm) and `salida` frames; `term.reset()` before writing the replay. (ET: Reload)
-- [ ] 4.7 In `PanelTerminal.jsx`, add `attachCustomKeyEventHandler`: Ctrl+C with selection or Ctrl+Shift+C copies and returns false; Ctrl+V / Ctrl+Shift+V return false without `preventDefault`; Ctrl+R calls `preventDefault` and returns true. Add a capture-phase window keydown listener blocking F5 and Ctrl+R while the view is mounted (removed on unmount). (ET: Reload)
-- [ ] 4.8 Modify `S/styles.css` for the terminal layout (tabs, panel, nav badge).
-- [ ] 4.9 Verify: `pnpm build` from `desktop/ui`; `go vet ./...` and `go test ./...` from `desktop/` still green (embedded `dist` unaffected); manual checks M.1 to M.4 on the real app before the PR is opened.
+- [x] 4.1 Modify `UI/package.json`: add `@xterm/xterm` 6.0.0 and `@xterm/addon-fit` 0.11.0 (exact versions, no `^`); update `pnpm-lock.yaml` (excluded from the budget). Modify `UI/vite.config.js`: `'/api': {target:'http://localhost:8080', ws:true}`.
+- [x] 4.2 Modify `S/api.js`: functions for sessions CRUD, ticket, entorno. Add the strings from the design UI Strings table used in this PR: "Terminal", "NUEVO", "Escribe un nombre para la sesión.", "Suelta", "La terminal requiere Windows 10 versión 1809 o superior.". (TS: Entry present, Empty name, Folder deleted)
+- [x] 4.3 Modify `S/App.jsx` (~25 lines): nav item `{id:'terminal', label:'Terminal', icon:'terminal', badge:'NUEVO'}` directly after Exportar with badge rendering; `lazy(() => import('./terminal/Terminal.jsx'))`; when `view==='terminal'` render `<Suspense><Terminal carpetas={carpetas}/></Suspense>` instead of the `.content` div (no PageHeader, no Topbar, no drop handler). (TS: Entry present)
+- [x] 4.4 Create `T/Terminal.jsx` (container): sessions list, open tabs and active tab in `localStorage`, create/close/delete flows (delete after confirmation; close only removes from `localStorage`). Sets `window.EXCALIDRAW_ASSET_PATH='/excalidraw/'` is deferred to PR5. (TS: Create, Delete)
+- [x] 4.5 Create presentational components `T/PestanasSesiones.jsx` (tabs, mode, "Suelta" for folderless), `T/DialogoNuevaSesion.jsx` (nombre, carpeta optional, modo; blank name shows "Escribe un nombre para la sesión."), `T/PanelTerminal.jsx` (xterm + fit addon, ResizeObserver with 100 ms debounce, "Abrir agente" fallback on 501). (TS: Create, Empty name)
+- [x] 4.6 Create `T/conexionPty.js`: ticket + ws, reconnect backoff 0.5 to 5 s, `TextEncoder` for binary input, resize text frames, handle close 4000 (no reconnect storm) and `salida` frames; `term.reset()` before writing the replay. (ET: Reload)
+- [x] 4.7 In `PanelTerminal.jsx`, add `attachCustomKeyEventHandler`: Ctrl+C with selection or Ctrl+Shift+C copies and returns false; Ctrl+V / Ctrl+Shift+V return false without `preventDefault`; Ctrl+R calls `preventDefault` and returns true. Add a capture-phase window keydown listener blocking F5 and Ctrl+R while the view is mounted (removed on unmount). (ET: Reload)
+- [x] 4.8 Modify `S/styles.css` for the terminal layout (tabs, panel, nav badge).
+- [x] 4.9 Verify: `pnpm build` from `desktop/ui`; `go vet ./...` and `go test ./...` from `desktop/` still green (embedded `dist` unaffected); manual checks M.1 to M.4 on the real app before the PR is opened.
 - [ ] 4.10 Open PR4 (base PR3 branch) with M.1 to M.4 in the description.
 
 ## PR5: Whiteboard, autosave and offline fonts (branch `feat/bythos-terminal-fase1-05-pizarra-ui`, base `feat/bythos-terminal-fase1-04-ui-terminal`)
@@ -186,10 +186,10 @@ Satisfies: WT pizarra_captura, pizarra_dibujar (client side), Delete Rules; TS R
 
 Run on an installed or locally built `bythos.exe`. Items are grouped by the PR that makes them testable; tick them in the PR description and again here.
 
-- [ ] M.1 (PR4) Terminal works: open Terminal, create a session, a `cmd` prompt appears in the app; run a CLI (`claude`, or `npm -v`) and confirm it logs in or runs normally.
-- [ ] M.2 (PR4) Reload keeps the session: print "hello", press F5/Ctrl+R in the app (the key is blocked inside the terminal) and use the reload of the window; the same process is still running and "hello" is replayed.
-- [ ] M.3 (PR4) Clipboard: select text and Ctrl+C copies it (without a selection Ctrl+C interrupts the process); Ctrl+Shift+C copies; Ctrl+V and Ctrl+Shift+V paste once (not twice).
-- [ ] M.4 (PR4) Sessions: empty name shows "Escribe un nombre para la sesión."; a folderless session shows "Suelta"; closing a tab keeps the data; deleting asks for confirmation and ends the PTY.
+- [x] M.1 (PR4) Terminal works: open Terminal, create a session, a `cmd` prompt appears in the app; run a CLI (`claude`, or `npm -v`) and confirm it logs in or runs normally.
+- [x] M.2 (PR4) Reload keeps the session: print "hello", press F5/Ctrl+R in the app (the key is blocked inside the terminal) and use the reload of the window; the same process is still running and "hello" is replayed.
+- [x] M.3 (PR4) Clipboard: select text and Ctrl+C copies it (without a selection Ctrl+C interrupts the process); Ctrl+Shift+C copies; Ctrl+V and Ctrl+Shift+V paste once (not twice).
+- [x] M.4 (PR4) Sessions: empty name shows "Escribe un nombre para la sesión."; a folderless session shows "Suelta"; closing a tab keeps the data; deleting asks for confirmation and ends the PTY.
 - [ ] M.5 (PR5) Drawing and autosave survive a restart: draw, wait for "Guardado", close Bythos fully, reopen: the same elements load. Edit and switch tabs/quit immediately: the edit is still saved.
 - [ ] M.6 (PR5) Image paste and drop onto the board are refused with "Las imágenes llegan en una fase posterior."; the image tool is not in the toolbar.
 - [ ] M.7 (PR5) Offline fonts: with the DevTools Network panel open (or network disabled) and text drawn on the board, there are zero non-localhost requests and the font renders.

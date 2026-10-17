@@ -225,4 +225,30 @@ export const api = {
   // cae al botón Descargar de siempre (ver FileViewerModal).
   textoArchivo: (archivoId) =>
     fetch(`${BASE}/api/archivos/${archivoId}/texto`, { headers: CABECERAS_ORIGEN }).then(leer),
+
+  // TERMINAL (Fase 1): sesiones, ticket de un solo uso para el WebSocket y
+  // entorno. Rutas en /api/terminal (api/sesiones.go, api/terminal.go).
+  entornoTerminal: () => fetch(`${BASE}/api/terminal/entorno`, { headers: CABECERAS_ORIGEN }).then(leer),
+  listarSesiones: () => fetch(`${BASE}/api/terminal/sesiones`, { headers: CABECERAS_ORIGEN }).then(leer),
+  crearSesion: (nombre, modo, carpeta_id) =>
+    fetch(`${BASE}/api/terminal/sesiones`, {
+      method: 'POST', headers: CABECERAS_JSON, body: JSON.stringify({ nombre, modo, carpeta_id }),
+    }).then(leer),
+  cambiarSesion: (id, cambios) =>
+    fetch(`${BASE}/api/terminal/sesiones/${id}`, {
+      method: 'PATCH', headers: CABECERAS_JSON, body: JSON.stringify(cambios),
+    }).then(leer),
+  borrarSesion: (id) =>
+    fetch(`${BASE}/api/terminal/sesiones/${id}`, { method: 'DELETE', headers: CABECERAS_ORIGEN }).then(leer),
+  ticketTerminal: (id) =>
+    fetch(`${BASE}/api/terminal/sesiones/${id}/ticket`, { method: 'POST', headers: CABECERAS_ORIGEN }).then(leer),
+}
+
+// Textos de la pantalla Terminal (design, UI Strings).
+export const TEXTO_TERMINAL = {
+  nav: 'Terminal',
+  insignia: 'NUEVO',
+  nombreVacio: 'Escribe un nombre para la sesión.',
+  suelta: 'Suelta',
+  sinConPty: 'La terminal requiere Windows 10 versión 1809 o superior.',
 }
