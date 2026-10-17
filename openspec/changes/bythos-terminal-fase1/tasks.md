@@ -76,7 +76,7 @@ Satisfies: ET Reattach and Replay, Fixed Command and Limits (PTY cap), Process C
 - [x] 1b.3 RED: create `D/terminal/gestor_test.go` with a fake `PTY` and fake clock: atomic snapshot+subscribe (no gap, no duplicate under concurrent output); a new attach replaces the old one (old gets closed with code 4000 signal); slow client (256 chunks full) is dropped and the reader never blocks; the 9th PTY returns a cap error and starts nothing; reaper closes a PTY detached >10 min and keeps one detached <10 min; `Cerrar` idempotent; resize forwarded; `Fin` channel carries the exit code; `Vivas()` lists live ids. (ET: PTY cap, Reload; TS: Delete)
 - [x] 1b.4 Create `D/terminal/gestor.go`: `Opciones{Iniciar, Max, Gracia, Ahora}`, `Adjuntar`, `Adjunto{Repeticion, Salida, Fin, Escribir, Redimensionar, Soltar}`, `Cerrar`, `CerrarTodo`, `Vivas`; reaper goroutine; constants from the Limits table (Max 8, Gracia 10 min). (ET: Reattach and Replay, PTY cap)
 - [x] 1b.5 Verify: `go vet ./...`, `go test ./...` from `desktop/`; run `go test ./terminal -race` once if the toolchain allows.
-- [ ] 1b.6 Open PR1b (base PR1a branch).
+- [x] 1b.6 Open PR1b (base PR1a branch). Opened as #19 with size:exception (~665 lines); budget raised to 800 for the rest of the chain.
 
 ## PR2: Sessions DB and scene API (branch `feat/bythos-terminal-fase1-02-sesiones`, base `feat/bythos-terminal-fase1-01b-gestor`)
 
