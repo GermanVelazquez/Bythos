@@ -45,13 +45,13 @@ Decision needed before apply: Yes. (1) PR6a is forecast at ~900 lines, more than
 
 Satisfies: SI Single Server, Stale state, Installer Detection (design D14).
 
-- [ ] 0.1 RED: create `D/arranque_test.go` with table tests: `esperarSalud` rejects a response whose `pid` differs from `os.Getpid()` and accepts its own; second-launch probe returns "mismo", "otra versión" and "sin respuesta" outcomes (fake HTTP). (SI: Second launch, Stale state)
-- [ ] 0.2 Modify `D/api/server.go`: `/api/salud` response adds `pid`. Add or extend a test in `D/api/` asserting `pid` is present. (SI: Second launch)
-- [ ] 0.3 Modify `D/arranque.go`: `esperarSalud` accepts only `pid == os.Getpid()`; add the second-launch probe (retry 10 s): same `version` -> `ventana.Abrir` and exit 0; different version -> dialog "Hay otra versión de Bythos abierta; cerrala"; no answer -> dialog "Bythos ya está abierto pero no responde" (exit 1). (SI: Second launch)
-- [ ] 0.4 Create `D/instancia_windows.go` (`CreateMutexW("Local\Bythos.Instancia")`, release on exit) and `D/instancia_other.go` (no-op acquire). Add `D/instancia_windows_test.go`: first acquire succeeds, second reports existing, release allows re-acquire; skipped on non-Windows. (SI: Second launch, Stale state)
-- [ ] 0.5 Modify `D/main.go`: acquire the mutex right after the `mcp` branch; on "already exists" run the second-launch flow. Do not touch the `mcp` path. (SI: Second launch)
-- [ ] 0.6 Modify `D/installer/bythos.iss` (path as in repo): add `AppMutex=Bythos.Instancia`. (SI: Upgrade while running, Uninstall while running)
-- [ ] 0.7 Verify: `go vet ./...` and `go test ./...` from `desktop/`.
+- [x] 0.1 RED: create `D/arranque_test.go` with table tests: `esperarSalud` rejects a response whose `pid` differs from `os.Getpid()` and accepts its own; second-launch probe returns "mismo", "otra versión" and "sin respuesta" outcomes (fake HTTP). (SI: Second launch, Stale state)
+- [x] 0.2 Modify `D/api/server.go`: `/api/salud` response adds `pid`. Add or extend a test in `D/api/` asserting `pid` is present. (SI: Second launch)
+- [x] 0.3 Modify `D/arranque.go`: `esperarSalud` accepts only `pid == os.Getpid()`; add the second-launch probe (retry 10 s): same `version` -> `ventana.Abrir` and exit 0; different version -> dialog "Hay otra versión de Bythos abierta; cerrala"; no answer -> dialog "Bythos ya está abierto pero no responde" (exit 1). (SI: Second launch)
+- [x] 0.4 Create `D/instancia_windows.go` (`CreateMutexW("Local\Bythos.Instancia")`, release on exit) and `D/instancia_other.go` (no-op acquire). Add `D/instancia_windows_test.go`: first acquire succeeds, second reports existing, release allows re-acquire; skipped on non-Windows. (SI: Second launch, Stale state)
+- [x] 0.5 Modify `D/main.go`: acquire the mutex right after the `mcp` branch; on "already exists" run the second-launch flow. Do not touch the `mcp` path. (SI: Second launch)
+- [x] 0.6 Modify `D/installer/bythos.iss` (path as in repo): add `AppMutex=Bythos.Instancia`. (SI: Upgrade while running, Uninstall while running)
+- [x] 0.7 Verify: `go vet ./...` and `go test ./...` from `desktop/`.
 - [ ] 0.8 Open PR0 (base `master`) with the chain diagram and manual items M.8 and M.9 in the description.
 
 ## PR1a: ConPTY and Job Object (branch `feat/bythos-terminal-fase1-01a-conpty`, base `feat/bythos-terminal-fase1-00-instancia`)
