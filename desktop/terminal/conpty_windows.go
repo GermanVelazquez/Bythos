@@ -54,7 +54,8 @@ type conpty struct {
 	mu      sync.Mutex // protege hpc y cerrado
 	cerrado bool
 
-	escribir sync.Mutex // serializa Write y el cierre de inW
+	lecturas sync.RWMutex // Read toma RLock; el cierre de outR toma Lock
+	escribir sync.Mutex   // serializa Write y el cierre de inW
 	once     sync.Once
 }
 
@@ -77,8 +78,10 @@ func NuevoPTY(cfg Config) (PTY, error) {
 		if ok {
 			return
 		}
+		// Mismo orden que Cerrar: Job primero y consola cerrada con la salida
+		// vaciándose, o ClosePseudoConsole puede bloquearse.
 		if hpc != 0 {
-			windows.ClosePseudoConsole(hpc)
+			cerrarConsola(job, hpc, outR)
 		}
 		for _, h := range []*windows.Handle{&inR, &inW, &outR, &outW, &job} {
 			cerrarHandle(h)
@@ -246,6 +249,11 @@ func (p *conpty) estaCerrado() bool {
 
 // Read lee la salida del hijo. Devuelve io.EOF cuando la consola se cerró.
 func (p *conpty) Read(b []byte) (int, error) {
+	p.lecturas.RLock()
+	defer p.lecturas.RUnlock()
+	if p.estaCerrado() {
+		return 0, io.EOF
+	}
 	var n uint32
 	err := windows.ReadFile(p.outR, b, &n, nil)
 	if n > 0 {
@@ -285,6 +293,36 @@ func (p *conpty) Redimensionar(cols, filas uint16) error {
 	return windows.ResizePseudoConsole(p.hpc, windows.Coord{X: int16(cols), Y: int16(filas)})
 }
 
+// cerrarConsola mata el Job y cierra la consola vaciando la salida mientras
+// tanto: ClosePseudoConsole puede emitir un último frame y bloquearse si
+// nadie lo lee. El lector del gestor sigue activo, pero este también cubre a
+// quien no lo tenga. Espera el EOF con tope. job puede ser 0.
+func cerrarConsola(job, hpc, outR windows.Handle) {
+	if job != 0 {
+		windows.TerminateJobObject(job, 1)
+	}
+	vaciado := make(chan struct{})
+	go func() {
+		defer close(vaciado)
+		b := make([]byte, 4096)
+		for {
+			var n uint32
+			if err := windows.ReadFile(outR, b, &n, nil); err != nil {
+				return
+			}
+		}
+	}()
+	windows.ClosePseudoConsole(hpc)
+	select {
+	case <-vaciado:
+	case <-time.After(topeLectura):
+		// Ojo: CancelIoEx cancela TODA lectura pendiente del handle, también
+		// la del lector externo (Read); está bien, ya estamos cerrando.
+		windows.CancelIoEx(outR, nil)
+		<-vaciado
+	}
+}
+
 // Cerrar mata el árbol de procesos y libera todo. Es idempotente.
 func (p *conpty) Cerrar() error {
 	p.once.Do(p.cerrar)
@@ -298,40 +336,19 @@ func (p *conpty) cerrar() {
 	p.cerrado = true
 	p.mu.Unlock()
 
-	// 1) Matar el árbol ANTES de tocar la consola.
-	windows.TerminateJobObject(p.job, 1)
+	// 1) y 2) Matar el árbol, cerrar la consola y vaciar la salida.
+	cerrarConsola(p.job, p.hpc, p.outR)
 
-	// 2) Cerrar la consola mientras la salida se sigue vaciando: ClosePseudoConsole
-	// puede emitir un último frame y bloquearse si nadie lo lee. El lector
-	// del gestor sigue activo, pero este también cubre a quien no lo tenga.
-	vaciado := make(chan struct{})
-	go func() {
-		defer close(vaciado)
-		b := make([]byte, 4096)
-		for {
-			var n uint32
-			if err := windows.ReadFile(p.outR, b, &n, nil); err != nil {
-				return
-			}
-		}
-	}()
-	windows.ClosePseudoConsole(p.hpc)
-
-	// 3) Esperar el EOF de la salida, con tope.
-	select {
-	case <-vaciado:
-	case <-time.After(topeLectura):
-		windows.CancelIoEx(p.outR, nil)
-		<-vaciado
-	}
-
-	// 4) Liberar lo que queda. El handle del proceso es del waiter.
-	// No se ponen en 0 los campos: Read los lee sin candado y ya devuelve EOF
-	// porque cerrado está en true.
+	// 3) Liberar lo que queda. El handle del proceso es del waiter.
 	p.escribir.Lock()
 	windows.CloseHandle(p.inW)
 	p.escribir.Unlock()
+	// Lock espera a las lecturas en curso (ya terminan: la salida llegó a EOF
+	// o CancelIoEx las cortó) y las nuevas devuelven EOF porque cerrado está
+	// en true; así nadie lee un handle ya cerrado y reciclado.
+	p.lecturas.Lock()
 	windows.CloseHandle(p.outR)
+	p.lecturas.Unlock()
 	windows.CloseHandle(p.job)
 	select {
 	case <-p.waite:

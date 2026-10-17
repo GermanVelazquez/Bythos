@@ -192,6 +192,32 @@ func TestConPTY_CerrarNoDejaProceso(t *testing.T) {
 	}
 }
 
+// Una lectura después de Cerrar devuelve EOF sin bloquearse (y sin tocar un
+// handle ya cerrado).
+func TestConPTY_ReadDespuesDeCerrar(t *testing.T) {
+	if testing.Short() {
+		t.Skip("ConPTY real: se omite con -short")
+	}
+	p, err := NuevoPTY(Config{Comando: comspec(), Args: []string{"/k"}})
+	if err != nil {
+		t.Fatalf("NuevoPTY: %v", err)
+	}
+	p.Cerrar()
+	res := make(chan error, 1)
+	go func() {
+		_, err := p.Read(make([]byte, 16))
+		res <- err
+	}()
+	select {
+	case err := <-res:
+		if err != io.EOF {
+			t.Errorf("Read = %v, quería io.EOF", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Read después de Cerrar se bloqueó")
+	}
+}
+
 // Cerrar justo después de arrancar (el hijo aún inicializa) no debe
 // colgarse ni dejar proceso: es el caso del diálogo 0xc0000142.
 func TestConPTY_CerrarInmediato(t *testing.T) {
