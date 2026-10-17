@@ -116,7 +116,9 @@ func (s *Servidor) Rutas() http.Handler {
 // --- Carpetas ---
 
 func (s *Servidor) salud(w http.ResponseWriter, r *http.Request) {
-	responder(w, map[string]interface{}{"ok": true, "version": Version})
+	// pid: el arranque verifica que el 200 sea de ESTE proceso y no de una
+	// instancia vieja que todavía tenía el puerto.
+	responder(w, map[string]interface{}{"ok": true, "version": Version, "pid": os.Getpid()})
 }
 
 func (s *Servidor) listarCarpetas(w http.ResponseWriter, r *http.Request) {
