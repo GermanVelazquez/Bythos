@@ -120,7 +120,7 @@ Satisfies: TS Navigation Entry, Create Session, Close and Delete Session, Status
 - [x] 4.7 In `PanelTerminal.jsx`, add `attachCustomKeyEventHandler`: Ctrl+C with selection or Ctrl+Shift+C copies and returns false; Ctrl+V / Ctrl+Shift+V return false without `preventDefault`; Ctrl+R calls `preventDefault` and returns true. Add a capture-phase window keydown listener blocking F5 and Ctrl+R while the view is mounted (removed on unmount). (ET: Reload)
 - [x] 4.8 Modify `S/styles.css` for the terminal layout (tabs, panel, nav badge).
 - [x] 4.9 Verify: `pnpm build` from `desktop/ui`; `go vet ./...` and `go test ./...` from `desktop/` still green (embedded `dist` unaffected); manual checks M.1 to M.4 on the real app before the PR is opened.
-- [ ] 4.10 Open PR4 (base PR3 branch) with M.1 to M.4 in the description.
+- [x] 4.10 Open PR4 (base PR3 branch) with M.1 to M.4 in the description. Opened as #22.
 
 ## PR5: Whiteboard, autosave and offline fonts (branch `feat/bythos-terminal-fase1-05-pizarra-ui`, base `feat/bythos-terminal-fase1-04-ui-terminal`)
 
