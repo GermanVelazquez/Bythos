@@ -105,7 +105,7 @@ Satisfies: ET Origin Check, Host Check, One-Time Ticket, Fixed Command and Limit
 - [x] 3.4 Create `D/api/terminal.go`: `POST sesiones/{id}/ticket` (16 bytes `crypto/rand`, base64url, TTL 30 s, sweep on issue, delete on consume whatever the outcome, session must match); `GET sesiones/{id}/ws` in the order Host, exact Origin, ticket, `websocket.Accept` with host-only `OriginPatterns` (`localhost:8080`, plus `localhost:5173` only when `modoDev()`), never `InsecureSkipVerify`, `SetReadLimit(1 MiB)`; frames per design (binary input/output, text `resize`, `salida`, `error`); `DELETE sesiones/{id}/pty`; shell `%ComSpec%` falling back to `C:\Windows\System32\cmd.exe`, cwd from `workspace.PrepararWorkspace(exe)`, env `os.Environ()` + `BYTHOS_SESION=<id>`; Gestor 429 maps to HTTP 429. Wire the real Gestor into the server (and `CerrarTodo` on shutdown). (ET: all requirements)
 - [x] 3.5 Modify `D/go.mod` / `go.sum`: add `github.com/coder/websocket v1.8.15`.
 - [x] 3.6 Verify: `go vet ./...`, `go test ./...` from `desktop/`, and the real ConPTY test without `-short`.
-- [ ] 3.7 Open PR3 (base PR2 branch).
+- [x] 3.7 Open PR3 (base PR2 branch). Opened as #21 with size:exception (805 counted lines).
 
 ## PR4: Terminal screen and xterm (branch `feat/bythos-terminal-fase1-04-ui-terminal`, base `feat/bythos-terminal-fase1-03-ws`)
 
