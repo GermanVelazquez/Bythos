@@ -15,14 +15,17 @@ import (
 	"strings"
 
 	"bythos-desktop/db"
+	"bythos-desktop/terminal"
 )
 
 // limiteEscena: techo propio del PUT de la pizarra (design D10).
 const limiteEscena = 20 << 20
 
-// gestorTerminal: lo que esta API necesita del gestor de PTYs. Servidor.Terminal
-// en nil = sin PTYs, así PR2 compila antes de que PR3 conecte el gestor real.
+// gestorTerminal: lo que esta API necesita del gestor de PTYs (*terminal.Gestor
+// lo cumple). Servidor.Terminal en nil = sin PTYs; nunca le asignes un
+// *terminal.Gestor nil (sería un interface no-nil con puntero nil).
 type gestorTerminal interface {
+	Adjuntar(id int64, cfg func() (terminal.Config, error), cols, filas uint16) (*terminal.Adjunto, error)
 	Cerrar(id int64) error
 	Vivas() []int64
 }
@@ -72,6 +75,7 @@ func (s *Servidor) rutasSesiones(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH "+p+"sesiones/{id}", conVentana(s.cambiarSesion))
 	mux.HandleFunc("DELETE "+p+"sesiones/{id}", conVentana(s.borrarSesion))
 	mux.HandleFunc("PUT "+p+"sesiones/{id}/pizarra", conVentana(s.guardarPizarra))
+	s.rutasTerminal(mux)
 }
 
 var modosSesion = map[string]bool{"practica": true, "revision": true, "prototipo": true, "dibujo": true, "paginas": true}
