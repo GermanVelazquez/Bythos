@@ -1,9 +1,9 @@
 schema: spec-driven
 
 context: |
-  Tech stack: Go (bythos-desktop, module desktop/), React (desktop/ui, Vite), Kotlin/Gradle (mobile/android, planned)
-  Architecture: Hexagonal-leaning single-binary desktop app (db / archivos / api / lan) plus a native Android client
-  Testing: go test ./... (desktop), gradlew testDebugUnitTest (mobile/android, planned)
+  Tech stack: Go 1.25 (bythos-desktop, module desktop/), React 18 (desktop/ui, Vite, pnpm), Kotlin/Gradle (mobile/android, minSdk 26, targetSdk 36), MV3 browser extension (extension/, plain JS), Go + Inno Setup installer (installer/)
+  Architecture: Hexagonal-leaning single-binary desktop app (db / archivos / api / lan) plus a native Android client paired over LAN (QR, TLS pinning, Keystore token)
+  Testing: go test ./... (run from desktop/), ./gradlew testDebugUnitTest (run from mobile/android/); no tests for desktop/ui, extension or installer; CI covers desktop only
   Style: Spanish identifiers/comments in Go and UI code; English for SDD/OpenSpec artifacts
 
 rules:
