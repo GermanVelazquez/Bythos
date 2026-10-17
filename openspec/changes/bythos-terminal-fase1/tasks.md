@@ -52,7 +52,7 @@ Satisfies: SI Single Server, Stale state, Installer Detection (design D14).
 - [x] 0.5 Modify `D/main.go`: acquire the mutex right after the `mcp` branch; on "already exists" run the second-launch flow. Do not touch the `mcp` path. (SI: Second launch)
 - [x] 0.6 Modify `D/installer/bythos.iss` (path as in repo): add `AppMutex=Bythos.Instancia`. (SI: Upgrade while running, Uninstall while running)
 - [x] 0.7 Verify: `go vet ./...` and `go test ./...` from `desktop/`.
-- [ ] 0.8 Open PR0 (base `master`) with the chain diagram and manual items M.8 and M.9 in the description.
+- [x] 0.8 Open PR0 (base `master`) with the chain diagram and manual items M.8 and M.9 in the description.
 
 ## PR1a: ConPTY and Job Object (branch `feat/bythos-terminal-fase1-01a-conpty`, base `feat/bythos-terminal-fase1-00-instancia`)
 
