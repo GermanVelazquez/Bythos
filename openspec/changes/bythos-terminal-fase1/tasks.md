@@ -65,7 +65,7 @@ Satisfies: ET Process Cleanup, Platform Guard (design D1, D3, ConPTY lifecycle).
 - [x] 1a.5 Create `D/terminal/conpty_other.go` (build tag `!windows`): the constructor returns `ErrNoSoportado`. (ET: Platform Guard)
 - [x] 1a.6 Add a unit test for the build-number gate (injectable version func) returning `ErrNoSoportado` below 17763. (ET: Old Windows)
 - [x] 1a.7 Verify: `go vet ./...`, `go test ./...` from `desktop/`, and the real ConPTY run without `-short` (see header).
-- [ ] 1a.8 Open PR1a (base PR0 branch).
+- [x] 1a.8 Open PR1a (base PR0 branch). Opened as #18 with size:exception (~750 lines) accepted by the maintainer.
 
 ## PR1b: Ring buffer and session manager (branch `feat/bythos-terminal-fase1-01b-gestor`, base `feat/bythos-terminal-fase1-01a-conpty`)
 
