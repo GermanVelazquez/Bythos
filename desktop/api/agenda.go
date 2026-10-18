@@ -54,8 +54,7 @@ func (s *Servidor) crearAgenda(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.registrarEvento(r, db.AccionNotaAgendaCreada, a.ID, detalleNota(a))
-	w.WriteHeader(http.StatusCreated)
-	responder(w, a)
+	responderCreado(w, a)
 }
 
 // detalleNota es el texto legible de una nota de agenda para el historial:

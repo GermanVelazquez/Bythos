@@ -118,8 +118,7 @@ func (s *Servidor) subirArchivo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.registrarEvento(r, db.AccionArchivoSubido, rec.ID, tituloOUrl(rec))
-	w.WriteHeader(http.StatusCreated)
-	responder(w, recursoConArchivo(s.Base, rec))
+	responderCreado(w, recursoConArchivo(s.Base, rec))
 }
 
 func mensajeArchivoDemasiadoGrande() string {
