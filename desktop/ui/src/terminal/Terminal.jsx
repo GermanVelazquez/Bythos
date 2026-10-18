@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react'
 import { api, TEXTO_TERMINAL } from '../api.js'
 import PestanasSesiones, { MODOS } from './PestanasSesiones.jsx'
 import DialogoNuevaSesion from './DialogoNuevaSesion.jsx'
-import PanelTerminal from './PanelTerminal.jsx'
+import PanelSesion from './PanelSesion.jsx'
+
+// Antes del import perezoso de Excalidraw: las fuentes salen de /excalidraw/fonts (local).
+window.EXCALIDRAW_ASSET_PATH = '/excalidraw/'
 
 const CLAVE_ABIERTAS = 'bythos.terminal.abiertas'
 const CLAVE_ACTIVA = 'bythos.terminal.activa'
@@ -95,7 +98,7 @@ export default function Terminal({ carpetas }) {
         </aside>
         <section className="term-area">
           {sesionActiva
-            ? <PanelTerminal key={sesionActiva.id} sesion={sesionActiva} />
+            ? <PanelSesion key={sesionActiva.id} sesion={sesionActiva} />
             : <div className="empty"><p className="empty-title">{TEXTO_TERMINAL.nav}</p><p className="empty-sub">Crea o abre una sesión.</p></div>}
         </section>
       </div>
