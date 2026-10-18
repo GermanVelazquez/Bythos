@@ -248,6 +248,15 @@ func TestReducirEscenaValidaReferenciasContraAdjuntos(t *testing.T) {
 		{"embeddable", `{"type":"embeddable","link":"https://ejemplo.com"}`, false},
 		{"iframe", `{"type":"iframe"}`, false},
 		{"escena heredada", `{"type":"rectangle","customData":{"otro":1}}`, true},
+		{"type duplicado en mayúsculas", `{"type":"embeddable","Type":"rectangle"}`, false},
+		{"fileId duplicado en mayúsculas", `{"type":"image","fileId":"` + ajeno + `","FILEID":"` + propio + `"}`, false},
+		{"sha256 duplicado en mayúsculas", `{"type":"rectangle","customData":{"sha256":"` + ajeno + `","SHA256":"` + propio + `"}}`, false},
+		{"rectángulo con fileId ajeno", `{"type":"rectangle","fileId":"` + ajeno + `"}`, false},
+		{"sha256 vacío", `{"type":"rectangle","customData":{"sha256":""}}`, false},
+		{"fileId no string", `{"type":"image","fileId":5}`, false},
+		{"sha256 no string", `{"type":"rectangle","customData":{"sha256":5}}`, false},
+		{"magicframe", `{"type":"magicframe"}`, false},
+		{"enlace y frame heredados", `{"type":"frame","link":"https://ejemplo.com"}`, true},
 	}
 	for _, c := range casos {
 		salida, ok := reducirEscena(json.RawMessage(`{"elements":[`+c.escena+`]}`), permitidos)
@@ -293,6 +302,7 @@ func TestBorrarSesionConservaArchivosYOtrasSesiones(t *testing.T) {
 	b := crearSesionT(t, s, `{"nombre":"B","modo":"dibujo"}`)
 	subirAdj(t, s, a.ID, origenUI, "a.png", pngAdj+"comun")
 	subirAdj(t, s, b.ID, origenUI, "b.png", pngAdj+"comun")
+	solo := decodificarAdj(t, subirAdj(t, s, a.ID, origenUI, "solo.png", pngAdj+"solo de A"))["sha256"].(string)
 	if rec := ventanaT(s, "DELETE", "sesiones/"+strconv.FormatInt(a.ID, 10), ""); rec.Code != 200 {
 		t.Fatalf("borrar: %d %s", rec.Code, rec.Body.String())
 	}
@@ -300,11 +310,14 @@ func TestBorrarSesionConservaArchivosYOtrasSesiones(t *testing.T) {
 		t.Fatalf("quedaron %d vínculos de la sesión borrada", len(l))
 	}
 	lista, _ := db.ListarAdjuntos(s.Base, b.ID)
-	if len(lista) != 1 || blobsEnDisco(t) != 1 {
-		t.Fatalf("la otra sesión perdió el adjunto: %d vínculos, %d blobs", len(lista), blobsEnDisco(t))
+	if len(lista) != 1 || blobsEnDisco(t) != 2 {
+		t.Fatalf("la otra sesión perdió el adjunto o se borró un blob: %d vínculos, %d blobs", len(lista), blobsEnDisco(t))
 	}
 	if _, ok, _ := db.ObtenerArchivo(s.Base, lista[0].ArchivoID); !ok {
 		t.Fatal("la fila de archivos debía quedar")
+	}
+	if _, ok, _ := db.ObtenerArchivoPorSHA256(s.Base, solo); !ok {
+		t.Fatal("la fila del adjunto exclusivo de A debía quedar")
 	}
 	rec := pedirTerminal(s, "GET", rutaAdj(b.ID, "/"+strconv.FormatInt(lista[0].ID, 10)+"/contenido"), "", "", "Sec-Fetch-Site", "same-origin")
 	if rec.Code != 200 {
