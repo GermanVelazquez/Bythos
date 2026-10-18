@@ -8,4 +8,12 @@
     <string name="usar_enlace">Usar enlace</string>
     <string name="qr_invalido">El código no es válido: %1$s</string>
     <string name="qr_leido">Código leído de «%1$s». Falta confirmar en la PC.</string>
+    <string name="esperando_aprobacion">Confirma en la PC que el código %1$s coincide.</string>
+    <string name="emparejado">Emparejado con «%1$s».</string>
+    <string name="rechazado">La PC rechazó la solicitud.</string>
+    <string name="fallo_pin">El certificado cambió: vuelve a escanear el QR.</string>
+    <string name="fallo_red_local">Acceso a la red local denegado: concédelo en los ajustes de la app.</string>
+    <string name="fallo_inalcanzable">No se pudo conectar con la PC. Revisa que estén en la misma red.</string>
+    <string name="fallo_no_emparejado">Esta app ya no está emparejada: vuelve a escanear el QR.</string>
+    <string name="fallo_pc">La PC respondió: %1$s</string>
 </resources>
