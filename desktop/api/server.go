@@ -43,6 +43,12 @@ type Servidor struct {
 	// Receptor es el control del receptor LAN (celular). nil = sin receptor:
 	// las rutas /api/receptor/* no se montan (tests, builds sin LAN).
 	Receptor *ControlReceptor
+	// Terminal es el gestor de PTYs; nil = sin terminal.
+	Terminal gestorTerminal
+	// tickets: entradas de un solo uso para el WebSocket (ver terminal.go).
+	tickets almacenTickets
+	// pizarra: latido, ops y capturas en memoria (ver pizarra.go).
+	pizarra estadoPizarra
 }
 
 // Rutas arma el menú HTTP. Leerlo es leer el producto:
@@ -103,6 +109,10 @@ func (s *Servidor) Rutas() http.Handler {
 	// extensión nunca puede pedir esto).
 	mux.HandleFunc("POST /api/agente/terminal", s.abrirTerminalAgente)
 
+	// Terminal: sesiones, pizarra y entorno (ver sesiones.go).
+	s.rutasSesiones(mux)
+	s.rutasPizarra(mux) // latido, ops y capturas (ver pizarra.go)
+
 	// Despertar la UI: "/" sirve ui/dist SIN pisar "/api/..."
 	// Va AL FINAL porque "/" es el cajón de sastre. Si la pones arriba,
 	// se traga la API. Orden = especifico primero, general al final.
@@ -124,7 +134,9 @@ func (s *Servidor) Rutas() http.Handler {
 // --- Carpetas ---
 
 func (s *Servidor) salud(w http.ResponseWriter, r *http.Request) {
-	responder(w, map[string]interface{}{"ok": true, "version": Version})
+	// pid: el arranque verifica que el 200 sea de ESTE proceso y no de una
+	// instancia vieja que todavía tenía el puerto.
+	responder(w, map[string]interface{}{"ok": true, "version": Version, "pid": os.Getpid()})
 }
 
 func (s *Servidor) listarCarpetas(w http.ResponseWriter, r *http.Request) {
