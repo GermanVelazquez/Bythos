@@ -49,6 +49,11 @@ const (
 	// AccionRecursoGuardado (que es para links) para poder auditar cada
 	// caso por separado en el Historial.
 	AccionArchivoSubido = "archivo_subido"
+	// Sesiones de Terminal: creada y borrada (cerrar una pestaña no registra nada).
+	AccionSesionTerminalCreada  = "sesion_terminal_creada"
+	AccionSesionTerminalBorrada = "sesion_terminal_borrada"
+	// AccionPizarraEditada: un lote de pizarra_dibujar quedó aplicado en la pizarra.
+	AccionPizarraEditada = "pizarra_editada"
 )
 
 // limiteEventosPorDefecto/Maximo acotan ListarEventos: sin límite pedido
