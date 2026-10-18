@@ -80,12 +80,10 @@ func TestSesionBorrarCarpetaLaSuelta(t *testing.T) {
 func TestSesionBorrarCascadaEscenaYOps(t *testing.T) {
 	base := basePrueba(t)
 	s, _ := CrearSesion(base, "A", "paginas", nil)
-	// La tabla de ops llega en PR6a; aquí se crea mínima para probar que el
-	// cascade de la sesión sí tiene a quién llevarse cuando exista.
-	if _, err := base.Exec(`CREATE TABLE IF NOT EXISTS terminal_pizarra_ops (id INTEGER PRIMARY KEY, sesion_id INTEGER NOT NULL REFERENCES terminal_sesiones(id) ON DELETE CASCADE)`); err != nil {
+	// Tabla real (db.go la crea): el cascade tiene a quién llevarse.
+	if _, err := EncolarOp(base, s.ID, `[]`); err != nil {
 		t.Fatal(err)
 	}
-	base.Exec(`INSERT INTO terminal_pizarra_ops (sesion_id) VALUES (?)`, s.ID)
 	if _, err := BorrarSesion(base, s.ID); err != nil {
 		t.Fatalf("BorrarSesion: %v", err)
 	}

@@ -128,6 +128,16 @@ func ObtenerSesion(base *sql.DB, id int64) (Sesion, bool, error) {
 	return s, err == nil, err
 }
 
+// SesionReciente devuelve la sesión con `actualizado` más nuevo (el id más
+// alto desempata); ok false si no hay sesiones.
+func SesionReciente(base *sql.DB) (Sesion, bool, error) {
+	s, err := leerSesion(base.QueryRow(`SELECT ` + columnasSesion + ` FROM terminal_sesiones ORDER BY actualizado DESC, id DESC LIMIT 1`))
+	if err == sql.ErrNoRows {
+		return Sesion{}, false, nil
+	}
+	return s, err == nil, err
+}
+
 // ActualizarSesion aplica solo los campos presentes. false si no existe.
 func ActualizarSesion(base *sql.DB, id int64, c CambiosSesion) (bool, error) {
 	sets, args := []string{`actualizado = datetime('now','localtime')`}, []interface{}{}
