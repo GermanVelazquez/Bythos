@@ -242,6 +242,16 @@ export const api = {
     fetch(`${BASE}/api/terminal/sesiones/${id}`, { method: 'DELETE', headers: CABECERAS_ORIGEN }).then(leer),
   ticketTerminal: (id) =>
     fetch(`${BASE}/api/terminal/sesiones/${id}/ticket`, { method: 'POST', headers: CABECERAS_ORIGEN }).then(leer),
+  // Pizarra: GET {escena, version}; PUT {escena, version}. El PUT devuelve el estado HTTP
+  // sin lanzar: el 409 trae la versión actual y el llamador decide (recargar la escena).
+  leerPizarra: (id) => fetch(`${BASE}/api/terminal/sesiones/${id}/pizarra`, { headers: CABECERAS_ORIGEN }).then(leer),
+  guardarPizarra: async (id, escena, version, keepalive = false) => {
+    const res = await fetch(`${BASE}/api/terminal/sesiones/${id}/pizarra`, {
+      method: 'PUT', headers: CABECERAS_JSON, body: JSON.stringify({ escena, version }), keepalive,
+    })
+    const dato = (res.headers.get('content-type') || '').includes('application/json') ? await res.json() : null
+    return { estado: res.status, ok: res.ok, version: dato?.version, error: dato?.error }
+  },
 }
 
 // Textos de la pantalla Terminal (design, UI Strings).
@@ -251,4 +261,14 @@ export const TEXTO_TERMINAL = {
   nombreVacio: 'Escribe un nombre para la sesión.',
   suelta: 'Suelta',
   sinConPty: 'La terminal requiere Windows 10 versión 1809 o superior.',
+}
+
+// Textos de la pizarra (design, UI Strings).
+export const TEXTO_PIZARRA = {
+  guardando: 'Guardando…',
+  guardado: 'Guardado',
+  error: 'Error al guardar',
+  sinImagenes: 'Las imágenes llegan en una fase posterior.',
+  otraVentana: 'Actualizada desde otra ventana',
+  revisar: 'Revisar',
 }

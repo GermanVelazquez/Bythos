@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { api, TEXTO_TERMINAL } from '../api.js'
 import { conectarPty } from './conexionPty.js'
+import { ChipTerminal } from './ChipsEstado.jsx'
 
 const TEXTO_ESTADO = {
   conectando: 'Conectando…',
@@ -16,7 +17,7 @@ const TEXTO_ESTADO = {
 }
 
 // Presentacional: monta xterm y lo conecta a la sesión. Sin estado de negocio.
-export default function PanelTerminal({ sesion }) {
+export default function PanelTerminal({ sesion, enfocarRef }) {
   const contenedor = useRef(null)
   const [estado, setEstado] = useState({ clave: 'conectando' })
   const [agente, setAgente] = useState('')
@@ -43,6 +44,7 @@ export default function PanelTerminal({ sesion }) {
     }
     ajustar()
     term.focus()
+    if (enfocarRef) enfocarRef.current = () => term.focus()
 
     const datos = term.onData((t) => conexion.enviar(t))
 
@@ -75,6 +77,7 @@ export default function PanelTerminal({ sesion }) {
 
     return () => {
       window.removeEventListener('keydown', bloquear, true)
+      if (enfocarRef) enfocarRef.current = null
       clearTimeout(temporizador)
       observador.disconnect()
       datos.dispose()
@@ -97,7 +100,7 @@ export default function PanelTerminal({ sesion }) {
   return (
     <div className="term-panel">
       <div className="term-estado">
-        <span className={`term-chip term-chip-${estado.clave}`}>{texto}</span>
+        <ChipTerminal clave={estado.clave} texto={texto} />
         {sinConPty && <button className="btn-outline" onClick={abrirAgente}>Abrir agente</button>}
         {agente && <span className="field-hint">{agente}</span>}
       </div>
