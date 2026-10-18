@@ -287,6 +287,20 @@ export const api = {
     const dato = (res.headers.get('content-type') || '').includes('application/json') ? await res.json() : null
     return { estado: res.status, ok: res.ok, version: dato?.version, error: dato?.error }
   },
+  // Adjuntos de la sesión (api/adjuntos.go). Subida multipart, campo "archivo". Los 413/415
+  // traen su mensaje en español en {error}; sin él se usa un texto propio.
+  subirAdjunto: async (sesionId, archivo) => {
+    const datos = new FormData()
+    datos.append('archivo', archivo, archivo.name || 'archivo')
+    const res = await fetch(`${BASE}/api/terminal/sesiones/${sesionId}/adjuntos`, { method: 'POST', headers: CABECERAS_ORIGEN, body: datos })
+    return leer(res).catch((e) => {
+      if (!e.message.startsWith('Error ')) throw e
+      throw new Error(res.status === 413 ? 'El archivo es demasiado grande (máximo 25 MiB)' : res.status === 415 ? 'Tipo de archivo no permitido' : 'No se pudo adjuntar el archivo')
+    })
+  },
+  listarAdjuntos: (sesionId) =>
+    fetch(`${BASE}/api/terminal/sesiones/${sesionId}/adjuntos`, { headers: CABECERAS_ORIGEN }).then(leer),
+  urlContenidoAdjunto: (sesionId, adjId) => `${BASE}/api/terminal/sesiones/${sesionId}/adjuntos/${adjId}/contenido`,
   // Agente en la pizarra: latido {ops, capturas}; ack de un lote; PNG de una captura.
   latidoPizarra: (sesionId) =>
     fetch(`${BASE}/api/terminal/latido`, { method: 'POST', headers: CABECERAS_JSON, body: JSON.stringify({ sesion_id: sesionId }) }).then(leer),
