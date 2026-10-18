@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { api } from './api.js'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { api, TEXTO_TERMINAL } from './api.js'
 import { AddFileModal, FileViewerModal, ArchivoPreview } from './Archivos.jsx'
 import ReceptorMovil from './ReceptorMovil.jsx'
+
+// xterm pesa: la pantalla Terminal se descarga solo al abrirla (chunk aparte).
+const Terminal = lazy(() => import('./terminal/Terminal.jsx'))
 
 // App.jsx — Bythos desktop UI: sidebar + topbar + cards + modal (dark theme).
 // Single-file layout on purpose: the whole product flow fits here.
@@ -167,6 +170,7 @@ function Sidebar({ currentView, onChangeView, counts, onAbrirAgente, agenteEstad
       label: 'Acciones',
       items: [
         { id: 'export', label: 'Exportar', icon: 'download' },
+        { id: 'terminal', label: TEXTO_TERMINAL.nav, icon: 'terminal', badge: TEXTO_TERMINAL.insignia },
         { id: 'historial', label: 'Historial', icon: 'clock' },
         { id: 'recibir', label: 'Recibir del celular', icon: 'download' },
         { id: 'agente-terminal', label: 'Abrir agente', icon: 'terminal', accion: true },
@@ -186,7 +190,7 @@ function Sidebar({ currentView, onChangeView, counts, onAbrirAgente, agenteEstad
           {group.items.map((item) => {
             const isActive = currentView === item.id
             const count = counts?.[item.id]
-            const isAction = item.accion || item.id === 'export' || item.id === 'historial' || item.id === 'settings'
+            const isAction = item.accion || item.id === 'export' || item.id === 'terminal' || item.id === 'historial' || item.id === 'settings'
             return (
               <button
                 key={item.id}
@@ -196,6 +200,7 @@ function Sidebar({ currentView, onChangeView, counts, onAbrirAgente, agenteEstad
               >
                 <Icon name={item.icon} size={14} />
                 <span>{item.label}</span>
+                {item.badge && <span className="nav-badge">{item.badge}</span>}
                 {count !== undefined && !isAction && (
                   <span className="nav-count">{count}</span>
                 )}
@@ -2609,6 +2614,12 @@ export default function App() {
         agenteEstado={agenteEstado}
       />
       <main className="main">
+        {view === 'terminal' ? (
+          // Pantalla propia: sin PageHeader, Topbar ni drop de archivos.
+          <Suspense fallback={<div className="empty"><p className="empty-title">Cargando…</p></div>}>
+            <Terminal carpetas={carpetas} />
+          </Suspense>
+        ) : (<>
         <Topbar
           query={query}
           onQueryChange={setQuery}
@@ -2710,6 +2721,7 @@ export default function App() {
             <SettingsView salud={salud} stats={stats} totalCarpetas={carpetas.length} />
           )}
         </div>
+        </>)}
       </main>
       <AddResourceModal
         open={modalOpen}
