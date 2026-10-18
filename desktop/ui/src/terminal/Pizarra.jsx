@@ -12,7 +12,7 @@ const traeArchivos = (dt) => Array.from(dt?.types ?? []).includes('Files')
 // Presentacional: lienzo de Excalidraw. Reporta (escena saneada, clave de versión)
 // y no sabe nada de guardado. Sin imágenes: herramienta oculta, pegar y soltar
 // bloqueados en captura (antes de que Excalidraw los vea).
-export default function Pizarra({ inicial, alCambiar }) {
+export default function Pizarra({ inicial, alCambiar, alTenerApi }) {
   const [aviso, setAviso] = useState('')
   const ultima = useRef(null)
 
@@ -32,6 +32,7 @@ export default function Pizarra({ inicial, alCambiar }) {
   return (
     <div className="term-lienzo" onDropCapture={bloquear} onPasteCapture={bloquear}>
       <Excalidraw
+        excalidrawAPI={alTenerApi}
         initialData={{ elements: inicial.elements, appState: inicial.appState, scrollToContent: true }}
         UIOptions={UI_OPCIONES}
         aiEnabled={false}
