@@ -40,6 +40,8 @@ const Version = "1.1.0"
 type Servidor struct {
 	Base *sql.DB
 	UI   fs.FS
+	// Terminal es el gestor de PTYs; nil = sin terminal (lo conecta PR3).
+	Terminal gestorTerminal
 }
 
 // Rutas arma el menú HTTP. Leerlo es leer el producto:
@@ -99,6 +101,9 @@ func (s *Servidor) Rutas() http.Handler {
 	// (más estricto que conGuardia a propósito: Origin EXACTO, la
 	// extensión nunca puede pedir esto).
 	mux.HandleFunc("POST /api/agente/terminal", s.abrirTerminalAgente)
+
+	// Terminal: sesiones, pizarra y entorno (ver sesiones.go).
+	s.rutasSesiones(mux)
 
 	// Despertar la UI: "/" sirve ui/dist SIN pisar "/api/..."
 	// Va AL FINAL porque "/" es el cajón de sastre. Si la pones arriba,
