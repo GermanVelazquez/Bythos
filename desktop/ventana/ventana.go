@@ -17,8 +17,6 @@ import (
 	"errors"
 	"os"
 	"os/exec"
-	"syscall"
-	"unsafe"
 )
 
 // Estilos de MessageBoxW (winuser.h): OK solo + icono de error.
@@ -79,28 +77,14 @@ func avisarSinNavegador() {
 
 // Aviso muestra un diálogo nativo informativo (botón Aceptar).
 func Aviso(titulo, mensaje string) {
-	t, _ := syscall.UTF16PtrFromString(titulo)
-	m, _ := syscall.UTF16PtrFromString(mensaje)
-	mostrarMensajeNativo(t, m, mbAceptar)
+	mostrarMensajeNativo(titulo, mensaje, mbAceptar)
 }
 
 // Error muestra un diálogo nativo de error (icono de error, botón Aceptar).
 // Es la vía visible cuando el .exe corre SIN consola (-H=windowsgui):
 // ahí log.Fatal no se ve en ningún lado, este diálogo sí.
 func Error(titulo, mensaje string) {
-	t, _ := syscall.UTF16PtrFromString(titulo)
-	m, _ := syscall.UTF16PtrFromString(mensaje)
-	mostrarMensajeNativo(t, m, mbAceptar|mbIconoError)
-}
-
-// mostrarMensajeNativo llama a MessageBoxW con el estilo pedido.
-func mostrarMensajeNativo(titulo, mensaje *uint16, estilo uint32) {
-	user32 := syscall.NewLazyDLL("user32.dll")
-	mensajeBox := user32.NewProc("MessageBoxW")
-	mensajeBox.Call(0, // sin ventana dueña: el diálogo va al frente
-		uintptr(unsafe.Pointer(mensaje)),
-		uintptr(unsafe.Pointer(titulo)),
-		uintptr(estilo))
+	mostrarMensajeNativo(titulo, mensaje, mbAceptar|mbIconoError)
 }
 
 // perfilBythos guarda cookies/estado de la ventana aparte de tu Edge normal.
