@@ -193,7 +193,7 @@ func TestInstruccionesTraenLaReglaDeLaPizarraYLaDeLaBiblioteca(t *testing.T) {
 		if err != nil {
 			t.Fatalf("leer %s: %v", nombre, err)
 		}
-		for _, frase := range []string{ReglaBiblioteca, ReglaPizarra} {
+		for _, frase := range []string{ReglaBiblioteca, ReglaPizarra, ReglaAdjuntos, "leer_imagen", "leer_archivo", AvisoDatosAdjuntos, "no podés insertar imágenes"} {
 			if !strings.Contains(string(b), frase) {
 				t.Fatalf("%s sin la frase %q", nombre, frase)
 			}
