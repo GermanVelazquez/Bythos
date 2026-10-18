@@ -25,6 +25,7 @@ Chain strategy: feature-branch-chain
 | 2a | lan cert/interfaces/listener/guard/lifecycle | PR 2 | `go test ./lan/... -run TestReceptor` | Local: start listener, curl from non-subnet IP → 403 | `lan/{cert,interfaces,receptor,guardia}.go`, off by default |
 | 2b | Network-category gate (NLM COM) | PR 3 | `go test ./lan/... -run TestRed` | Real Windows box: toggle profile, observe gate | `lan/{red,red_windows,red_other}.go`, additive gate |
 | 3 | Pairing + QR + tokens | PR 4 | `go test ./lan/... -run TestEmparejar` | Manual: scan QR / curl pairing script | `lan/{emparejar,auth,qr,respuestas}.go` |
+| 3b | Shorter reception window (amendment) | PR 4b | `go test ./lan/... -run TestReceptor` | Local: start, wait 10 min / use once then 2 min | `lan/receptor.go` |
 | 4a | Upload store (sidecar/.parte) | PR 5 | `go test ./lan/... -run TestSubidasStore` | Local: interrupt + resume via curl script | `lan/subidas_store.go` |
 | 4b | Upload/link handlers + puente | PR 6 | `go test ./lan/... ./api/... -run "TestSubidas|TestLinks|TestPuenteLAN"` | Manual: curl chunked upload against running listener | `lan/{subidas,links}.go`, `api/puente_lan.go` |
 | 5a | Control API + wiring + stop triggers | PR 7 | `go build ./... && go test ./api/...` | Manual: curl `/api/receptor/activar\|desactivar` | `api/receptor.go`, `main.go` wiring |
@@ -57,7 +58,7 @@ Chain strategy: feature-branch-chain
 - [x] 2a.3 `desktop/lan/receptor.go`: `Receptor` struct, `Start`/`Stop` (`Shutdown` 10s grace then `Close`), fixed port 48080 no fallback → `puerto_ocupado`.
 - [x] 2a.4 `desktop/lan/guardia.go`: `var remotoPermitido` seam; same-subnet IPv4 check → 403 `origen_no_permitido`, no processing, no event.
 - [x] 2a.5 Idle-timeout stop trigger (fake clock); stub hooks for the remaining 3 stop triggers (wired in 5a). — Done: `Stop` is the single idempotent hook; unit 5a wires it from 3 call sites (screen close, explicit disable, app exit), no separate stub methods needed.
-- [x] 2a.6 Tests: httptest TLS + pinned client; non-subnet remote 403; off = refused; idle auto-off; stop mid-chunk completes then refuses; stop idempotent; key reuse/SPKI-stable golden fixture (shared with Android 7a). — Done: `cert_test.go`, `interfaces_test.go`, `guardia_test.go`, `receptor_test.go` (9 tests, all pass).
+- [x] 2a.6 Tests: httptest TLS + pinned client; non-subnet remote 403; off = refused; idle auto-off (superseded by 3b windows); stop mid-chunk completes then refuses; stop idempotent; key reuse/SPKI-stable golden fixture (shared with Android 7a). — Done: `cert_test.go`, `interfaces_test.go`, `guardia_test.go`, `receptor_test.go` (9 tests, all pass).
 - Acceptance: spec scenarios "Reception off", "Idle auto-off", "Same-subnet private source", "Private address, different subnet", "Public address", "Cert unchanged/rotated".
 - Verification: `cd desktop && go test ./lan/... -run TestReceptor`
 - Est. changed lines: ~380
@@ -85,6 +86,14 @@ Chain strategy: feature-branch-chain
 - Acceptance: spec "Valid/Expired/Reused code", "Approved/Declined", "Valid/Unpaired/Revoked token".
 - Verification: `cd desktop && go test ./lan/... -run TestEmparejar`
 - Est. changed lines: ~330
+
+## Phase 4b — Unit 3b: shorter reception window (user amendment 2026-10-01)
+
+- [x] 3b.1 `desktop/lan/receptor.go`: replace the 30-min idle timeout with `VentanaSinUso` (10 min from `Start` with no successful request) and `VentanaTrasUso` (2 min after the last successful request once used).
+- [x] 3b.2 Only responses with status < 400 count as activity (status-capturing wrapper); 403/401/error responses never extend the window.
+- [x] 3b.3 Tests (fake clock + short poll): no-use stop at 10 min, post-use stop at 2 min, error responses do not extend the window.
+- [x] 3b.4 Spec/design updated (lan-reception Listener Lifecycle; design stop triggers). Unit 5a/5b UI copy should say reception closes after 10 min without pairing or 2 min without use; user reopens "Recibir del celular" for a new QR.
+- Verification: `cd desktop && go test ./lan/... -run TestReceptor`
 
 ## Phase 5 — Unit 4a: upload store
 
@@ -117,7 +126,7 @@ Chain strategy: feature-branch-chain
 
 ## Phase 8 — Unit 5b: UI + Private guide
 
-- [ ] 5b.1 `desktop/ui/src/ReceptorMovil.jsx`: states Desactivado→Activando→Activo (QR+`qr_texto` copy+interface picker+renew)→Solicitud(SAS)→Dispositivos/Transferencias; poll `estado` every 1.5s; unmount/`pagehide` → `POST desactivar` (`fetch keepalive:true`).
+- [ ] 5b.1 `desktop/ui/src/ReceptorMovil.jsx` (copy: reception closes after 10 min without pairing/use or 2 min after last use; reopen for a new QR): states Desactivado→Activando→Activo (QR+`qr_texto` copy+interface picker+renew)→Solicitud(SAS)→Dispositivos/Transferencias; poll `estado` every 1.5s; unmount/`pagehide` → `POST desactivar` (`fetch keepalive:true`).
 - [ ] 5b.2 `desktop/ui/src/App.jsx`: add `recibir` sidebar entry, own API calls, presentational component.
 - [ ] 5b.3 `desktop/ui/src/api.js`: add `receptor*` client functions.
 - [ ] 5b.4 `desktop/ui/src/styles.css`: guide panel for `puerto_ocupado`/`red_no_privada`/`desconocida` ("Marcar la red como Privada" + Reintentar); 60s no-request checklist hint.
