@@ -50,7 +50,7 @@ Satisfies: WA Upload Endpoint (storage once per hash), Session Privacy, TS Delet
 - [x] 1a.4 Modify `D/db/archivos.go`: add `ContarReferenciasArchivo(archivoID)` (resources plus `terminal_adjuntos`). (D2)
 - [x] 1a.5 RED then fix: in `D/api/archivos_test.go` a library resource whose blob is also a session attachment is deleted: the blob stays on disk and the `archivos` row stays; with no links the blob is still removed (existing behavior). Modify `limpiarArchivoSiHuerfano` in `D/api/archivos.go` to use `ContarReferenciasArchivo`. (D2; TS: Shared content survives)
 - [x] 1a.6 Verify: `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...` from `desktop/`.
-- [ ] 1a.7 Open PR1a (base `master`) with the chain diagram, stating that the table is additive and the orphan fix is a prerequisite for uploads.
+- [x] 1a.7 Open PR1a (base `master`) with the chain diagram, stating that the table is additive and the orphan fix is a prerequisite for uploads.
 
 ## PR1b: Upload, list, content and text routes (branch `feat/bythos-terminal-fase2-01b-adjuntos-api`, base `feat/bythos-terminal-fase2-01a-adjuntos-db`)
 
