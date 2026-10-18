@@ -170,6 +170,11 @@ func crearTablas(base *sql.DB) error {
 	if err := crearTablaOps(base); err != nil {
 		return err
 	}
+	// terminal_adjuntos (Terminal fase 2): referencia sesiones y archivos,
+	// por eso va después de ambas.
+	if err := crearTablaAdjuntos(base); err != nil {
+		return err
+	}
 	// eventos es tabla nueva (v1.1+): CREATE TABLE IF NOT EXISTS alcanza,
 	// no hace falta ALTER TABLE (ver comentario en crearTablaEventos).
 	return crearTablaEventos(base)

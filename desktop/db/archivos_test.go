@@ -194,6 +194,46 @@ func TestGuardarArchivoYRefcount(t *testing.T) {
 	}
 }
 
+// TestContarReferenciasArchivo: el conteo suma recursos Y adjuntos de
+// sesiones (design D2); contar solo recursos borraría blobs en uso.
+func TestContarReferenciasArchivo(t *testing.T) {
+	base := basePrueba(t)
+	c, _ := CrearCarpeta(base, "React")
+	s, _ := CrearSesion(base, "uno", "dibujo", nil)
+	a, _ := CrearArchivo(base, "aaa", "x.pdf", "application/pdf", 10, "aa/aaa.pdf")
+
+	cuenta := func(esperado int, caso string) {
+		t.Helper()
+		if n, err := ContarReferenciasArchivo(base, a.ID); err != nil || n != esperado {
+			t.Fatalf("%s: n=%d err=%v, quería %d", caso, n, err, esperado)
+		}
+	}
+	cuenta(0, "sin referencias")
+
+	if _, err := CrearAdjunto(base, s.ID, a.ID, "x.pdf"); err != nil {
+		t.Fatalf("CrearAdjunto: %v", err)
+	}
+	cuenta(1, "solo vínculo")
+
+	r, err := GuardarArchivo(base, c.ID, a.ID, "X", "pdf")
+	if err != nil {
+		t.Fatalf("GuardarArchivo: %v", err)
+	}
+	cuenta(2, "recurso y vínculo")
+
+	if err := Borrar(base, r.ID); err != nil {
+		t.Fatalf("Borrar: %v", err)
+	}
+	cuenta(1, "solo vínculo tras borrar el recurso")
+
+	// Solo recursos: otro archivo sin vínculos.
+	b, _ := CrearArchivo(base, "bbb", "y.pdf", "application/pdf", 10, "bb/bbb.pdf")
+	GuardarArchivo(base, c.ID, b.ID, "Y", "pdf")
+	if n, err := ContarReferenciasArchivo(base, b.ID); err != nil || n != 1 {
+		t.Fatalf("solo recurso: n=%d err=%v, quería 1", n, err)
+	}
+}
+
 // TestMigracionArchivoIDNoRompeDBVieja replays a .db from before v1.2
 // (sin la tabla archivos ni resources.archivo_id) through Abrir: filas
 // viejas sobreviven, y el mundo nuevo (archivo_id) funciona después.
