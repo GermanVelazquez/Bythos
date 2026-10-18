@@ -47,6 +47,8 @@ class PairingActivity : ActividadRedLocal() {
         reemparejar = Estilo.botonSecundario(this, getString(R.string.volver_a_emparejar)) {
             Escaner.escanear(this@PairingActivity, ::alTexto, ::mostrarPegado)
         }
+        // Acceso permanente al tutorial: secundario, no toca la marca de "ya visto".
+        val comoEnviar = Estilo.botonSecundario(this, getString(R.string.como_enviar)) { abrirTutorial() }
         Estilo.pantalla(this).apply {
             addView(Estilo.titulo(context, getString(R.string.emparejar_titulo)))
             addView(estado)
@@ -55,10 +57,26 @@ class PairingActivity : ActividadRedLocal() {
             addView(reemparejar)
             addView(escanear)
             addView(pegar)
+            addView(comoEnviar)
             addView(pegado)
         }
-        if (clienteEmparejado(this) != null) modoEmparejado() else modoSinEmparejar()
+        val emparejado = clienteEmparejado(this) != null
+        if (emparejado) modoEmparejado() else modoSinEmparejar()
+        // Primer uso desde el lanzador: la marca se guarda ANTES de abrir, así sale una sola vez.
+        val prefs = getSharedPreferences("bythos", MODE_PRIVATE)
+        if (debeAbrirTutorial(
+                desdeLanzador = intent.action == Intent.ACTION_MAIN,
+                emparejado = emparejado,
+                visto = prefs.getBoolean(CLAVE_TUTORIAL_VISTO, false),
+                recreada = savedInstanceState != null,
+            )
+        ) {
+            prefs.edit().putBoolean(CLAVE_TUTORIAL_VISTO, true).apply()
+            abrirTutorial()
+        }
     }
+
+    private fun abrirTutorial() = startActivity(Intent(this, TutorialActivity::class.java))
 
     private fun modoEmparejado() {
         val guardado = getSharedPreferences("bythos", MODE_PRIVATE).getString("nombrePC", null)
