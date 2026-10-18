@@ -84,7 +84,7 @@ Satisfies: WA Entry Paths (paste, drop), Allowed Types (pre-filter), Size Limit 
 - [x] 3a.4 Modify `T/excalidrawAdapter.js`: `sanearEscena(elements, appState, conocidos)` keeps images/cards whose sha is in the known set (strips others and deleted elements); `construirImagen(adjunto)` (fileId = sha, `status:"saved"`); `construirTarjeta(adjunto)` as rectangle + bound text with `customData={bythos:"adjunto", sha256}` showing name and kind; `agregarArchivos(api, files)` wrapping `addFiles`. Still the only importer of `@excalidraw/excalidraw`. (D3, D8; WA: Card appears, Card in capture)
 - [x] 3a.5 Modify `T/Pizarra.jsx`: replace the phase-1 block with capture-phase `onPasteCapture` and `onDropCapture` on the wrapper (`stopPropagation` + `preventDefault`) that route files to the upload flow; non-file paste (plain text) passes through untouched; remove the "Las imágenes llegan en una fase posterior." message; keep `UIOptions` image tool disabled so images enter only through the flow; disallowed drops (video, svg) show the "type not allowed" message. Insert flow: upload -> `addFiles` -> `updateScene({elements, captureUpdate: IMMEDIATELY})` -> `vaciar()`. On upload failure add nothing and show the error. (D8, D10; WB: Image accepted, Disallowed file dropped; WA: Paste image, Drop file, Pasting plain text, Server error)
 - [ ] 3a.6 Verify: `pnpm build`; `go vet ./...`, `go test ./...`. Manual: M.1, M.2, M.3 on the real app.
-- [ ] 3a.7 Open PR3a (base PR2 branch) with the runtime-check results and M.1 to M.3.
+- [x] 3a.7 Open PR3a (base PR2 branch) with the runtime-check results and M.1 to M.3. (#34)
 
 ## PR3b: Rehydration, Adjuntar and paste guard (branch `feat/bythos-terminal-fase2-03b-ui-rehidratar`, base `feat/bythos-terminal-fase2-03a-ui-insertar`)
 
