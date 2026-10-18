@@ -62,7 +62,7 @@ Satisfies: WA Allowed Types, Size Limit, Upload Endpoint, Session Privacy; Threa
 - [x] 1b.4 Modify `D/api/archivos.go`: extract `servirArchivo(w, r, a)` from `contenidoArchivo` (nosniff, sandbox CSP, `frame-ancestors 'self'`) with the existing archivos tests still green. (D12)
 - [x] 1b.5 Create `D/api/adjuntos.go`: `POST sesiones/{id}/adjuntos` (Ventana, `MaxBytesReader(25 MiB + 4 KiB)`, multipart, `archivos.Guardar`, video -> 415 with blob cleanup unless `Reusado`, link row, 201); `GET sesiones/{id}/adjuntos`, `.../{adj}/contenido`, `.../{adj}/texto` (Ventana-lectura, session-scoped, reuse `servirArchivo` and `TextoExtraido`). Wire in `D/api/server.go`. Spanish 413 message names the 25 MiB limit. (D11, D12; WA: Size Limit)
 - [x] 1b.6 Verify: `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...`.
-- [ ] 1b.7 Open PR1b (base PR1a branch).
+- [x] 1b.7 Open PR1b (base PR1a branch). (#32)
 
 ## PR2: Scene validation (branch `feat/bythos-terminal-fase2-02-escena`, base `feat/bythos-terminal-fase2-01b-adjuntos-api`)
 
