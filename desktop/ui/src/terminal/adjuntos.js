@@ -71,6 +71,31 @@ export const leerComoDataURL = (blob) => new Promise((ok, ko) => {
   r.readAsDataURL(blob)
 })
 
+const PARALELO = 4
+
+// Rehidratación (D7): bytes de las imágenes vivas de la escena como BinaryFileData
+// {id: sha, mimeType, dataURL, created}. Máximo 4 descargas en paralelo y caché en
+// memoria por sha (`cache` es un Map). Un blob que falta se omite: solo ese elemento
+// queda con el marcador de Excalidraw y el tablero carga igual. Devuelve { files, faltan }.
+export async function cargarArchivos(sesionId, lista, elements, cache) {
+  const adjPorSha = new Map(lista.map((a) => [a.sha256, a]))
+  const shas = [...new Set(elements.filter((e) => !e.isDeleted && e.type === 'image' && e.fileId).map((e) => e.fileId))]
+  const files = {}
+  let faltan = 0
+  const trabajador = async () => {
+    for (let sha = shas.shift(); sha; sha = shas.shift()) {
+      const adj = adjPorSha.get(sha)
+      try {
+        if (!adj) throw new Error('sin adjunto')
+        if (!cache.has(sha)) cache.set(sha, await leerComoDataURL(await api.bytesAdjunto(sesionId, adj.id)))
+        files[sha] = { id: sha, mimeType: adj.mime, dataURL: cache.get(sha), created: Date.now() }
+      } catch { faltan++ }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(PARALELO, shas.length) }, trabajador))
+  return { files, faltan }
+}
+
 // Valida, reduce (si es imagen) y sube. Lanza Error con el mensaje a mostrar.
 // Devuelve { adjunto, archivo, ancho, alto }: `archivo` es lo realmente subido.
 export async function subirArchivo(sesionId, original) {

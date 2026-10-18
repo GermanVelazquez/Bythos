@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, TEXTO_PIZARRA } from '../api.js'
+import { cargarArchivos } from './adjuntos.js'
 
 const DEBOUNCE_MS = 1500
 const LIMITE_KEEPALIVE = 60 * 1024 // tope de fetch keepalive del navegador (64 KiB)
@@ -8,18 +9,31 @@ const LIMITE_KEEPALIVE = 60 * 1024 // tope de fetch keepalive del navegador (64 
 // la UI, se guarda con debounce y se vacía al cambiar de pestaña, desmontar,
 // ocultar o cerrar la página. Un guardado fallido deja la escena en memoria.
 export function useAutoguardado(sesionId) {
-  const [carga, setCarga] = useState(null) // { escena, n }: n fuerza remontar el lienzo
+  const [carga, setCarga] = useState(null) // { escena, files, conocidos, n }: n fuerza remontar el lienzo
   const [guardado, setGuardado] = useState('guardado')
   const [aviso, setAviso] = useState('')
-  const r = useRef({ version: 0, clave: null, pendiente: null, timer: null, cola: Promise.resolve() })
+  const r = useRef({ version: 0, clave: null, pendiente: null, timer: null, cola: Promise.resolve(), cache: new Map() })
 
   const cargar = useCallback(async () => {
     const d = await api.leerPizarra(sesionId)
     if (typeof d?.version !== 'number' || !Array.isArray(d?.escena?.elements)) {
       throw new Error('Respuesta de pizarra inválida')
     }
+    // Adjuntos y bytes antes de montar el lienzo (excalidraw#6146). Sin lista, `conocidos`
+    // es null (sanearEscena no filtra) y el tablero carga sin bytes.
+    let conocidos = null
+    let files = {}
+    let faltan = 0
+    try {
+      const lista = await api.listarAdjuntos(sesionId)
+      conocidos = new Set(lista.map((a) => a.sha256))
+      ;({ files, faltan } = await cargarArchivos(sesionId, lista, d.escena.elements, r.current.cache))
+    } catch {
+      setAviso(TEXTO_PIZARRA.adjuntosSinListar)
+    }
+    if (faltan) setAviso(TEXTO_PIZARRA.adjuntoNoDisponible)
     Object.assign(r.current, { version: d.version, clave: null, pendiente: null })
-    setCarga((c) => ({ escena: d.escena, n: (c?.n ?? 0) + 1 }))
+    setCarga((c) => ({ escena: d.escena, files, conocidos, n: (c?.n ?? 0) + 1 }))
   }, [sesionId])
 
   const enviar = useCallback(async (keepalive) => {
