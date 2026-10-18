@@ -106,7 +106,7 @@ Satisfies: WT leer_imagen, leer_archivo, pizarra_leer (server side), Agent Reads
 - [x] 4a.4 Create the Agente routes in `D/api/adjuntos.go` (session resolution as phase 1: argumento > entorno > activa > reciente, response carries `resolucion`); extend `D/pizarra/resumen.go` `Resumir` to expose sha (`json:"-"`) and `ElementoResumen.Adjunto` (int64) for image and card elements; wire in `D/api/server.go`. (D5, Interfaces)
 - [x] 4a.5 RED then implement: `GET pizarra` adds `adjuntos:[{id,nombre,tipo,mime,tamano,elementos:[ids]}]` only for attachments referenced by live saved elements, empty list when none, no content; rest of result unchanged. (WT: Lists attachments, No attachments)
 - [ ] 4a.6 Verify: `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...`.
-- [ ] 4a.7 Open PR4a (base PR3b branch; after merges, retargeted to `master`).
+- [x] 4a.7 Open PR4a (base PR3b branch; after merges, retargeted to `master`). Split in two: #36 (4a.1–4a.2) and #37 (4a.3–4a.5).
 
 ## PR4b: MCP tools and workspace rule (branch `feat/bythos-terminal-fase2-04b-agente-mcp`, base `feat/bythos-terminal-fase2-04a-agente-rutas`)
 
