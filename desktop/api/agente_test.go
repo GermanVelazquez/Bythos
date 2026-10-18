@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -190,5 +191,25 @@ func TestAbrirTerminalAgenteHeadersAntiClickjacking(t *testing.T) {
 	}
 	if got := rec.Header().Get("Content-Security-Policy"); got != "frame-ancestors 'none'" {
 		t.Fatalf("Content-Security-Policy = %q, quería frame-ancestors 'none'", got)
+	}
+}
+
+// El arranque compara este pid con el suyo para saber que el 200 es de
+// ESTE proceso y no de una instancia vieja que tenía el puerto.
+func TestSaludIncluyePid(t *testing.T) {
+	s := basePrueba(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/salud", nil)
+	req.Host = "localhost:8080"
+	rec := httptest.NewRecorder()
+	s.Rutas().ServeHTTP(rec, req)
+
+	var cuerpo struct {
+		Pid int `json:"pid"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &cuerpo); err != nil {
+		t.Fatalf("cuerpo no es JSON: %v (%s)", err, rec.Body.String())
+	}
+	if cuerpo.Pid != os.Getpid() {
+		t.Fatalf("pid = %d, quería %d", cuerpo.Pid, os.Getpid())
 	}
 }
