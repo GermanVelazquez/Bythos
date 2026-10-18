@@ -193,14 +193,14 @@ Run on an installed or locally built `bythos.exe`. Items are grouped by the PR t
 - [x] M.5 (PR5) Drawing and autosave survive a restart: draw, wait for "Guardado", close Bythos fully, reopen: the same elements load. Edit and switch tabs/quit immediately: the edit is still saved.
 - [x] M.6 (PR5) Image paste and drop onto the board are refused with "Las imágenes llegan en una fase posterior."; the image tool is not in the toolbar.
 - [x] M.7 (PR5) Offline fonts: with the DevTools Network panel open (or network disabled) and text drawn on the board, there are zero non-localhost requests and the font renders.
-- [ ] M.8 (PR0) Single instance: with Bythos open, launch `bythos.exe` again: no second listener, the existing window is shown, the new process exits. After killing the process from Task Manager, Bythos starts normally.
-- [ ] M.9 (PR0) Installer upgrade with the app open: run the installer; it asks to close Bythos before continuing; same for the uninstaller.
+- [x] M.8 (PR0) Single instance: with Bythos open, launch `bythos.exe` again: no second listener, the existing window is shown, the new process exits. After killing the process from Task Manager, Bythos starts normally. Passed 2026-10-18: relaunches keep one bythos.exe and one :8080 listener; after a forced kill it restarts and serves the UI.
+- [x] M.9 (PR0) Installer upgrade with the app open: run the installer; it asks to close Bythos before continuing; same for the uninstaller. WAIVED by the maintainer at archive (needs an installer build); covered only by AppMutex=Bythos.Instancia in bythos.iss.
 - [x] M.10 (PR5) Revisar: with pending board edits press Revisar: the chip goes to "Guardado", the terminal has focus, and nothing was typed into the terminal.
 - [x] M.11 (PR6b) An agent draws and captures: from the embedded terminal run an agent with the Bythos MCP, ask it to draw a rectangle (it appears, Ctrl+Z undoes it) and to look at the board (it describes the drawing). With the Terminal view closed, `pizarra_dibujar` and `pizarra_captura` fail with the Spanish 409 messages; `pizarra_leer` still returns the saved scene.
 - [x] M.12 (PR6b) Closing a folder loosens sessions: delete a folder that has a linked session: the session, scene and ops remain and the session shows "Suelta".
 - [x] M.13 (PR6b) Process cleanup: with two sessions running a long command (`ping -t 127.0.0.1`), end `bythos.exe` from Task Manager: no `ping.exe` or `cmd.exe` child remains. Also confirm a PTY detached for more than 10 min is reaped (optional, or shorten `Gracia` via a debug build).
 - [x] M.14 (final) Exe size is about 31 MB (compare with the previous release; the fonts are not embedded in git but are in `dist`, so report the real size). Measured: 29.8 MB (dev build of the PR6b tip; v1.1.0 only ships the 11.8 MB installer, no raw exe to compare).
-- [ ] M.15 (final) Windows older than 1809 (or the simulated `ErrNoSoportado` path): the UI shows "La terminal requiere Windows 10 versión 1809 o superior." and offers "Abrir agente".
+- [x] M.15 (final) Windows older than 1809 (or the simulated `ErrNoSoportado` path): the UI shows "La terminal requiere Windows 10 versión 1809 o superior." and offers "Abrir agente". WAIVED by the maintainer at archive (needs a simulated old-Windows build); Go side covered by TestConPTY_VersionMinima.
 
 ## Chain order and boundaries
 
