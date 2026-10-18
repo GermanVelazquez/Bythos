@@ -90,9 +90,9 @@ Satisfies: WA Entry Paths (paste, drop), Allowed Types (pre-filter), Size Limit 
 
 Satisfies: WA Rehydration, Entry Paths (Adjuntar), Session Privacy (cross-session paste), Scene stays small (D7, D10).
 
-- [ ] 3b.1 Modify `T/useAutoguardado.js`: `cargar()` fetches scene + attachment list, then bytes of live image `fileId`s (4 in parallel, cached in memory by sha); returns `carga = {escena, files}` passed as `initialData.files`; a missing blob marks only that element as unavailable and the board still loads; rehydration does not mark the scene dirty. (D7; WA: Restart, Missing blob)
-- [ ] 3b.2 Modify `T/Pizarra.jsx`: "Adjuntar" button (file picker) feeding the same upload flow; pass the known-sha set to `sanearEscena`; `onPaste` returns `false` when an image or card references a sha unknown to this session (cross-session internal paste). (D10; WA: Adjuntar)
-- [ ] 3b.3 Add Spanish strings for Adjuntar, errors and unavailable elements to `T/` string constants (reuse the existing strings module). (WA: Failure Handling)
+- [x] 3b.1 Modify `T/useAutoguardado.js`: `cargar()` fetches scene + attachment list, then bytes of live image `fileId`s (4 in parallel, cached in memory by sha); returns `carga = {escena, files}` passed as `initialData.files`; a missing blob marks only that element as unavailable and the board still loads; rehydration does not mark the scene dirty. (D7; WA: Restart, Missing blob)
+- [x] 3b.2 Modify `T/Pizarra.jsx`: "Adjuntar" button (file picker) feeding the same upload flow; pass the known-sha set to `sanearEscena`; `onPaste` returns `false` when an image or card references a sha unknown to this session (cross-session internal paste). (D10; WA: Adjuntar)
+- [x] 3b.3 Add Spanish strings for Adjuntar, errors and unavailable elements to `T/` string constants (reuse the existing strings module). (WA: Failure Handling)
 - [ ] 3b.4 Verify: `pnpm build`; `go vet ./...`, `go test ./...`. Manual: M.4 to M.7.
 - [ ] 3b.5 Open PR3b (base PR3a branch) with M.4 to M.7.
 
