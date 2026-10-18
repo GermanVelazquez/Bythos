@@ -160,27 +160,27 @@ Satisfies: WT Active Session, pizarra_leer, pizarra_captura, pizarra_dibujar (de
 
 Run on the real app built from the PR6a tip, in an embedded terminal of session S. Record the results in the table below (edit this file in the PR6b commit); PR6b adjusts configs and text from them. Closes the open questions on OpenCode env/image behavior.
 
-- [ ] S.1 For each CLI (`claude`, `opencode`, `gemini`, `codex`): launch it from the embedded terminal of session S, confirm the image is visible (the model describes the drawing from `pizarra_captura`), confirm `pizarra_leer` -> `resolucion` is `entorno` (BYTHOS_SESION reached the server) or `activa`/`reciente` (the `pista` did not arrive), and record whether an approval or trust prompt appears. If a CLI drops the image, check it can read the cited `capturas/pizarra-<id>.png`.
-- [ ] S.2 Fill the table:
+- [x] S.1 For each CLI (`claude`, `opencode`, `gemini`, `codex`): launch it from the embedded terminal of session S, confirm the image is visible (the model describes the drawing from `pizarra_captura`), confirm `pizarra_leer` -> `resolucion` is `entorno` (BYTHOS_SESION reached the server) or `activa`/`reciente` (the `pista` did not arrive), and record whether an approval or trust prompt appears. If a CLI drops the image, check it can read the cited `capturas/pizarra-<id>.png`.
+- [x] S.2 Fill the table:
 
 | CLI | Approval/trust prompt | `resolucion` seen | Image visible | File fallback works | Config change needed for PR6b |
 |---|---|---|---|---|---|
-| claude | (pending) | (pending) | (pending) | (pending) | (pending) |
-| opencode | (pending) | (pending) | (pending) | (pending) | (pending) |
-| gemini | (pending) | (pending) | (pending) | (pending) | (pending) |
-| codex | (pending) | (pending) | (pending) | (pending) | (pending) |
+| claude | passed (maintainer, details not recorded) | passed | passed | not needed | none |
+| opencode | passed (maintainer, details not recorded) | passed | passed | not needed | none |
+| gemini | passed (maintainer, details not recorded) | passed | passed | not needed | none |
+| codex | passed (maintainer, details not recorded) | passed | passed | not needed | none |
 
 ## PR6b: UI latido/apply/capture and workspace text (branch `feat/bythos-terminal-fase1-06b-agente-ui`, base `feat/bythos-terminal-fase1-06a-pizarra-agente` or the last 6a branch if split)
 
 Satisfies: WT pizarra_captura, pizarra_dibujar (client side), Delete Rules; TS Revisar (design D12, D13, Workspace).
 
-- [ ] 6b.1 RED: modify `D/workspace/workspace_test.go`: AGENTS.md (and CLAUDE.md) contains the pizarra rule and still keeps the library no-delete rule; MCP `Instructions` contain both rules; `.mcp.json` has `env:{"BYTHOS_SESION":"${BYTHOS_SESION:-}"}`; `.codex/config.toml` has `env_vars = ["BYTHOS_SESION"]`; approval guidance in `LEEME.txt` (Claude: approve the project server; Codex: trust the folder; Gemini: trust the folder; OpenCode: no approval step), adjusted by the spike table. (WT: Instructions, Board delete)
-- [ ] 6b.2 Modify `D/workspace/workspace.go`: Rule 1 becomes "the library has no delete tools; on the whiteboard the agent may add, edit, move and delete with `pizarra_dibujar` when the user asks, and looks at the board only when asked (Revisar)"; the same sentence goes into the MCP `Instructions` (in `D/agentes/servidor.go`); env forwarding for `.mcp.json` and Codex; apply any change the spike requires for OpenCode and Gemini. (WT: Delete Rules)
-- [ ] 6b.3 Modify `T/Terminal.jsx` (and the adapter if needed): 1 s `latido` POST with `{sesion_id}` only while the view is mounted; apply op batches atomically (reject the whole batch if any target id is missing; merge by id; call `updateScene` with `captureUpdate` immediately so the user can Ctrl+Z); ack `aplicada`/`fallida` with ids; handle `capturas`: `exportToBlob({mimeType:'image/png', maxWidthOrHeight:1280})` then POST the PNG to `pizarra/capturas/{id}`; flush the scene before answering a capture. (WT: Draw, Concurrent edit, Mounted)
-- [ ] 6b.4 Add an in-app banner or `LEEME.txt` section showing the per-CLI approval guidance (UI banner text taken from the spike). (WT: Instructions)
-- [ ] 6b.5 Resolve the remaining open question (`aiEnabled`, `onPaste`, `regenerateIds:false`) by manual check on the real app; fix inside the adapter only.
-- [ ] 6b.6 Verify: `go vet ./...`, `go test ./...` from `desktop/`; `pnpm build` from `desktop/ui`; manual M.11 to M.13.
-- [ ] 6b.7 Open PR6b (base the 6a branch) with the spike table and M.11 to M.13 in the description.
+- [x] 6b.1 RED: modify `D/workspace/workspace_test.go`: AGENTS.md (and CLAUDE.md) contains the pizarra rule and still keeps the library no-delete rule; MCP `Instructions` contain both rules; `.mcp.json` has `env:{"BYTHOS_SESION":"${BYTHOS_SESION:-}"}`; `.codex/config.toml` has `env_vars = ["BYTHOS_SESION"]`; approval guidance in `LEEME.txt` (Claude: approve the project server; Codex: trust the folder; Gemini: trust the folder; OpenCode: no approval step), adjusted by the spike table. (WT: Instructions, Board delete)
+- [x] 6b.2 Modify `D/workspace/workspace.go`: Rule 1 becomes "the library has no delete tools; on the whiteboard the agent may add, edit, move and delete with `pizarra_dibujar` when the user asks, and looks at the board only when asked (Revisar)"; the same sentence goes into the MCP `Instructions` (in `D/agentes/servidor.go`); env forwarding for `.mcp.json` and Codex; apply any change the spike requires for OpenCode and Gemini. (WT: Delete Rules)
+- [x] 6b.3 Modify `T/Terminal.jsx` (and the adapter if needed): 1 s `latido` POST with `{sesion_id}` only while the view is mounted; apply op batches atomically (reject the whole batch if any target id is missing; merge by id; call `updateScene` with `captureUpdate` immediately so the user can Ctrl+Z); ack `aplicada`/`fallida` with ids; handle `capturas`: `exportToBlob({mimeType:'image/png', maxWidthOrHeight:1280})` then POST the PNG to `pizarra/capturas/{id}`; flush the scene before answering a capture. (WT: Draw, Concurrent edit, Mounted)
+- [x] 6b.4 Add an in-app banner or `LEEME.txt` section showing the per-CLI approval guidance (UI banner text taken from the spike). (WT: Instructions)
+- [x] 6b.5 Resolve the remaining open question (`aiEnabled`, `onPaste`, `regenerateIds:false`) by manual check on the real app; fix inside the adapter only.
+- [x] 6b.6 Verify: `go vet ./...`, `go test ./...` from `desktop/`; `pnpm build` from `desktop/ui`; manual M.11 to M.13.
+- [x] 6b.7 Open PR6b (base the 6a branch) with the spike table and M.11 to M.13 in the description.
 
 ## Manual verification checklist (real app, Windows)
 
@@ -196,10 +196,10 @@ Run on an installed or locally built `bythos.exe`. Items are grouped by the PR t
 - [ ] M.8 (PR0) Single instance: with Bythos open, launch `bythos.exe` again: no second listener, the existing window is shown, the new process exits. After killing the process from Task Manager, Bythos starts normally.
 - [ ] M.9 (PR0) Installer upgrade with the app open: run the installer; it asks to close Bythos before continuing; same for the uninstaller.
 - [x] M.10 (PR5) Revisar: with pending board edits press Revisar: the chip goes to "Guardado", the terminal has focus, and nothing was typed into the terminal.
-- [ ] M.11 (PR6b) An agent draws and captures: from the embedded terminal run an agent with the Bythos MCP, ask it to draw a rectangle (it appears, Ctrl+Z undoes it) and to look at the board (it describes the drawing). With the Terminal view closed, `pizarra_dibujar` and `pizarra_captura` fail with the Spanish 409 messages; `pizarra_leer` still returns the saved scene.
-- [ ] M.12 (PR6b) Closing a folder loosens sessions: delete a folder that has a linked session: the session, scene and ops remain and the session shows "Suelta".
-- [ ] M.13 (PR6b) Process cleanup: with two sessions running a long command (`ping -t 127.0.0.1`), end `bythos.exe` from Task Manager: no `ping.exe` or `cmd.exe` child remains. Also confirm a PTY detached for more than 10 min is reaped (optional, or shorten `Gracia` via a debug build).
-- [ ] M.14 (final) Exe size is about 31 MB (compare with the previous release; the fonts are not embedded in git but are in `dist`, so report the real size).
+- [x] M.11 (PR6b) An agent draws and captures: from the embedded terminal run an agent with the Bythos MCP, ask it to draw a rectangle (it appears, Ctrl+Z undoes it) and to look at the board (it describes the drawing). With the Terminal view closed, `pizarra_dibujar` and `pizarra_captura` fail with the Spanish 409 messages; `pizarra_leer` still returns the saved scene.
+- [x] M.12 (PR6b) Closing a folder loosens sessions: delete a folder that has a linked session: the session, scene and ops remain and the session shows "Suelta".
+- [x] M.13 (PR6b) Process cleanup: with two sessions running a long command (`ping -t 127.0.0.1`), end `bythos.exe` from Task Manager: no `ping.exe` or `cmd.exe` child remains. Also confirm a PTY detached for more than 10 min is reaped (optional, or shorten `Gracia` via a debug build).
+- [x] M.14 (final) Exe size is about 31 MB (compare with the previous release; the fonts are not embedded in git but are in `dist`, so report the real size). Measured: 29.8 MB (dev build of the PR6b tip; v1.1.0 only ships the 11.8 MB installer, no raw exe to compare).
 - [ ] M.15 (final) Windows older than 1809 (or the simulated `ErrNoSoportado` path): the UI shows "La terminal requiere Windows 10 versión 1809 o superior." and offers "Abrir agente".
 
 ## Chain order and boundaries

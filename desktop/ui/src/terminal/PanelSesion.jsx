@@ -1,7 +1,8 @@
-import { lazy, Suspense, useRef } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 import PanelTerminal from './PanelTerminal.jsx'
 import ChipsEstado from './ChipsEstado.jsx'
 import { useAutoguardado } from './useAutoguardado.js'
+import { usePizarraAgente } from './usePizarraAgente.js'
 import { TEXTO_PIZARRA } from '../api.js'
 
 // Excalidraw va en su propio chunk: solo se pide al abrir una sesión.
@@ -12,6 +13,8 @@ const Pizarra = lazy(() => import('./Pizarra.jsx'))
 export default function PanelSesion({ sesion }) {
   const { carga, guardado, aviso, alCambiar, vaciar } = useAutoguardado(sesion.id)
   const enfocar = useRef(null)
+  const [apiLienzo, setApiLienzo] = useState(null) // API de Excalidraw; null mientras no hay lienzo
+  usePizarraAgente(sesion.id, apiLienzo, vaciar)
 
   // Revisar: guarda lo pendiente y devuelve el foco a la terminal; no escribe nada al PTY.
   async function revisar() {
@@ -30,7 +33,7 @@ export default function PanelSesion({ sesion }) {
         </div>
         {carga && (
           <Suspense fallback={null}>
-            <Pizarra key={carga.n} inicial={carga.escena} alCambiar={alCambiar} />
+            <Pizarra key={carga.n} inicial={carga.escena} alCambiar={alCambiar} alTenerApi={setApiLienzo} />
           </Suspense>
         )}
       </section>

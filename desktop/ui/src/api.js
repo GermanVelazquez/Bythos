@@ -252,6 +252,15 @@ export const api = {
     const dato = (res.headers.get('content-type') || '').includes('application/json') ? await res.json() : null
     return { estado: res.status, ok: res.ok, version: dato?.version, error: dato?.error }
   },
+  // Agente en la pizarra: latido {ops, capturas}; ack de un lote; PNG de una captura.
+  latidoPizarra: (sesionId) =>
+    fetch(`${BASE}/api/terminal/latido`, { method: 'POST', headers: CABECERAS_JSON, body: JSON.stringify({ sesion_id: sesionId }) }).then(leer),
+  ackOpPizarra: (opId, cuerpo) =>
+    fetch(`${BASE}/api/terminal/pizarra/ops/${opId}/ack`, { method: 'POST', headers: CABECERAS_JSON, body: JSON.stringify(cuerpo) }).then(leer),
+  subirCapturaPizarra: (capturaId, png) =>
+    fetch(`${BASE}/api/terminal/pizarra/capturas/${capturaId}`, {
+      method: 'POST', headers: { 'Content-Type': 'image/png', ...CABECERAS_ORIGEN }, body: png,
+    }).then(leer),
 }
 
 // Textos de la pantalla Terminal (design, UI Strings).
