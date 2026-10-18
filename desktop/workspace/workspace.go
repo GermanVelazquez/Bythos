@@ -129,10 +129,15 @@ type mcpServidorStdio struct {
 }
 
 // mcpJSONClaudeCode arma .mcp.json.
+// Reenvía BYTHOS_SESION (la pone la terminal embebida de Bythos) al proceso
+// MCP; sin ella queda vacía y el servidor cae a la sesión activa/reciente.
 func mcpJSONClaudeCode(exe string) map[string]any {
 	return map[string]any{
 		"mcpServers": map[string]any{
-			"bythos": mcpServidorStdio{Command: exe, Args: []string{"mcp"}},
+			"bythos": struct {
+				mcpServidorStdio
+				Env map[string]string `json:"env"`
+			}{mcpServidorStdio{Command: exe, Args: []string{"mcp"}}, map[string]string{"BYTHOS_SESION": "${BYTHOS_SESION:-}"}},
 		},
 	}
 }
@@ -169,7 +174,8 @@ func tomlCodex(exe string) string {
 		"# Fuente: https://developers.openai.com/codex/config-reference\n" +
 		"[mcp_servers.bythos]\n" +
 		"command = " + tomlLiteral(exe) + "\n" +
-		"args = [\"mcp\"]\n"
+		"args = [\"mcp\"]\n" +
+		"env_vars = [\"BYTHOS_SESION\"]\n"
 }
 
 // tomlLiteral encierra s como TOML literal string. Fallback a basic
@@ -184,6 +190,13 @@ func tomlLiteral(s string) string {
 }
 
 // --- Textos en español (instrucciones + bienvenida) ---
+
+// Regla 1, en dos frases sin saltos de línea (también van a las Instructions
+// del servidor MCP, ver agentes/servidor.go).
+const (
+	ReglaBiblioteca = "La biblioteca (carpetas, recursos y notas) no tiene herramientas para borrar."
+	ReglaPizarra    = "En la pizarra podés agregar, editar, mover y borrar con pizarra_dibujar cuando el usuario te lo pida, y solo la mirás cuando te lo pida (Revisar)."
+)
 
 // textoInstrucciones documenta Bythos, las herramientas MCP disponibles
 // (mismos nombres/orden que RegistrarLectura + RegistrarEscritura, ver
@@ -223,10 +236,10 @@ Escritura (agregan o actualizan, nunca destruyen):
 
 ## Reglas
 
-1. No existen herramientas para BORRAR nada (ni carpetas, ni recursos,
-   ni notas). Si el usuario te pide borrar algo, decile que lo haga
-   desde la app o la extensión: vos no tenés esa herramienta a
-   propósito.
+1. ` + ReglaBiblioteca + `
+   Si el usuario te pide borrar algo de la biblioteca, decile que lo
+   haga desde la app o la extensión: vos no tenés esa herramienta a
+   propósito. ` + ReglaPizarra + `
 2. Antes de hacer un cambio MASIVO (varias carpetas, varios links o
    varias notas de una sola vez), confirmá primero con el usuario qué
    vas a hacer. Una herramienta a la vez para un pedido puntual está
@@ -265,11 +278,15 @@ Escribí uno de estos para empezar (Bythos NO los lanza por vos):
 El servidor MCP de Bythos ya está configurado como proyecto para los
 tres. Si tu terminal soporta otro cliente MCP, mirá AGENTS.md.
 
-- Claude Code: la primera vez te va a pedir aprobar el servidor de
-  proyecto (.mcp.json). Aceptalo desde el diálogo de Claude.
-- Codex CLI: no está en la lista de arriba porque necesita que confíes
-  en esta carpeta la primera vez que corrés "codex" acá (te lo va a
-  preguntar). Si preferís no usar carpetas de proyecto, agregá esto a
+Aprobación del servidor, según el cliente:
+
+- Claude Code: aprobá el servidor de proyecto (.mcp.json) la primera
+  vez, desde el diálogo de Claude.
+- Gemini CLI: confiá en la carpeta cuando te lo pregunte.
+- OpenCode: no pide aprobación.
+- Codex CLI: confiá en la carpeta la primera vez que corrés "codex"
+  acá (te lo va a preguntar). No está en la lista de arriba porque sin
+  esa confianza no lee la config de proyecto. Si preferís no usar carpetas de proyecto, agregá esto a
   mano en tu config global (~/.codex/config.toml):
       [mcp_servers.bythos]
       command = 'RUTA_A_TU_BYTHOS.EXE'

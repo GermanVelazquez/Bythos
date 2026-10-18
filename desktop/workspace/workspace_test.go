@@ -182,6 +182,57 @@ func TestPrepararWorkspaceEsIdempotenteYNoBorraArchivosAjenos(t *testing.T) {
 	}
 }
 
+func TestInstruccionesTraenLaReglaDeLaPizarraYLaDeLaBiblioteca(t *testing.T) {
+	conWorkspaceTemporal(t)
+	dir, err := PrepararWorkspace(exeDePrueba)
+	if err != nil {
+		t.Fatalf("PrepararWorkspace: %v", err)
+	}
+	for _, nombre := range []string{"AGENTS.md", "CLAUDE.md"} {
+		b, err := os.ReadFile(filepath.Join(dir, nombre))
+		if err != nil {
+			t.Fatalf("leer %s: %v", nombre, err)
+		}
+		for _, frase := range []string{ReglaBiblioteca, ReglaPizarra} {
+			if !strings.Contains(string(b), frase) {
+				t.Fatalf("%s sin la frase %q", nombre, frase)
+			}
+		}
+	}
+}
+
+func TestMCPYCodexReenvianBythosSesion(t *testing.T) {
+	conWorkspaceTemporal(t)
+	dir, err := PrepararWorkspace(exeDePrueba)
+	if err != nil {
+		t.Fatalf("PrepararWorkspace: %v", err)
+	}
+	b, _ := os.ReadFile(filepath.Join(dir, ".mcp.json"))
+	var claude struct {
+		McpServers map[string]struct {
+			Env map[string]string `json:"env"`
+		} `json:"mcpServers"`
+	}
+	if err := json.Unmarshal(b, &claude); err != nil {
+		t.Fatalf(".mcp.json inválido: %v", err)
+	}
+	if got := claude.McpServers["bythos"].Env["BYTHOS_SESION"]; got != "${BYTHOS_SESION:-}" {
+		t.Fatalf("env BYTHOS_SESION = %q, quería ${BYTHOS_SESION:-}", got)
+	}
+	b, _ = os.ReadFile(filepath.Join(dir, ".codex", "config.toml"))
+	if !strings.Contains(string(b), `env_vars = ["BYTHOS_SESION"]`) {
+		t.Fatalf("config.toml sin env_vars: %s", b)
+	}
+}
+
+func TestLeemeTraeLaGuiaDeAprobacionPorCLI(t *testing.T) {
+	for _, frase := range []string{"Claude Code: aprobá el servidor", "Codex CLI: confiá en la carpeta", "Gemini CLI: confiá en la carpeta", "OpenCode: no pide aprobación"} {
+		if !strings.Contains(textoBienvenida(), frase) {
+			t.Fatalf("LEEME.txt sin %q", frase)
+		}
+	}
+}
+
 func TestTomlLiteralEscapaComillaSimplePocoProbable(t *testing.T) {
 	// Caso borde: si algún día una ruta trae una comilla simple, no debe
 	// romper el TOML (cae a basic string con \ y " escapados).
