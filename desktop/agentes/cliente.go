@@ -58,6 +58,22 @@ type Cliente struct {
 	BaseURL string
 	Host    string
 	HTTP    *http.Client
+	// HTTPLargo es el cliente de pizarra_captura (la app espera hasta 15 s a
+	// la UI). Sin él se deriva de HTTP con TimeoutLargo.
+	HTTPLargo *http.Client
+	// DirAgente es el workspace del agente (los PNG van a su subcarpeta
+	// "capturas"); vacío = workspace.RutaWorkspace().
+	DirAgente string
+}
+
+// TimeoutLargo es el timeout de pizarra_captura; el resto sigue en 15 s.
+const TimeoutLargo = 25 * time.Second
+
+func (c *Cliente) httpLargo() *http.Client {
+	if c.HTTPLargo != nil {
+		return c.HTTPLargo
+	}
+	return &http.Client{Transport: c.http().Transport, Timeout: TimeoutLargo}
 }
 
 // NuevoCliente apunta al Bythos real. Es lo que usa el servidor MCP en
@@ -75,18 +91,25 @@ func NuevoCliente() *Cliente {
 // si status < 400, o un error en español si algo salió mal (red caída,
 // o la API respondió con {"error": "..."}).
 func (c *Cliente) peticion(ctx context.Context, metodo, ruta string, cuerpo any) ([]byte, error) {
+	datos, _, err := c.hacer(ctx, c.http(), metodo, ruta, cuerpo)
+	return datos, err
+}
+
+// hacer es peticion con el cliente HTTP elegido; devuelve además las
+// cabeceras de la respuesta.
+func (c *Cliente) hacer(ctx context.Context, cli *http.Client, metodo, ruta string, cuerpo any) ([]byte, http.Header, error) {
 	var lector io.Reader
 	if cuerpo != nil {
 		datos, err := json.Marshal(cuerpo)
 		if err != nil {
-			return nil, fmt.Errorf("no se pudo armar la petición: %w", err)
+			return nil, nil, fmt.Errorf("no se pudo armar la petición: %w", err)
 		}
 		lector = bytes.NewReader(datos)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, metodo, c.BaseURL+ruta, lector)
 	if err != nil {
-		return nil, fmt.Errorf("no se pudo armar la petición: %w", err)
+		return nil, nil, fmt.Errorf("no se pudo armar la petición: %w", err)
 	}
 	if cuerpo != nil {
 		req.Header.Set("Content-Type", "application/json")
@@ -108,17 +131,17 @@ func (c *Cliente) peticion(ctx context.Context, metodo, ruta string, cuerpo any)
 		req.Host = c.Host
 	}
 
-	resp, err := c.http().Do(req)
+	resp, err := cli.Do(req)
 	if err != nil {
 		// Cualquier error de transporte (puerto cerrado, DNS, timeout)
 		// significa lo mismo para el agente: la app no está corriendo.
-		return nil, errors.New(mensajeAppCerrada)
+		return nil, nil, errors.New(mensajeAppCerrada)
 	}
 	defer resp.Body.Close()
 
 	datos, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("no se pudo leer la respuesta de Bythos: %w", err)
+		return nil, nil, fmt.Errorf("no se pudo leer la respuesta de Bythos: %w", err)
 	}
 
 	if resp.StatusCode >= 400 {
@@ -126,11 +149,11 @@ func (c *Cliente) peticion(ctx context.Context, metodo, ruta string, cuerpo any)
 			Error string `json:"error"`
 		}
 		if json.Unmarshal(datos, &carga) == nil && carga.Error != "" {
-			return nil, errors.New(carga.Error)
+			return nil, nil, errors.New(carga.Error)
 		}
-		return nil, fmt.Errorf("Bythos respondió con error %d", resp.StatusCode)
+		return nil, nil, fmt.Errorf("Bythos respondió con error %d", resp.StatusCode)
 	}
-	return datos, nil
+	return datos, resp.Header, nil
 }
 
 func (c *Cliente) http() *http.Client {
