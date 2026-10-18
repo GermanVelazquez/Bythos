@@ -18,6 +18,7 @@ import (
 	"bythos-desktop/agentes"
 	"bythos-desktop/api"
 	"bythos-desktop/db"
+	"bythos-desktop/terminal"
 	"bythos-desktop/ventana"
 )
 
@@ -43,6 +44,23 @@ func main() {
 		return
 	}
 
+	// 0b. Una sola instancia: un mutex de sesión marca "Bythos está abierto".
+	// Si ya existe, esta es una segunda instancia: NO levanta otro servidor ni
+	// abre la .db; trae al frente la ventana de la primera (o avisa por qué
+	// no puede) y sale. Va DESPUÉS de mcp: ese modo es un proceso aparte que
+	// convive con el Bythos abierto. Si el mutex falla por otra causa, se
+	// sigue igual: el puerto ocupado sigue siendo la última barrera.
+	liberar, yaExiste, err := adquirirInstancia()
+	if err != nil {
+		log.Println("No se pudo tomar el candado de instancia única:", err)
+	} else {
+		defer liberar()
+	}
+	if yaExiste {
+		os.Exit(segundoLanzamiento("http://localhost:8080/api/salud", "http://localhost:8080",
+			api.Version, 200*time.Millisecond, 10*time.Second, ventana.Abrir, ventana.Aviso))
+	}
+
 	// 1. Memoria: abre (o crea) %APPDATA%/Bythos/bythos.db
 	// ¿Por qué aquí y no dentro de api? Porque el dueño del recurso
 	// es quien lo cierra. Main abre, main cierra con defer.
@@ -64,7 +82,11 @@ func main() {
 	}
 
 	// 3. Cerebro: sirve la API para la UI y la extensión (+ la cara en "/")
-	srv := &api.Servidor{Base: base, UI: sub}
+	// El gestor se crea siempre (nunca un *Gestor nil dentro del interface).
+	// main nunca vuelve (select{} u os.Exit): al terminar el proceso, el Job
+	// de cada PTY (KILL_ON_JOB_CLOSE) mata a los hijos.
+	gestor := terminal.NuevoGestor(terminal.Opciones{Iniciar: terminal.NuevoPTY})
+	srv := &api.Servidor{Base: base, UI: sub, Terminal: gestor}
 	// Receptor LAN (apagado por defecto): se enciende desde la UI y se apaga
 	// al cerrar la pantalla, por inactividad o al salir de la app.
 	srv.Receptor = api.NuevoControlReceptor(srv)
