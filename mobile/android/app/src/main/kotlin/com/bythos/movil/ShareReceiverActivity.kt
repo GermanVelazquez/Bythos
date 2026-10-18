@@ -6,6 +6,10 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.widget.TextView
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.Observer
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import java.io.File
 import java.util.UUID
 
@@ -26,6 +30,10 @@ class ShareReceiverActivity : ActividadRedLocal() {
 
     private lateinit var estado: TextView
     private var pendientes: List<Pendiente> = emptyList()
+    private val lineas = linkedMapOf<Long, String>()
+    private val terminados = mutableSetOf<Long>()
+    private var esperados = 0
+    private val observadores = mutableListOf<Pair<LiveData<List<WorkInfo>>, Observer<List<WorkInfo>>>>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,21 +93,53 @@ class ShareReceiverActivity : ActividadRedLocal() {
         Thread {
             val repo = EnviosDbHelper(this)
             try {
+                val nuevos = mutableListOf<Pair<Long, String>>()
                 for (p in pendientes) {
                     val envio = if (p.url != null) {
                         Envio(tipo = Envio.TIPO_LINK, uri = p.url, nombre = p.url, tamano = 0, carpetaId = carpetaId, clienteId = UUID.randomUUID().toString())
                     } else {
                         prepararArchivo(p.uri!!, carpetaId)
                     }
-                    UploadWorker.encolar(this, repo.guardar(envio).id)
+                    val guardado = repo.guardar(envio)
+                    UploadWorker.encolar(this, guardado.id)
+                    nuevos += guardado.id to guardado.nombre
                 }
                 avisar(getString(R.string.encolados, pendientes.size))
+                runOnUiThread { esperados = nuevos.size; nuevos.forEach { (id, nombre) -> observarEnvio(id, nombre) } }
             } catch (e: SinEspacio) {
                 avisar(getString(R.string.sin_espacio))
             } catch (e: Exception) {
                 avisar(getString(R.string.fallo_fuente))
             }
         }.start()
+    }
+
+    /** Shows each queued item's phase and percent from its unique work's progress; removed in onDestroy. */
+    private fun observarEnvio(id: Long, nombre: String) {
+        val datos = WorkManager.getInstance(this).getWorkInfosForUniqueWorkLiveData("envio-$id")
+        val observador = Observer<List<WorkInfo>> { infos ->
+            val w = infos.firstOrNull() ?: return@Observer
+            val fase = w.progress.getString(UploadWorker.FASE)?.let { Fase.valueOf(it) }
+            lineas[id] = when {
+                w.state == WorkInfo.State.SUCCEEDED -> "$nombre: ${getString(R.string.fase_listo)}"
+                fase == null -> return@Observer
+                fase == Fase.VERIFICANDO -> "$nombre: ${getString(UploadWorker.textoFase(fase))}"
+                else -> "$nombre: ${getString(UploadWorker.textoFase(fase))} " +
+                    "${UploadWorker.porcentaje(w.progress.getLong(UploadWorker.HECHOS, 0), w.progress.getLong(UploadWorker.TOTAL, 0))} %"
+            }
+            estado.text = lineas.values.joinToString("\n")
+            // Once every item is on the PC, show "Listo" briefly and go back to where the user came from.
+            if (w.state == WorkInfo.State.SUCCEEDED && terminados.add(id) && terminados.size == esperados) {
+                estado.postDelayed({ finish() }, CIERRE_MS)
+            }
+        }
+        datos.observeForever(observador)
+        observadores += datos to observador
+    }
+
+    override fun onDestroy() {
+        observadores.forEach { (d, o) -> d.removeObserver(o) }
+        super.onDestroy()
     }
 
     /** Keeps the content URI when the grant can be made persistent; otherwise copies it to cache. */
@@ -134,5 +174,6 @@ class ShareReceiverActivity : ActividadRedLocal() {
     private companion object {
         const val PEDIDO_DOCUMENTO = 2
         const val MARGEN_LIBRE = 16L shl 20
+        const val CIERRE_MS = 1_500L
     }
 }

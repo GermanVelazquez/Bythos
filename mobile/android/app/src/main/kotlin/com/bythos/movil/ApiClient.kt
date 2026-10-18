@@ -24,6 +24,8 @@ class ApiClient(
     private val puerto: Int,
     huella: String,
     private val token: String? = null,
+    private val conexionMs: Int = CONEXION_MS,
+    private val lecturaMs: Int = LECTURA_MS,
 ) {
     private val fabrica = SSLContext.getInstance("TLS")
         .apply { init(null, arrayOf(PinnedTrustManager(huella)), null) }
@@ -52,8 +54,8 @@ class ApiClient(
         try {
             con.sslSocketFactory = fabrica
             con.hostnameVerifier = javax.net.ssl.HostnameVerifier { h, _ -> hostCoincide(host, h) }
-            con.connectTimeout = CONEXION_MS
-            con.readTimeout = LECTURA_MS
+            con.connectTimeout = conexionMs
+            con.readTimeout = lecturaMs
             con.instanceFollowRedirects = false
             con.requestMethod = metodo
             token?.let { con.setRequestProperty("Authorization", "Bearer $it") }

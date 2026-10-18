@@ -23,4 +23,13 @@
     <string name="encolados">%1$d elemento(s) en cola; se envían por Wi-Fi.</string>
     <string name="sin_espacio">No hay espacio libre para copiar el archivo.</string>
     <string name="fallo_fuente">No se pudo leer el archivo compartido.</string>
+    <string name="fase_preparando">Preparando</string>
+    <string name="fase_enviando">Enviando</string>
+    <string name="fase_verificando">Verificando en la PC</string>
+    <string name="fase_listo">Listo</string>
+    <string name="pc_sin_nombre">tu PC</string>
+    <string name="emparejado_con">Emparejado con «%1$s»</string>
+    <string name="volver_a_emparejar">Volver a emparejar</string>
+    <string name="conectando">Conectando…</string>
+    <string name="pc_no_recibe">La PC no está recibiendo. Abrí «Recibir del celular» en la PC y escaneá el QR de nuevo.</string>
 </resources>

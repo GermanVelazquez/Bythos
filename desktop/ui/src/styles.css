@@ -83,6 +83,14 @@ a { color: var(--ink-accent); }
 .agente-feedback.ok { color: var(--green); }
 .agente-feedback.error { color: var(--red); }
 
+/* Aviso de llegada desde el celular: flotante, se cierra solo. */
+.aviso-celular {
+  position: fixed; right: 24px; bottom: 24px; z-index: 50; max-width: 360px;
+  padding: 12px 16px; border-radius: 8px; font-size: 13px; line-height: 1.4;
+  background: var(--bg); color: var(--ink); border: 1px solid var(--green);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); overflow-wrap: anywhere;
+}
+
 /* ── Topbar ────────────────────────────────── */
 .topbar {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;

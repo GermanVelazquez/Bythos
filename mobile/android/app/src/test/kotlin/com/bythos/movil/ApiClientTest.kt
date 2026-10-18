@@ -132,6 +132,22 @@ class ApiClientTest {
     }
 
     @Test
+    fun escribirEnTramosConservaLosBytesYReportaAcumulado() {
+        val datos = ByteArray(150 * 1024) { it.toByte() }
+        val salida = java.io.ByteArrayOutputStream()
+        val vistos = mutableListOf<Long>()
+        escribirEnTramos(salida, datos, { vistos += it })
+        assertTrue(datos.contentEquals(salida.toByteArray()))
+        assertEquals(listOf(64L * 1024, 128L * 1024, 150L * 1024), vistos)
+    }
+
+    @Test
+    fun losTimeoutsPorDefectoNoCambian() {
+        assertEquals(5_000, ApiClient.CONEXION_MS)
+        assertEquals(60_000, ApiClient.LECTURA_MS)
+    }
+
+    @Test
     fun unTokenInvalidoSeClasificaComoNoEmparejado() {
         val ex = assertThrows(ErrorApi::class.java) { cliente().get("/v1/otra") }
         assertEquals(Fallo.NO_EMPAREJADO, clasificarFallo(ex, 34, true))
