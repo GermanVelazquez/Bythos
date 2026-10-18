@@ -80,3 +80,9 @@ func ListarCarpetas(base *sql.DB) ([]Carpeta, error) {
 	}
 	return out, rows.Err()
 }
+
+// ExisteCarpeta dice si hay una carpeta con ese id.
+func ExisteCarpeta(base *sql.DB, id int64) bool {
+	var n int
+	return base.QueryRow(`SELECT 1 FROM folders WHERE id = ?`, id).Scan(&n) == nil
+}

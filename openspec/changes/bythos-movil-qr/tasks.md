@@ -105,11 +105,11 @@ Chain strategy: feature-branch-chain
 
 ## Phase 6 — Unit 4b: upload/link handlers + puente
 
-- [ ] 4b.1 `desktop/lan/links.go`: `POST /v1/links` — folder check FIRST → 404 `carpeta_no_encontrada` before metadata fetch (nothing written, no event); else 201.
-- [ ] 4b.2 `desktop/lan/subidas.go`: `POST /v1/subidas` (create, 404 if folder missing before sidecar, 413 oversize, max 3 active/device, idempotent on `cliente_id`), `POST .../estado`, `POST .../partes` (`X-Offset`/`X-Chunk-SHA256`, `MaxBytesReader`, `TryLock`→409, offset mismatch→409, bad hash→422 truncate+restore, complete→202), `POST .../cancelar`.
-- [ ] 4b.3 Async finalize worker: whole-hash check, folder re-check, `archivos.Guardar`, evento; error paths delete temp, no event.
-- [ ] 4b.4 `desktop/api/puente_lan.go`: `Biblioteca` port adapter (`ListarCarpetas`, `ExisteCarpeta`, `GuardarLink`, `GuardarArchivo`) wrapping `db` + `archivos` + SSRF metadata client.
-- [ ] 4b.5 Tests: create/estado/partes/cancelar; 409/413/422; folder missing at create / deleted before finalize; links 404 before metadata fetch (fake fetcher not called); dedupe; whole-hash mismatch; magic-byte reject → `tipo_no_permitido`.
+- [x] 4b.1 `desktop/lan/links.go`: `POST /v1/links` — folder check FIRST → 404 `carpeta_no_encontrada` before metadata fetch (nothing written, no event); else 201.
+- [x] 4b.2 `desktop/lan/subidas.go`: `POST /v1/subidas` (create, 404 if folder missing before sidecar, 413 oversize, max 3 active/device, idempotent on `cliente_id`), `POST .../estado`, `POST .../partes` (`X-Offset`/`X-Chunk-SHA256`, `MaxBytesReader`, `TryLock`→409, offset mismatch→409, bad hash→422 truncate+restore, complete→202), `POST .../cancelar`.
+- [x] 4b.3 Async finalize worker: whole-hash check, folder re-check, `archivos.Guardar`, evento; error paths delete temp, no event.
+- [x] 4b.4 `desktop/api/puente_lan.go`: `Biblioteca` port adapter (`ListarCarpetas`, `ExisteCarpeta`, `GuardarLink`, `GuardarArchivo`) wrapping `db` + `archivos` + SSRF metadata client.
+- [x] 4b.5 Tests: create/estado/partes/cancelar; 409/413/422; folder missing at create / deleted before finalize; links 404 before metadata fetch (fake fetcher not called); dedupe; whole-hash mismatch; magic-byte reject → `tipo_no_permitido`.
 - Acceptance: spec "Valid/Folder not found" folder, "Allowed/Disallowed type", "Resume after interruption", "Oversize transfer".
 - Verification: `cd desktop && go test ./lan/... ./api/... -run "TestSubidas|TestLinks|TestPuenteLAN"`
 - Est. changed lines: ~390
