@@ -44,6 +44,8 @@ type Servidor struct {
 	Terminal gestorTerminal
 	// tickets: entradas de un solo uso para el WebSocket (ver terminal.go).
 	tickets almacenTickets
+	// pizarra: latido, ops y capturas en memoria (ver pizarra.go).
+	pizarra estadoPizarra
 }
 
 // Rutas arma el menú HTTP. Leerlo es leer el producto:
@@ -106,6 +108,7 @@ func (s *Servidor) Rutas() http.Handler {
 
 	// Terminal: sesiones, pizarra y entorno (ver sesiones.go).
 	s.rutasSesiones(mux)
+	s.rutasPizarra(mux) // latido, ops y capturas (ver pizarra.go)
 
 	// Despertar la UI: "/" sirve ui/dist SIN pisar "/api/..."
 	// Va AL FINAL porque "/" es el cajón de sastre. Si la pones arriba,
