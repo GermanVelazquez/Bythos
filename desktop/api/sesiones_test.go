@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"bythos-desktop/db"
+	"bythos-desktop/terminal"
 )
 
 const origenUI = "http://localhost:8080"
@@ -21,6 +22,9 @@ type gestorFalso struct{ cerradas []int64 }
 
 func (g *gestorFalso) Cerrar(id int64) error { g.cerradas = append(g.cerradas, id); return nil }
 func (g *gestorFalso) Vivas() []int64        { return []int64{1, 2} }
+func (g *gestorFalso) Adjuntar(int64, func() (terminal.Config, error), uint16, uint16) (*terminal.Adjunto, error) {
+	return nil, terminal.ErrLimite
+}
 
 // pedirTerminal manda una request como la ventana: Host localhost:8080 y el
 // Origin dado ("" = sin Origin). cabeceras extra en pares clave, valor.

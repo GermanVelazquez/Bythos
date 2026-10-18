@@ -16,6 +16,7 @@ import (
 	"bythos-desktop/agentes"
 	"bythos-desktop/api"
 	"bythos-desktop/db"
+	"bythos-desktop/terminal"
 	"bythos-desktop/ventana"
 )
 
@@ -79,7 +80,11 @@ func main() {
 	}
 
 	// 3. Cerebro: sirve la API para la UI y la extensión (+ la cara en "/")
-	srv := &api.Servidor{Base: base, UI: sub}
+	// El gestor se crea siempre (nunca un *Gestor nil dentro del interface).
+	// main nunca vuelve (select{} u os.Exit): al terminar el proceso, el Job
+	// de cada PTY (KILL_ON_JOB_CLOSE) mata a los hijos.
+	gestor := terminal.NuevoGestor(terminal.Opciones{Iniciar: terminal.NuevoPTY})
+	srv := &api.Servidor{Base: base, UI: sub, Terminal: gestor}
 
 	// 4. Ventana: el servidor va en segundo plano y la ventana al frente.
 	// ¿Por qué goroutine? ListenAndServe BLOQUEA (nunca vuelve); sin go,

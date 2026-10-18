@@ -40,8 +40,10 @@ const Version = "1.1.0"
 type Servidor struct {
 	Base *sql.DB
 	UI   fs.FS
-	// Terminal es el gestor de PTYs; nil = sin terminal (lo conecta PR3).
+	// Terminal es el gestor de PTYs; nil = sin terminal.
 	Terminal gestorTerminal
+	// tickets: entradas de un solo uso para el WebSocket (ver terminal.go).
+	tickets almacenTickets
 }
 
 // Rutas arma el menú HTTP. Leerlo es leer el producto:
