@@ -16,4 +16,11 @@
     <string name="fallo_inalcanzable">No se pudo conectar con la PC. Revisa que estén en la misma red.</string>
     <string name="fallo_no_emparejado">Esta app ya no está emparejada: vuelve a escanear el QR.</string>
     <string name="fallo_pc">La PC respondió: %1$s</string>
+    <string name="enviar_archivo">Enviar un archivo a la PC</string>
+    <string name="elegir_carpeta">Elige la carpeta de destino</string>
+    <string name="cargando_carpetas">Consultando las carpetas de la PC…</string>
+    <string name="nada_que_enviar">No hay nada que enviar.</string>
+    <string name="encolados">%1$d elemento(s) en cola; se envían por Wi-Fi.</string>
+    <string name="sin_espacio">No hay espacio libre para copiar el archivo.</string>
+    <string name="fallo_fuente">No se pudo leer el archivo compartido.</string>
 </resources>

@@ -165,22 +165,33 @@ Chain strategy: feature-branch-chain
 
 ## Phase 12 — Unit 7c: outbox/worker/share
 
-- [ ] 7c.1 `EnviosDbHelper.kt` (`SQLiteOpenHelper`): `envios` table (tipo, uri/url, nombre, tamano, sha256, carpeta_id, cliente_id, subida_id, offset, estado, error).
-- [ ] 7c.2 `ShareReceiverActivity.kt`: `ACTION_SEND`/`SEND_MULTIPLE`, `takePersistableUriPermission` or cache-copy with free-space check, `ACTION_OPEN_DOCUMENT`.
-- [ ] 7c.3 `UploadWorker.kt`: unique work per envio, `UNMETERED` constraint, `setForeground` `dataSync` FGS; sha256 before create; `/estado` on resume; 401 → mark unpaired; `onStopped` persists offset.
-- [ ] 7c.4 Tests: outbox state-machine transitions; worker resume-from-offset (fake `ApiClient`).
-- [ ] 7c.5 Instrumented smoke (manual/CI-optional): keystore round-trip, share routing, scanner-unavailable fallback.
+- [x] 7c.1 `EnviosDbHelper.kt` (`SQLiteOpenHelper`): `envios` table (tipo, uri/url, nombre, tamano, sha256, carpeta_id, cliente_id, subida_id, offset, estado, error).
+- [x] 7c.2 `ShareReceiverActivity.kt`: `ACTION_SEND`/`SEND_MULTIPLE`, `takePersistableUriPermission` or cache-copy with free-space check, `ACTION_OPEN_DOCUMENT`.
+- [x] 7c.3 `UploadWorker.kt`: unique work per envio, `UNMETERED` constraint, `setForeground` `dataSync` FGS; sha256 before create; `/estado` on resume; 401 → mark unpaired; `onStopped` persists offset.
+- [x] 7c.4 Tests: outbox state-machine transitions; worker resume-from-offset (fake `ApiClient`).
+- [x] 7c.5 Instrumented smoke (manual/CI-optional): keystore round-trip, share routing, scanner-unavailable fallback.
+  - Note: `./gradlew :app:connectedDebugAndroidTest` passed on a Samsung SM-A546E (Android 16): 5 tests, 0 failures. The fallback test covers the manual-paste screen, not a real Play Services outage.
 - Acceptance: spec "Share to app", "Resume after kill", "Source deleted mid-transfer".
 - Verification: `cd mobile/android && ./gradlew :app:testDebugUnitTest`
 - Est. changed lines: ~370
 
 ## Phase 13 — Manual Verification (cannot be automated)
 
-- [ ] 13.1 Firewall rule, admin account: fresh install; confirm inbound rule `profile=private remoteip=localsubnet`; connect from a paired phone; confirm no Public-profile rule is ever created.
-- [ ] 13.2 Firewall rule, standard account + UAC elevation: repeat 13.1; document the over-the-shoulder elevation limitation (accepted per design open questions, not solved).
-- [ ] 13.3 Per-user → per-machine install migration: on a machine with a prior HKCU install, confirm silent HKCU uninstall, `%APPDATA%` preserved, no duplicate Start Menu entries.
+- [x] 13.1 Firewall rule, admin account: fresh install; confirm inbound rule `profile=private remoteip=localsubnet`; connect from a paired phone; confirm no Public-profile rule is ever created.
+  - Note: verified on 2026-10-16 with a fresh admin install on a machine with no prior install and no rule. `Bythos (celular)` was inbound, Allow, TCP 48080, Private only, RemoteIP LocalSubnet, program `C:\Program Files\Bythos\bythos.exe`. The paired A54 sent a file with no Windows firewall prompt, and no Public-profile rule exists. Two pre-existing `Bythos` Private rules for the dev build `desktop\bythos.exe` came from an earlier Windows prompt, not from the installer.
+- [x] 13.2 Firewall rule, standard account + UAC elevation: repeat 13.1; document the over-the-shoulder elevation limitation (accepted per design open questions, not solved).
+  - Note: verified on 2026-10-16 on a temporary local standard account (`Usuarios` only) with the admin credentials typed into the UAC prompt, after a clean uninstall. `Bythos (celular)` was inbound, Allow, TCP 48080, Private only, RemoteIP LocalSubnet, program `C:\Program Files\Bythos\bythos.exe`, with no Public-profile rule. The phone paired with the standard account's Bythos and sent a file.
+  - Over-the-shoulder limitation, as observed: setup runs as the elevating admin, so `{userdesktop}` resolves to the admin's Desktop. `Bythos-Extension` was written to the admin's Desktop, not to the standard user's, and the desktop shortcut landed on the Public Desktop, visible to all accounts. The app itself (`runasoriginaluser`) ran as the standard user with its own `%APPDATA%\Bythos`. This is accepted and not solved.
+  - Finding (separate fix, same root as the 13.3 finding): there is no single-instance guard. A stale dev copy launched in the same session held 127.0.0.1:8080, and the newly installed instances showed its old UI (served bundle `index-BcS6Li0G.js` vs embedded `index-CAw64gCJ.js`).
+- [x] 13.3 Per-user → per-machine install migration: on a machine with a prior HKCU install, confirm silent HKCU uninstall, `%APPDATA%` preserved, no duplicate Start Menu entries.
+  - Note: verified on 2026-10-16. Installed the old per-user setup: HKCU `{AEEA0123-...}}_is1`, `%LOCALAPPDATA%\Bythos`. Then ran the new setup as admin. The `/LOG` showed `UninstallString leído=...\AppData\Local\Bythos\unins000.exe`, then `desinstalador terminó con código=0`, then `la entrada ya no está en HKCU`. After install: HKLM key only, the per-user folder and per-user Start Menu entries are gone, there is one common Start Menu `Bythos` group, and the firewall rule is Private/LocalSubnet. In `%APPDATA%\Bythos`, all 25 pre-existing files under `archivos`/`lan`/`agente` are byte-identical to the pre-test backup, and the DB is intact. The paired A54 kept sending files.
+  - Finding (separate fix): the uninstaller does not detect a running `bythos.exe` (no `AppMutex` in `bythos.iss`, no named mutex in the app). Uninstalling with the app open leaves `C:\Program Files\Bythos\bythos.exe` behind.
 - [ ] 13.4 Android local-network permission on a real/emulated device enforcing it: deny → confirm "local network access denied" hint + settings button; grant → confirm normal connection.
-- [ ] 13.5 Windows network-category detection on real hardware: toggle a real adapter Private/Public/Domain; confirm NLM COM detection matches Windows Settings and gates listener start/UI guide correctly.
+  - Note: not testable on the Samsung SM-A546E while it runs Android 16 (the app requests the permission only on SDK ≥ 37). Pending until the device is updated to Android 17.
+  - Deferred 2026-10-16 (user decision): Android 17 enforces ACCESS_LOCAL_NETWORK only for apps targeting SDK 37+; apps below 37 get a temporary implicit grant (https://developer.android.com/privacy-and-security/local-network-permission). With `targetSdk = 36` the deny path cannot be reached, even on an Android 17 emulator. Re-run this check when `targetSdk` moves to 37.
+  - Follow-up for that bump: `ActividadRedLocal.kt` requests the permission based on `SDK_INT` alone; the docs advise not requesting it before targeting 37. Gate the request on target 37 as well, or land it with the bump.
+- [x] 13.5 Windows network-category detection on real hardware: toggle a real adapter Private/Public/Domain; confirm NLM COM detection matches Windows Settings and gates listener start/UI guide correctly.
+  - Note: verified on 2026-10-11 on a real Wi-Fi adapter. Private: the listener started on 192.168.1.33:48080. Public: "Recibir del celular" refused to start and showed the guide to switch to Private. Back to Private: the listener started again. Domain was not tested because the PC is not domain-joined.
 
 ## Key Learnings
 
