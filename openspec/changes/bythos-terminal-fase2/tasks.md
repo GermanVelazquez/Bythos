@@ -44,12 +44,12 @@ Notes: strategy is already chosen (auto-chain, stacked-to-main), so apply procee
 
 Satisfies: WA Upload Endpoint (storage once per hash), Session Privacy, TS Delete with attachments, Shared content survives (D1, D2). **The shared-blob fix ships here, before any upload exists.**
 
-- [ ] 1a.1 RED: create `D/db/adjuntos_test.go` (`t.TempDir`): create link; `UNIQUE(sesion_id, archivo_id)` returns the existing link on re-attach; list by session; lookup by `(sesion_id, id)` returns not-found for another session; deleting a session cascades links but keeps the `archivos` row; an `archivos` row referenced by a link cannot be deleted (no CASCADE). (WA: Duplicate content, Other session; TS: Delete with attachments, Shared content survives)
-- [ ] 1a.2 Create `D/db/adjuntos.go` and modify `D/db/db.go` (`crearTablaAdjuntos`, `CREATE TABLE IF NOT EXISTS terminal_adjuntos(id PK, sesion_id FK ON DELETE CASCADE, archivo_id REFERENCES archivos(id), nombre, creado, UNIQUE(sesion_id, archivo_id))`). Confirm foreign keys are on for the connection. (D1)
-- [ ] 1a.3 RED: in `D/db/archivos_test.go` add `ContarReferenciasArchivo` cases: counts resources only, links only, both, neither. (D2)
-- [ ] 1a.4 Modify `D/db/archivos.go`: add `ContarReferenciasArchivo(archivoID)` (resources plus `terminal_adjuntos`). (D2)
-- [ ] 1a.5 RED then fix: in `D/api/archivos_test.go` a library resource whose blob is also a session attachment is deleted: the blob stays on disk and the `archivos` row stays; with no links the blob is still removed (existing behavior). Modify `limpiarArchivoSiHuerfano` in `D/api/archivos.go` to use `ContarReferenciasArchivo`. (D2; TS: Shared content survives)
-- [ ] 1a.6 Verify: `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...` from `desktop/`.
+- [x] 1a.1 RED: create `D/db/adjuntos_test.go` (`t.TempDir`): create link; `UNIQUE(sesion_id, archivo_id)` returns the existing link on re-attach; list by session; lookup by `(sesion_id, id)` returns not-found for another session; deleting a session cascades links but keeps the `archivos` row; an `archivos` row referenced by a link cannot be deleted (no CASCADE). (WA: Duplicate content, Other session; TS: Delete with attachments, Shared content survives)
+- [x] 1a.2 Create `D/db/adjuntos.go` and modify `D/db/db.go` (`crearTablaAdjuntos`, `CREATE TABLE IF NOT EXISTS terminal_adjuntos(id PK, sesion_id FK ON DELETE CASCADE, archivo_id REFERENCES archivos(id), nombre, creado, UNIQUE(sesion_id, archivo_id))`). Confirm foreign keys are on for the connection. (D1)
+- [x] 1a.3 RED: in `D/db/archivos_test.go` add `ContarReferenciasArchivo` cases: counts resources only, links only, both, neither. (D2)
+- [x] 1a.4 Modify `D/db/archivos.go`: add `ContarReferenciasArchivo(archivoID)` (resources plus `terminal_adjuntos`). (D2)
+- [x] 1a.5 RED then fix: in `D/api/archivos_test.go` a library resource whose blob is also a session attachment is deleted: the blob stays on disk and the `archivos` row stays; with no links the blob is still removed (existing behavior). Modify `limpiarArchivoSiHuerfano` in `D/api/archivos.go` to use `ContarReferenciasArchivo`. (D2; TS: Shared content survives)
+- [x] 1a.6 Verify: `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...` from `desktop/`.
 - [ ] 1a.7 Open PR1a (base `master`) with the chain diagram, stating that the table is additive and the orphan fix is a prerequisite for uploads.
 
 ## PR1b: Upload, list, content and text routes (branch `feat/bythos-terminal-fase2-01b-adjuntos-api`, base `feat/bythos-terminal-fase2-01a-adjuntos-db`)
