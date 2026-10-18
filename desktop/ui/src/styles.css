@@ -476,3 +476,29 @@ input:focus-visible, select:focus-visible, button:focus-visible, .res-card-click
   .viewer-modal { max-width: 100%; }
   .viewer-frame, .viewer-video, .viewer-image { max-height: 60vh; }
 }
+
+/* ── Terminal ──────────────────────────────── */
+.nav-badge { margin-left: auto; font-size: 8px; font-weight: 700; letter-spacing: 0.1em; color: var(--green); border: 1px solid var(--green); border-radius: 4px; padding: 1px 5px; }
+.term-vista { flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.term-tabs { display: flex; align-items: center; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.term-tab { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--ink-muted); font-size: 12px; cursor: pointer; white-space: nowrap; }
+.term-tab:hover { border-color: var(--border-strong); }
+.term-tab.active { background: var(--surface-2); color: var(--ink); border-color: var(--border-strong); }
+.term-tab-meta { font-size: 10px; color: var(--ink-dim); }
+.term-tab-x { background: none; border: 0; color: var(--ink-dim); cursor: pointer; font-size: 13px; padding: 0 2px; }
+.term-tab-x:hover { color: var(--red); }
+.term-tab-nueva { margin-left: auto; flex-shrink: 0; }
+.term-cuerpo { flex: 1; display: flex; min-height: 0; }
+.term-lista { width: 200px; flex-shrink: 0; border-right: 1px solid var(--border); overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.term-item { display: flex; align-items: center; border-radius: 6px; }
+.term-item.active, .term-item:hover { background: var(--surface); }
+.term-item-abrir { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; background: none; border: 0; color: var(--ink); font-size: 12px; padding: 6px 8px; cursor: pointer; }
+.term-item-abrir small { font-size: 10px; color: var(--ink-dim); }
+.term-area { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.term-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.term-estado { display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 11px; }
+.term-chip { padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border-strong); color: var(--ink-muted); }
+.term-chip-conectado { color: var(--green); border-color: var(--green); }
+.term-chip-reconectando, .term-chip-conectando { color: var(--amber); border-color: var(--amber); }
+.term-chip-sinconpty, .term-chip-limite, .term-chip-reemplazada, .term-chip-terminado { color: var(--red); border-color: var(--red); }
+.term-xterm { flex: 1; min-height: 0; padding: 6px 8px; background: var(--bg); overflow: hidden; }

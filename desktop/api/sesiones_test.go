@@ -52,6 +52,9 @@ func crearSesionT(t *testing.T, s *Servidor, cuerpo string) db.Sesion {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("crear sesión: %d %s", rec.Code, rec.Body.String())
 	}
+	if ct := rec.Result().Header.Get("Content-Type"); ct != "application/json" {
+		t.Fatalf("crear sesión: Content-Type %q, la UI necesita JSON", ct)
+	}
 	var se db.Sesion
 	json.Unmarshal(rec.Body.Bytes(), &se)
 	return se
