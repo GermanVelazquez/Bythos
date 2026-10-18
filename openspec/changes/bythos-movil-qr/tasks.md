@@ -144,11 +144,11 @@ Chain strategy: feature-branch-chain
 
 ## Phase 10 — Unit 7a: Android pairing/pinning/keystore/scanner
 
-- [ ] 7a.1 Gradle module `mobile/android` (`:app`), minSdk 26 / target 36, deps androidx core/activity/work-runtime-ktx/play-services-code-scanner (no OkHttp/Compose/Room); `AndroidManifest.xml` declares `ACCESS_LOCAL_NETWORK`.
-- [ ] 7a.2 `PinnedTrustManager.kt`: `X509TrustManager` comparing SHA-256(chain[0].publicKey.encoded) base64url constant-time; throws `PinMismatchException` on mismatch/`checkClientTrusted`.
-- [ ] 7a.3 `KeystoreTokenStore.kt`: Keystore AES-GCM key encrypts token in SharedPreferences.
-- [ ] 7a.4 `PairingActivity.kt` + `ScannerFallback.kt`: `GmsBarcodeScanning`; manual-paste screen for `bythos://pair?...` when Play Services unavailable/install fails.
-- [ ] 7a.5 JVM tests (pure, no Robolectric): QR parse; pin TrustManager against fixture cert (shared SPKI golden from 2a.6); keystore round-trip logic.
+- [x] 7a.1 Gradle module `mobile/android` (`:app`), minSdk 26 / target 36, deps androidx core/activity/work-runtime-ktx/play-services-code-scanner (no OkHttp/Compose/Room); `AndroidManifest.xml` declares `ACCESS_LOCAL_NETWORK`.
+- [x] 7a.2 `PinnedTrustManager.kt`: `X509TrustManager` comparing SHA-256(chain[0].publicKey.encoded) base64url constant-time; throws `PinMismatchException` on mismatch/`checkClientTrusted`.
+- [x] 7a.3 `KeystoreTokenStore.kt`: Keystore AES-GCM key encrypts token in SharedPreferences.
+- [x] 7a.4 `PairingActivity.kt` + `ScannerFallback.kt`: `GmsBarcodeScanning`; manual-paste screen for `bythos://pair?...` when Play Services unavailable/install fails.
+- [x] 7a.5 JVM tests (pure, no Robolectric): QR parse; pin TrustManager against fixture cert (shared SPKI golden from 2a.6); keystore round-trip logic.
 - Acceptance: spec "Fingerprint match/mismatch"; client-side "Valid/Expired/Reused code".
 - Verification: `cd mobile/android && ./gradlew :app:testDebugUnitTest`
 - Est. changed lines: ~380
