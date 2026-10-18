@@ -225,4 +225,59 @@ export const api = {
   // cae al botón Descargar de siempre (ver FileViewerModal).
   textoArchivo: (archivoId) =>
     fetch(`${BASE}/api/archivos/${archivoId}/texto`, { headers: CABECERAS_ORIGEN }).then(leer),
+
+  // TERMINAL (Fase 1): sesiones, ticket de un solo uso para el WebSocket y
+  // entorno. Rutas en /api/terminal (api/sesiones.go, api/terminal.go).
+  entornoTerminal: () => fetch(`${BASE}/api/terminal/entorno`, { headers: CABECERAS_ORIGEN }).then(leer),
+  listarSesiones: () => fetch(`${BASE}/api/terminal/sesiones`, { headers: CABECERAS_ORIGEN }).then(leer),
+  crearSesion: (nombre, modo, carpeta_id) =>
+    fetch(`${BASE}/api/terminal/sesiones`, {
+      method: 'POST', headers: CABECERAS_JSON, body: JSON.stringify({ nombre, modo, carpeta_id }),
+    }).then(leer),
+  cambiarSesion: (id, cambios) =>
+    fetch(`${BASE}/api/terminal/sesiones/${id}`, {
+      method: 'PATCH', headers: CABECERAS_JSON, body: JSON.stringify(cambios),
+    }).then(leer),
+  borrarSesion: (id) =>
+    fetch(`${BASE}/api/terminal/sesiones/${id}`, { method: 'DELETE', headers: CABECERAS_ORIGEN }).then(leer),
+  ticketTerminal: (id) =>
+    fetch(`${BASE}/api/terminal/sesiones/${id}/ticket`, { method: 'POST', headers: CABECERAS_ORIGEN }).then(leer),
+  // Pizarra: GET {escena, version}; PUT {escena, version}. El PUT devuelve el estado HTTP
+  // sin lanzar: el 409 trae la versión actual y el llamador decide (recargar la escena).
+  leerPizarra: (id) => fetch(`${BASE}/api/terminal/sesiones/${id}/pizarra`, { headers: CABECERAS_ORIGEN }).then(leer),
+  guardarPizarra: async (id, escena, version, keepalive = false) => {
+    const res = await fetch(`${BASE}/api/terminal/sesiones/${id}/pizarra`, {
+      method: 'PUT', headers: CABECERAS_JSON, body: JSON.stringify({ escena, version }), keepalive,
+    })
+    const dato = (res.headers.get('content-type') || '').includes('application/json') ? await res.json() : null
+    return { estado: res.status, ok: res.ok, version: dato?.version, error: dato?.error }
+  },
+  // Agente en la pizarra: latido {ops, capturas}; ack de un lote; PNG de una captura.
+  latidoPizarra: (sesionId) =>
+    fetch(`${BASE}/api/terminal/latido`, { method: 'POST', headers: CABECERAS_JSON, body: JSON.stringify({ sesion_id: sesionId }) }).then(leer),
+  ackOpPizarra: (opId, cuerpo) =>
+    fetch(`${BASE}/api/terminal/pizarra/ops/${opId}/ack`, { method: 'POST', headers: CABECERAS_JSON, body: JSON.stringify(cuerpo) }).then(leer),
+  subirCapturaPizarra: (capturaId, png) =>
+    fetch(`${BASE}/api/terminal/pizarra/capturas/${capturaId}`, {
+      method: 'POST', headers: { 'Content-Type': 'image/png', ...CABECERAS_ORIGEN }, body: png,
+    }).then(leer),
+}
+
+// Textos de la pantalla Terminal (design, UI Strings).
+export const TEXTO_TERMINAL = {
+  nav: 'Terminal',
+  insignia: 'NUEVO',
+  nombreVacio: 'Escribe un nombre para la sesión.',
+  suelta: 'Suelta',
+  sinConPty: 'La terminal requiere Windows 10 versión 1809 o superior.',
+}
+
+// Textos de la pizarra (design, UI Strings).
+export const TEXTO_PIZARRA = {
+  guardando: 'Guardando…',
+  guardado: 'Guardado',
+  error: 'Error al guardar',
+  sinImagenes: 'Las imágenes llegan en una fase posterior.',
+  otraVentana: 'Actualizada desde otra ventana',
+  revisar: 'Revisar',
 }
