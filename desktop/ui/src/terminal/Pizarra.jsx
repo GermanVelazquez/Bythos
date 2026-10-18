@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
-import { Excalidraw, sanearEscena, versionEscena } from './excalidrawAdapter.js'
-import { TEXTO_PIZARRA } from '../api.js'
+import { useEffect, useRef, useState } from 'react'
+import { Excalidraw, sanearEscena, versionEscena, insertarAdjunto, shaDeElemento } from './excalidrawAdapter.js'
+import { subirArchivo, leerComoDataURL } from './adjuntos.js'
+import { api } from '../api.js'
 
 const UI_OPCIONES = {
   tools: { image: false },
@@ -9,38 +10,86 @@ const UI_OPCIONES = {
 
 const traeArchivos = (dt) => Array.from(dt?.types ?? []).includes('Files')
 
-// Presentacional: lienzo de Excalidraw. Reporta (escena saneada, clave de versión)
-// y no sabe nada de guardado. Sin imágenes: herramienta oculta, pegar y soltar
-// bloqueados en captura (antes de que Excalidraw los vea).
-export default function Pizarra({ inicial, alCambiar, alTenerApi }) {
-  const [aviso, setAviso] = useState('')
-  const ultima = useRef(null)
+// Archivos de un pegado: files y, si viene vacío, items (getAsFile).
+const archivosDe = (dt) => {
+  const directos = Array.from(dt?.files ?? [])
+  if (directos.length) return directos
+  return Array.from(dt?.items ?? []).filter((i) => i.kind === 'file').map((i) => i.getAsFile()).filter(Boolean)
+}
 
-  function bloquear(e) {
-    if (!traeArchivos(e.clipboardData ?? e.dataTransfer)) return
-    e.preventDefault()
-    e.stopPropagation()
-    setAviso(TEXTO_PIZARRA.sinImagenes)
+// Presentacional: lienzo de Excalidraw. Reporta (escena saneada, clave de versión).
+// Pegar y soltar se interceptan en captura (antes de que Excalidraw los vea) y van
+// al flujo de adjuntos: subir -> addFiles -> updateScene -> vaciar. Las imágenes
+// solo entran por ahí (herramienta oculta).
+export default function Pizarra({ sesionId, inicial, alCambiar, alTenerApi, vaciar }) {
+  const [aviso, setAviso] = useState('')
+  const [listo, setListo] = useState(false)
+  const ultima = useRef(null)
+  const apiLienzo = useRef(null)
+  const conocidos = useRef(null) // shas de los adjuntos de la sesión; null = no se pudo listar
+
+  // Los conocidos se cargan antes de montar el lienzo: sin ellos sanearEscena
+  // descartaría las imágenes ya guardadas en el primer cambio.
+  useEffect(() => {
+    let vivo = true
+    api.listarAdjuntos(sesionId)
+      .then((lista) => { conocidos.current = new Set(lista.map((a) => a.sha256)) })
+      .catch(() => { conocidos.current = null })
+      .finally(() => vivo && setListo(true))
+    return () => { vivo = false; clearTimeout(ultima.current) }
+  }, [sesionId])
+
+  function mostrar(texto) {
+    setAviso(texto)
     clearTimeout(ultima.current)
     ultima.current = setTimeout(() => setAviso(''), 4000)
   }
 
-  // Segunda barrera: si algún pegado llegara con archivos o imágenes, no se aplica.
+  async function adjuntar(archivos) {
+    for (const original of archivos) {
+      try {
+        const { adjunto, archivo, ancho, alto } = await subirArchivo(sesionId, original)
+        const dataURL = adjunto.tipo === 'imagen' ? await leerComoDataURL(archivo) : null
+        conocidos.current?.add(adjunto.sha256) // antes de pintar: el onChange ya debe conocerlo
+        insertarAdjunto(apiLienzo.current, adjunto, dataURL, ancho, alto)
+        await vaciar()
+      } catch (err) {
+        mostrar(err.message) // no se añadió nada
+      }
+    }
+  }
+
+  function interceptar(e) {
+    const dt = e.clipboardData ?? e.dataTransfer
+    const archivos = archivosDe(dt)
+    if (!archivos.length && !traeArchivos(dt)) return // texto u otro pegado: pasa intacto
+    e.preventDefault()
+    e.stopPropagation()
+    if (archivos.length) adjuntar(archivos)
+  }
+
+  // Segunda barrera: un pegado interno que arrastre archivos o un adjunto ajeno no se aplica.
   const alPegar = (datos) =>
-    !(Object.keys(datos?.files ?? {}).length || (datos?.elements ?? []).some((e) => e.type === 'image'))
+    !Object.keys(datos?.files ?? {}).length &&
+    !(datos?.elements ?? []).some((e) => {
+      const sha = shaDeElemento(e)
+      return sha != null && !conocidos.current?.has(sha)
+    })
 
   return (
-    <div className="term-lienzo" onDropCapture={bloquear} onPasteCapture={bloquear}>
-      <Excalidraw
-        excalidrawAPI={alTenerApi}
-        initialData={{ elements: inicial.elements, appState: inicial.appState, scrollToContent: true }}
-        UIOptions={UI_OPCIONES}
-        aiEnabled={false}
-        theme="dark"
-        onPaste={alPegar}
-        langCode="es-ES"
-        onChange={(elements, appState) => alCambiar(sanearEscena(elements, appState), `${versionEscena(elements)}|${appState.viewBackgroundColor}`)}
-      />
+    <div className="term-lienzo" onDropCapture={interceptar} onPasteCapture={interceptar}>
+      {listo && (
+        <Excalidraw
+          excalidrawAPI={(a) => { apiLienzo.current = a; alTenerApi(a) }}
+          initialData={{ elements: inicial.elements, appState: inicial.appState, scrollToContent: true }}
+          UIOptions={UI_OPCIONES}
+          aiEnabled={false}
+          theme="dark"
+          onPaste={alPegar}
+          langCode="es-ES"
+          onChange={(elements, appState) => alCambiar(sanearEscena(elements, appState, conocidos.current), `${versionEscena(elements)}|${appState.viewBackgroundColor}`)}
+        />
+      )}
       {aviso && <div className="term-aviso">{aviso}</div>}
     </div>
   )

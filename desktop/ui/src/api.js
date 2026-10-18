@@ -326,7 +326,6 @@ export const TEXTO_PIZARRA = {
   guardando: 'Guardando…',
   guardado: 'Guardado',
   error: 'Error al guardar',
-  sinImagenes: 'Las imágenes llegan en una fase posterior.',
   otraVentana: 'Actualizada desde otra ventana',
   revisar: 'Revisar',
 }
