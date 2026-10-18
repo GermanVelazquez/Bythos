@@ -30,6 +30,7 @@ func NuevoServidor(c *Cliente, version string) *mcp.Server {
 	})
 	RegistrarLectura(s, c)
 	RegistrarEscritura(s, c)
+	RegistrarPizarra(s, c)
 	return s
 }
 
