@@ -166,8 +166,7 @@ func (s *Servidor) crearCarpeta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.registrarEvento(r, db.AccionCarpetaCreada, c.ID, c.Nombre)
-	w.WriteHeader(http.StatusCreated)
-	responder(w, c)
+	responderCreado(w, c)
 }
 
 func (s *Servidor) borrarCarpeta(w http.ResponseWriter, r *http.Request) {
@@ -252,8 +251,7 @@ func (s *Servidor) guardarRecurso(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.registrarEvento(r, db.AccionRecursoGuardado, rec.ID, tituloOUrl(rec))
-	w.WriteHeader(http.StatusCreated)
-	responder(w, recursoConArchivo(s.Base, rec))
+	responderCreado(w, recursoConArchivo(s.Base, rec))
 }
 
 func (s *Servidor) cambiarEstado(w http.ResponseWriter, r *http.Request) {
@@ -425,6 +423,14 @@ func esBodyDemasiadoGrande(err error) bool {
 
 func responder(w http.ResponseWriter, dato interface{}) {
 	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(dato)
+}
+
+// responderCreado manda 201 con JSON. El Content-Type va antes de WriteHeader:
+// después Go lo ignora y el navegador recibe text/plain.
+func responderCreado(w http.ResponseWriter, dato interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(dato)
 }
 

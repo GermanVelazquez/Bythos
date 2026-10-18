@@ -149,11 +149,7 @@ func (s *Servidor) crearSesion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.registrarEvento(r, db.AccionSesionTerminalCreada, se.ID, se.Nombre)
-	// Content-Type antes de WriteHeader: después se ignora y el navegador
-	// recibe text/plain (la UI no podría leer el id de la sesión nueva).
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	responder(w, se)
+	responderCreado(w, se)
 }
 
 func (s *Servidor) cambiarSesion(w http.ResponseWriter, r *http.Request) {
