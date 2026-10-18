@@ -135,6 +135,66 @@ func TestSubirArchivoDedupe(t *testing.T) {
 	}
 }
 
+// borrarRecursoHTTP borra un recurso por la ruta real.
+func borrarRecursoHTTP(t *testing.T, s *Servidor, id int64) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/recursos/%d", id), nil)
+	req.Host = "localhost:8080"
+	w := httptest.NewRecorder()
+	s.Rutas().ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("borrar recurso: status=%d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// Un blob que también es adjunto de una sesión sobrevive al borrado del
+// recurso de la biblioteca (design D2); sin vínculos se borra como siempre.
+func TestBorrarRecursoConservaBlobAdjuntadoAUnaSesion(t *testing.T) {
+	usarArchivosPrueba(t)
+	s := basePrueba(t)
+	c, _ := db.CrearCarpeta(s.Base, "React")
+
+	rec := decodificarRecurso(t, subirMultipart(t, s, c.ID, "apuntes.pdf", pdfMinimo))
+	a, ok, err := db.ObtenerArchivo(s.Base, rec.ArchivoID)
+	if err != nil || !ok {
+		t.Fatalf("ObtenerArchivo: ok=%v err=%v", ok, err)
+	}
+	ses, _ := db.CrearSesion(s.Base, "uno", "dibujo", nil)
+	if _, err := db.CrearAdjunto(s.Base, ses.ID, a.ID, "apuntes.pdf"); err != nil {
+		t.Fatalf("CrearAdjunto: %v", err)
+	}
+
+	borrarRecursoHTTP(t, s, rec.ID)
+
+	if _, ok, _ := db.ObtenerArchivo(s.Base, a.ID); !ok {
+		t.Fatal("la fila de archivos debió quedar: una sesión la adjunta")
+	}
+	f, err := archivos.Abrir(a.Ruta)
+	if err != nil {
+		t.Fatalf("el blob debió quedar en disco: %v", err)
+	}
+	f.Close()
+}
+
+func TestBorrarRecursoSinVinculosBorraElBlob(t *testing.T) {
+	usarArchivosPrueba(t)
+	s := basePrueba(t)
+	c, _ := db.CrearCarpeta(s.Base, "React")
+
+	rec := decodificarRecurso(t, subirMultipart(t, s, c.ID, "apuntes.pdf", pdfMinimo))
+	a, _, _ := db.ObtenerArchivo(s.Base, rec.ArchivoID)
+
+	borrarRecursoHTTP(t, s, rec.ID)
+
+	if _, ok, _ := db.ObtenerArchivo(s.Base, a.ID); ok {
+		t.Fatal("sin vínculos, la fila de archivos debió borrarse")
+	}
+	if f, err := archivos.Abrir(a.Ruta); err == nil {
+		f.Close()
+		t.Fatal("sin vínculos, el blob debió borrarse del disco")
+	}
+}
+
 func TestSubirArchivoTipoRechazado(t *testing.T) {
 	usarArchivosPrueba(t)
 	s := basePrueba(t)
