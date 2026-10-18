@@ -68,10 +68,10 @@ Satisfies: WA Allowed Types, Size Limit, Upload Endpoint, Session Privacy; Threa
 
 Satisfies: WB Scene Limits; WA Foreign Attachment Reference; TS Delete keeps files (D9). Never ship this PR reverted while 3a is kept.
 
-- [ ] 2.1 RED: extend `D/api/sesiones_test.go` with a `reducirEscena(raw, permitidos)` table: image with own sha -> ok; card (`customData.sha256`) with own sha -> ok; foreign fileId -> 400 and previous scene intact; unknown fileId -> 400; card with foreign sha -> 400; `embeddable` with an external link -> 400; `iframe` -> 400; non-empty `files` -> stored with `files:{}`; legacy scene with no images -> unchanged; 21 MiB still 413. (WB: Image of own attachment, Foreign reference, Bytes stripped, Legacy scene; WA: Own/Foreign/Unknown; Threat Matrix scene injection)
-- [ ] 2.2 Modify `D/api/sesiones.go`: `reducirEscena(raw, permitidos)` rejects as in D9 (fail closed) and keeps `files:{}`; the PUT handler builds `permitidos` from the sha set of the session's links. (D9)
-- [ ] 2.3 RED then fix: delete session removes link rows and keeps `archivos` rows and blobs; delete of A leaves B's attachment listed and readable; closing a tab (no API call) keeps links. (TS: Delete with attachments, Shared content survives, Close tab, Library resource survives)
-- [ ] 2.4 Verify: `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...`.
+- [x] 2.1 RED: extend `D/api/sesiones_test.go` with a `reducirEscena(raw, permitidos)` table: image with own sha -> ok; card (`customData.sha256`) with own sha -> ok; foreign fileId -> 400 and previous scene intact; unknown fileId -> 400; card with foreign sha -> 400; `embeddable` with an external link -> 400; `iframe` -> 400; non-empty `files` -> stored with `files:{}`; legacy scene with no images -> unchanged; 21 MiB still 413. (WB: Image of own attachment, Foreign reference, Bytes stripped, Legacy scene; WA: Own/Foreign/Unknown; Threat Matrix scene injection)
+- [x] 2.2 Modify `D/api/sesiones.go`: `reducirEscena(raw, permitidos)` rejects as in D9 (fail closed) and keeps `files:{}`; the PUT handler builds `permitidos` from the sha set of the session's links. (D9)
+- [x] 2.3 RED then fix: delete session removes link rows and keeps `archivos` rows and blobs; delete of A leaves B's attachment listed and readable; closing a tab (no API call) keeps links. (TS: Delete with attachments, Shared content survives, Close tab, Library resource survives)
+- [x] 2.4 Verify: `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...`.
 - [ ] 2.5 Open PR2 (base PR1b branch).
 
 ## PR3a: Client upload and insertion (branch `feat/bythos-terminal-fase2-03a-ui-insertar`, base `feat/bythos-terminal-fase2-02-escena`)
