@@ -163,6 +163,13 @@ func crearTablas(base *sql.DB) error {
 	if err := crearTablaDispositivos(base); err != nil {
 		return err
 	}
+	// terminal_sesiones/terminal_pizarras: tablas nuevas (Terminal fase 1).
+	if err := crearTablaSesiones(base); err != nil {
+		return err
+	}
+	if err := crearTablaOps(base); err != nil {
+		return err
+	}
 	// eventos es tabla nueva (v1.1+): CREATE TABLE IF NOT EXISTS alcanza,
 	// no hace falta ALTER TABLE (ver comentario en crearTablaEventos).
 	return crearTablaEventos(base)

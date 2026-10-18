@@ -15,7 +15,8 @@ export default defineConfig({
     port: 5173, // ¿Por qué 5173? Es el default de Vite y NO choca con :8080 de Go
     proxy: {
       // Todo lo que empiece con /api va al cerebro Go
-      '/api': 'http://localhost:8080',
+      // ws: la terminal usa WebSocket por /api
+      '/api': { target: 'http://localhost:8080', ws: true },
     },
   },
 })

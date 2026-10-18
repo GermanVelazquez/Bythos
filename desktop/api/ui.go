@@ -13,10 +13,15 @@ package api
 
 import (
 	"io/fs"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
 )
+
+// En Windows el tipo de .woff2 sale del registro (a veces vacío o text/plain):
+// se fija a mano para que las fuentes de la pizarra carguen siempre.
+func init() { mime.AddExtensionType(".woff2", "font/woff2") }
 
 // UI, si no es nil, son los archivos de ui/dist DENTRO del .exe.
 // Lo pone main.go (el único que puede usar go:embed con la ruta correcta).

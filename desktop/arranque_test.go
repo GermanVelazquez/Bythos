@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -33,7 +34,7 @@ func TestEsperarSalud(t *testing.T) {
 		{
 			nombre: "responde ya: vuelve al instante",
 			responder: func(_ *atomic.Int32) http.HandlerFunc {
-				return func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }
+				return respuestaSalud(os.Getpid(), "1.0.0")
 			},
 			errServidor: nadieMuere(),
 			total:       rapidoTest,
@@ -41,14 +42,14 @@ func TestEsperarSalud(t *testing.T) {
 		{
 			nombre: "tarda unos intentos: espera y abre",
 			responder: func(contador *atomic.Int32) http.HandlerFunc {
-				return func(w http.ResponseWriter, _ *http.Request) {
+				return func(w http.ResponseWriter, r *http.Request) {
 					// Las primeras 3 preguntas fallan (server tibio),
 					// después responde: el polling debe aguantar.
 					if contador.Add(1) <= 3 {
 						w.WriteHeader(http.StatusServiceUnavailable)
 						return
 					}
-					w.WriteHeader(http.StatusOK)
+					respuestaSalud(os.Getpid(), "1.0.0")(w, r)
 				}
 			},
 			errServidor: nadieMuere(),
@@ -115,6 +116,95 @@ func TestEsperarSalud(t *testing.T) {
 			// El camino feliz nunca tarda el techo: abre APENAS responde.
 			if !tt.quiereError && tardo >= tt.total {
 				t.Fatalf("debió volver antes del techo %s, tardó %s", tt.total, tardo)
+			}
+		})
+	}
+}
+
+// respuestaSalud imita /api/salud: 200 con pid y versión.
+func respuestaSalud(pid int, version string) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprintf(w, `{"ok":true,"version":%q,"pid":%d}`, version, pid)
+	}
+}
+
+// Un 200 de OTRO proceso (pid ajeno, o sin pid) NO es nuestra salud:
+// es el servidor de una instancia vieja que todavía tenía el puerto.
+func TestEsperarSaludRechazaPidAjeno(t *testing.T) {
+	casos := []struct {
+		nombre  string
+		handler http.HandlerFunc
+	}{
+		{"pid distinto", respuestaSalud(os.Getpid()+1, "1.0.0")},
+		{"sin pid", func(w http.ResponseWriter, _ *http.Request) { fmt.Fprint(w, `{"ok":true}`) }},
+		{"cuerpo no JSON", func(w http.ResponseWriter, _ *http.Request) { fmt.Fprint(w, "hola") }},
+	}
+	for _, tt := range casos {
+		t.Run(tt.nombre, func(t *testing.T) {
+			srv := httptest.NewServer(tt.handler)
+			defer srv.Close()
+			if err := esperarSalud(srv.URL, intervaloTest, 50*time.Millisecond, nadieMuere()); err == nil {
+				t.Fatal("debía rechazar una salud que no es de este proceso")
+			}
+		})
+	}
+}
+
+func TestSondearInstancia(t *testing.T) {
+	casos := []struct {
+		nombre  string
+		handler http.HandlerFunc // nil = nada escucha
+		quiere  resultadoSonda
+	}{
+		{"misma versión", respuestaSalud(4242, "1.1.0"), instanciaMisma},
+		{"otra versión", respuestaSalud(4242, "1.0.0"), instanciaOtraVersion},
+		{"sin respuesta", nil, instanciaSinRespuesta},
+		{"responde sin versión", func(w http.ResponseWriter, _ *http.Request) { fmt.Fprint(w, "x") }, instanciaSinRespuesta},
+	}
+	for _, tt := range casos {
+		t.Run(tt.nombre, func(t *testing.T) {
+			url := "http://localhost:9/salud"
+			if tt.handler != nil {
+				srv := httptest.NewServer(tt.handler)
+				defer srv.Close()
+				url = srv.URL
+			}
+			if got := sondearInstancia(url, "1.1.0", intervaloTest, 50*time.Millisecond); got != tt.quiere {
+				t.Fatalf("sondearInstancia = %v, quería %v", got, tt.quiere)
+			}
+		})
+	}
+}
+
+func TestSegundoLanzamiento(t *testing.T) {
+	casos := []struct {
+		nombre      string
+		handler     http.HandlerFunc // nil = nada escucha
+		abreError   error
+		quiereCod   int
+		quiereAbre  bool
+		quiereAviso string
+	}{
+		{"misma versión: abre la ventana y sale 0", respuestaSalud(1, "1.1.0"), nil, 0, true, ""},
+		{"misma versión y la ventana falla: sale 1", respuestaSalud(1, "1.1.0"), fmt.Errorf("sin Edge"), 1, true, ""},
+		{"otra versión: avisa y sale 1", respuestaSalud(1, "0.9.0"), nil, 1, false, msgOtraVersion},
+		{"sin respuesta: avisa y sale 1", nil, nil, 1, false, msgSinRespuesta},
+	}
+	for _, tt := range casos {
+		t.Run(tt.nombre, func(t *testing.T) {
+			url := "http://localhost:9/salud"
+			if tt.handler != nil {
+				srv := httptest.NewServer(tt.handler)
+				defer srv.Close()
+				url = srv.URL
+			}
+			abrio, aviso := false, ""
+			cod := segundoLanzamiento(url, "http://localhost:8080", "1.1.0", intervaloTest, 50*time.Millisecond,
+				func(string) error { abrio = true; return tt.abreError },
+				func(_, m string) { aviso = m })
+			if cod != tt.quiereCod || abrio != tt.quiereAbre || aviso != tt.quiereAviso {
+				t.Fatalf("cod=%d abrio=%v aviso=%q; quería cod=%d abrio=%v aviso=%q",
+					cod, abrio, aviso, tt.quiereCod, tt.quiereAbre, tt.quiereAviso)
 			}
 		})
 	}
