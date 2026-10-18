@@ -117,7 +117,7 @@ Satisfies: WT leer_imagen, leer_archivo, Agent Reads On Request, Attachment Tool
 - [x] 4b.3 RED then modify `D/workspace/workspace.go` and `D/workspace/workspace_test.go`: AGENTS.md and CLAUDE.md name `leer_imagen`/`leer_archivo`, state untrusted-data and no-image-insertion, and keep every phase-1 rule. (WT: Instructions)
 - [x] 4b.4 RED then verify: `pizarra_dibujar` op creating `image` is still rejected with nothing enqueued; deleting an existing image element by id remains allowed. Adjust `D/pizarra` tests only if needed. (WT: Agent inserts image, Agent deletes an image)
 - [ ] 4b.5 Verify: `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...`. Manual: M.8, M.9.
-- [ ] 4b.6 Open PR4b (base PR4a branch).
+- [x] 4b.6 Open PR4b (base PR4a branch). (#38)
 
 ## PR5a: Save to folder and attach folder resource, server (branch `feat/bythos-terminal-fase2-05a-carpeta-api`, base `feat/bythos-terminal-fase2-04b-agente-mcp`)
 
