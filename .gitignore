@@ -26,3 +26,5 @@ desktop/ui/node_modules/
 desktop/ui/*.log
 desktop/ui/dist/*
 !desktop/ui/dist/.gitkeep
+# Fuentes de Excalidraw: se copian con scripts/copiar-fuentes.mjs, no se commitean
+desktop/ui/public/excalidraw/

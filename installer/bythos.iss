@@ -26,6 +26,9 @@
 [Setup]
 AppId={{AEEA0123-59D0-4FFD-89D0-13AA666C70C4}}
 AppName=Bythos
+; Mismo nombre que el mutex de main.go (Local\Bythos.Instancia): el instalador
+; y el desinstalador piden cerrar Bythos si está abierto.
+AppMutex=Bythos.Instancia
 AppVersion={#AppVersion}
 AppVerName=Bythos {#AppVersion}
 UninstallDisplayName=Bythos
