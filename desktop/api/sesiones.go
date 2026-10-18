@@ -245,8 +245,10 @@ func (s *Servidor) leerPizarra(w http.ResponseWriter, r *http.Request) {
 }
 
 // reducirEscena deja solo {elements (sin isDeleted), appState:{viewBackgroundColor},
-// files:{}} (design D10). ok false = imágenes o JSON inválido (400).
-func reducirEscena(raw json.RawMessage) (string, bool) {
+// files:{}} (design D10). permitidos = sha256 de los adjuntos de la sesión (D9):
+// ok false = JSON inválido, imagen o tarjeta que no apunta a un adjunto propio,
+// o embeddable/iframe (400, falla cerrado).
+func reducirEscena(raw json.RawMessage, permitidos map[string]bool) (string, bool) {
 	var e struct {
 		Elements []json.RawMessage `json:"elements"`
 		AppState struct {
@@ -261,11 +263,18 @@ func reducirEscena(raw json.RawMessage) (string, bool) {
 		var meta struct {
 			Tipo    string `json:"type"`
 			Borrado bool   `json:"isDeleted"`
+			FileID  string `json:"fileId"`
+			Datos   struct {
+				SHA string `json:"sha256"`
+			} `json:"customData"`
 		}
-		if json.Unmarshal(el, &meta) != nil || meta.Tipo == "image" {
+		if json.Unmarshal(el, &meta) != nil || meta.Tipo == "embeddable" || meta.Tipo == "iframe" {
 			return "", false
 		}
 		if !meta.Borrado {
+			if meta.Tipo == "image" && !permitidos[meta.FileID] || meta.Datos.SHA != "" && !permitidos[meta.Datos.SHA] {
+				return "", false
+			}
 			elementos = append(elementos, el)
 		}
 	}
@@ -298,9 +307,18 @@ func (s *Servidor) guardarPizarra(w http.ResponseWriter, r *http.Request) {
 		responderError(w, 400, "JSON inválido. Manda {\"escena\":{...},\"version\":N}")
 		return
 	}
-	escena, ok := reducirEscena(body.Escena)
+	adjuntos, err := db.ListarAdjuntos(s.Base, id)
+	if err != nil {
+		responderError(w, 500, "No se pudo leer la pizarra")
+		return
+	}
+	permitidos := make(map[string]bool, len(adjuntos))
+	for _, a := range adjuntos {
+		permitidos[a.SHA256] = true
+	}
+	escena, ok := reducirEscena(body.Escena, permitidos)
 	if !ok {
-		responderError(w, 400, "Escena inválida: no se admiten imágenes")
+		responderError(w, 400, "Escena inválida: referencia imágenes o tarjetas que no son adjuntos de esta sesión")
 		return
 	}
 	nueva, err := db.GuardarPizarra(s.Base, id, escena, body.Version)
