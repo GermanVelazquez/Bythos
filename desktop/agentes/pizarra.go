@@ -69,7 +69,9 @@ func registrarPizarraDibujar(s *mcp.Server, c *Cliente) {
 		Name: "pizarra_dibujar",
 		Description: "Dibuja en la pizarra de una sesión de Terminal con operaciones (agregar, actualizar, " +
 			"borrar, mover). Puede borrar elementos: usala solo cuando el usuario lo pida. Requiere la " +
-			"pantalla Terminal abierta; si la UI no confirma a tiempo, el estado queda pendiente.",
+			"pantalla Terminal abierta; si la UI no confirma a tiempo, el estado queda pendiente. " +
+			"En tipo text, alto fija el tamaño de letra (alto ≈ 1,25 × letra) y el ancho se calcula solo; " +
+			"en line, arrow y freedraw, puntos son coordenadas relativas a x,y.",
 		Annotations: &mcp.ToolAnnotations{DestructiveHint: boolPtr(true)},
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in entradaPizarraDibujar) (*mcp.CallToolResult, map[string]any, error) {
 		if err := pizarra.Validar(in.Ops); err != nil {
