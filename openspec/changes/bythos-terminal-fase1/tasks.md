@@ -199,7 +199,7 @@ Run on an installed or locally built `bythos.exe`. Items are grouped by the PR t
 - [x] M.11 (PR6b) An agent draws and captures: from the embedded terminal run an agent with the Bythos MCP, ask it to draw a rectangle (it appears, Ctrl+Z undoes it) and to look at the board (it describes the drawing). With the Terminal view closed, `pizarra_dibujar` and `pizarra_captura` fail with the Spanish 409 messages; `pizarra_leer` still returns the saved scene.
 - [x] M.12 (PR6b) Closing a folder loosens sessions: delete a folder that has a linked session: the session, scene and ops remain and the session shows "Suelta".
 - [x] M.13 (PR6b) Process cleanup: with two sessions running a long command (`ping -t 127.0.0.1`), end `bythos.exe` from Task Manager: no `ping.exe` or `cmd.exe` child remains. Also confirm a PTY detached for more than 10 min is reaped (optional, or shorten `Gracia` via a debug build).
-- [ ] M.14 (final) Exe size is about 31 MB (compare with the previous release; the fonts are not embedded in git but are in `dist`, so report the real size).
+- [x] M.14 (final) Exe size is about 31 MB (compare with the previous release; the fonts are not embedded in git but are in `dist`, so report the real size). Measured: 29.8 MB (dev build of the PR6b tip; v1.1.0 only ships the 11.8 MB installer, no raw exe to compare).
 - [ ] M.15 (final) Windows older than 1809 (or the simulated `ErrNoSoportado` path): the UI shows "La terminal requiere Windows 10 versión 1809 o superior." and offers "Abrir agente".
 
 ## Chain order and boundaries
