@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"bythos-desktop/archivos"
 	"bythos-desktop/db"
 	"bythos-desktop/pizarra"
 )
@@ -502,6 +503,11 @@ func (s *Servidor) leerPizarraAgente(w http.ResponseWriter, r *http.Request) {
 		responderError(w, 500, "La pizarra guardada está dañada")
 		return
 	}
+	adjuntos, err := adjuntosEnPizarra(s, se.ID, []byte(escena), res.Elementos)
+	if err != nil {
+		responderError(w, 500, "No se pudieron leer los adjuntos")
+		return
+	}
 	pendientes, err := db.ContarOpsPendientes(s.Base, se.ID)
 	if err != nil {
 		responderError(w, 500, "No se pudieron leer las operaciones")
@@ -523,5 +529,43 @@ func (s *Servidor) leerPizarraAgente(w http.ResponseWriter, r *http.Request) {
 		},
 		"ops_pendientes": pendientes,
 		"truncado":       res.Truncado,
+		"adjuntos":       adjuntos,
 	})
+}
+
+// adjuntoPizarra es un adjunto de la sesión que un elemento vivo de la escena
+// guardada referencia. Sin contenido: el agente lo lee con leer_imagen o
+// leer_archivo (design D5).
+type adjuntoPizarra struct {
+	ID        int64    `json:"id"`
+	Nombre    string   `json:"nombre"`
+	Tipo      string   `json:"tipo"`
+	Mime      string   `json:"mime"`
+	Tamano    int64    `json:"tamano"`
+	Elementos []string `json:"elementos"`
+}
+
+// adjuntosEnPizarra cruza los vínculos de la sesión con los elementos vivos de
+// la escena y marca en cada elemento de la lista el adjunto al que apunta.
+func adjuntosEnPizarra(s *Servidor, sesionID int64, escena []byte, elementos []pizarra.ElementoResumen) ([]adjuntoPizarra, error) {
+	refs, err := pizarra.Referencias(escena)
+	if err != nil {
+		return nil, err
+	}
+	vinculos, err := db.ListarAdjuntos(s.Base, sesionID)
+	if err != nil {
+		return nil, err
+	}
+	salida := []adjuntoPizarra{}
+	porSHA := map[string]int64{}
+	for _, v := range vinculos {
+		if ids := refs[v.SHA256]; len(ids) > 0 {
+			porSHA[v.SHA256] = v.ID
+			salida = append(salida, adjuntoPizarra{v.ID, v.Nombre, archivos.TipoRecurso(v.Mime), v.Mime, v.Tamano, ids})
+		}
+	}
+	for i := range elementos {
+		elementos[i].Adjunto = porSHA[elementos[i].SHA]
+	}
+	return salida, nil
 }
