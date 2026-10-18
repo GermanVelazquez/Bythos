@@ -135,7 +135,7 @@ Satisfies: WB Toolset, Autosave, Offline Assets, Lazy Load; TS Status Chips (sav
 - [x] 5.7 Modify `T/Terminal.jsx`: set `window.EXCALIDRAW_ASSET_PATH='/excalidraw/'` at module top before the lazy Excalidraw import; autosave: `onChange` checks `getSceneVersion`, 1.5 s debounce, `PUT {escena, version}`; on 409 reload the server scene and show "Actualizada desde otra ventana"; on failure keep the scene in memory, show "Error al guardar", retry on next change or flush; flush on tab switch, unmount, `visibilitychange:hidden`, and `pagehide` with `keepalive` only if the body is under 60 KiB; add the "Revisar" button that flushes and focuses the terminal without writing any bytes to the PTY. (WB: Restart, Save failure; TS: Revisar, Save state)
 - [x] 5.8 Verify: `pnpm build` from `desktop/ui` (the Excalidraw chunk is separate and not loaded by other screens); `go vet ./...` and `go test ./...` from `desktop/`. If CI fails to build Excalidraw on Node 18, bump `setup-node` to 20 in the workflow in this PR. Resolve the open question on `aiEnabled`, `onPaste` file data and `regenerateIds:false` in 0.18.1 and note the result in the PR.
 - [x] 5.9 Manual checks before opening: M.5, M.6, M.7, M.10 on the real app.
-- [ ] 5.10 Open PR5 (base PR4 branch).
+- [x] 5.10 Open PR5 (base PR4 branch). Opened as #23.
 
 ## PR6a: Pizarra domain, ops, routes and MCP tools (branch `feat/bythos-terminal-fase1-06a-pizarra-agente`, base `feat/bythos-terminal-fase1-05-pizarra-ui`)
 
