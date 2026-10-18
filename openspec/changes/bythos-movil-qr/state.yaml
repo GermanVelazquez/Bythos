@@ -1,0 +1,40 @@
+change: bythos-movil-qr
+pace: auto
+artifact_store:
+  mode: hybrid
+phases:
+  explore:
+    status: done
+  research:
+    status: done
+  proposal:
+    status: done
+    revision: 1
+  specs:
+    status: done
+    revision: 2
+  design:
+    status: done
+    revision: 2
+  tasks:
+    status: done
+    revision: 1
+  apply:
+    status: pending
+  verify:
+    status: pending
+  archive:
+    status: pending
+delivery:
+  strategy: auto-chain
+  chain_strategy: feature-branch-chain
+  tracker_branch: feat/bythos-movil-qr
+  chained_prs: 12
+  decided_by_user: true
+  decided_on: "2026-09-30"
+prerequisite:
+  name: "Paso 0 (archivos)"
+  status: done
+  commit: aa80bd0
+  branch: master
+next: sdd-apply unit 1 (db dispositivos + celular origin)
