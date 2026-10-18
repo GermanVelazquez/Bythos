@@ -52,20 +52,20 @@ Satisfies: SI Single Server, Stale state, Installer Detection (design D14).
 - [x] 0.5 Modify `D/main.go`: acquire the mutex right after the `mcp` branch; on "already exists" run the second-launch flow. Do not touch the `mcp` path. (SI: Second launch)
 - [x] 0.6 Modify `D/installer/bythos.iss` (path as in repo): add `AppMutex=Bythos.Instancia`. (SI: Upgrade while running, Uninstall while running)
 - [x] 0.7 Verify: `go vet ./...` and `go test ./...` from `desktop/`.
-- [ ] 0.8 Open PR0 (base `master`) with the chain diagram and manual items M.8 and M.9 in the description.
+- [x] 0.8 Open PR0 (base `master`) with the chain diagram and manual items M.8 and M.9 in the description.
 
 ## PR1a: ConPTY and Job Object (branch `feat/bythos-terminal-fase1-01a-conpty`, base `feat/bythos-terminal-fase1-00-instancia`)
 
 Satisfies: ET Process Cleanup, Platform Guard (design D1, D3, ConPTY lifecycle).
 
-- [ ] 1a.1 Create `D/terminal/pty.go`: `PTY` interface, `Config`, `ErrNoSoportado`. No redeclaration of `Lanzador`, `NuevoLanzador`, `lanzadorSistema`, `createNewConsole`, `sysProcAttrConsola` (check against `terminal.go`, `terminal_windows.go`, `terminal_other.go`). (ET: Platform Guard)
-- [ ] 1a.2 RED: create `D/terminal/conpty_windows_test.go` (skipped with `-short` and on non-Windows): (a) `cmd.exe /c echo hola` emits the output and an exit code; (b) `Cerrar` after start leaves no process. (ET: Process Cleanup)
-- [ ] 1a.3 RED: in the same test file add the helper-host test: `TestMain` with an env flag re-executes the binary as a host that opens a PTY running `cmd /c ping -n 60 127.0.0.1` and reports the grandchild PID; the test kills the host with `TerminateProcess` and asserts the grandchild is gone within 5 s (proves `KILL_ON_JOB_CLOSE`). (ET: App exit)
-- [ ] 1a.4 Create `D/terminal/conpty_windows.go` following the design lifecycle: build >= 17763 check via `RtlGetVersion` else `ErrNoSoportado`; two `CreatePipe` pairs; `CreatePseudoConsole` flags 0; attribute list; `CreateProcess` with `CREATE_SUSPENDED | EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT`, `bInheritHandles=false`; per-PTY Job with `KILL_ON_JOB_CLOSE`; assign, resume, close thread handle, close `inR` and `outW`; write mutex; waiter goroutine for the exit code; `Cerrar` via `sync.Once` (TerminateJobObject, ClosePseudoConsole while draining, reader EOF with 2 s cap, close handles). Add `golang.org/x/sys/windows` to `go.mod` only if not already present. (ET: Process Cleanup, Platform Guard)
-- [ ] 1a.5 Create `D/terminal/conpty_other.go` (build tag `!windows`): the constructor returns `ErrNoSoportado`. (ET: Platform Guard)
-- [ ] 1a.6 Add a unit test for the build-number gate (injectable version func) returning `ErrNoSoportado` below 17763. (ET: Old Windows)
-- [ ] 1a.7 Verify: `go vet ./...`, `go test ./...` from `desktop/`, and the real ConPTY run without `-short` (see header).
-- [ ] 1a.8 Open PR1a (base PR0 branch).
+- [x] 1a.1 Create `D/terminal/pty.go`: `PTY` interface, `Config`, `ErrNoSoportado`. No redeclaration of `Lanzador`, `NuevoLanzador`, `lanzadorSistema`, `createNewConsole`, `sysProcAttrConsola` (check against `terminal.go`, `terminal_windows.go`, `terminal_other.go`). (ET: Platform Guard)
+- [x] 1a.2 RED: create `D/terminal/conpty_windows_test.go` (skipped with `-short` and on non-Windows): (a) `cmd.exe /c echo hola` emits the output and an exit code; (b) `Cerrar` after start leaves no process. (ET: Process Cleanup)
+- [x] 1a.3 RED: in the same test file add the helper-host test: `TestMain` with an env flag re-executes the binary as a host that opens a PTY running `cmd /c ping -n 60 127.0.0.1` and reports the grandchild PID; the test kills the host with `TerminateProcess` and asserts the grandchild is gone within 5 s (proves `KILL_ON_JOB_CLOSE`). (ET: App exit)
+- [x] 1a.4 Create `D/terminal/conpty_windows.go` following the design lifecycle: build >= 17763 check via `RtlGetVersion` else `ErrNoSoportado`; two `CreatePipe` pairs; `CreatePseudoConsole` flags 0; attribute list; `CreateProcess` with `CREATE_SUSPENDED | EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT`, `bInheritHandles=false`; per-PTY Job with `KILL_ON_JOB_CLOSE`; assign, resume, close thread handle, close `inR` and `outW`; write mutex; waiter goroutine for the exit code; `Cerrar` via `sync.Once` (TerminateJobObject, ClosePseudoConsole while draining, reader EOF with 2 s cap, close handles). Add `golang.org/x/sys/windows` to `go.mod` only if not already present. (ET: Process Cleanup, Platform Guard)
+- [x] 1a.5 Create `D/terminal/conpty_other.go` (build tag `!windows`): the constructor returns `ErrNoSoportado`. (ET: Platform Guard)
+- [x] 1a.6 Add a unit test for the build-number gate (injectable version func) returning `ErrNoSoportado` below 17763. (ET: Old Windows)
+- [x] 1a.7 Verify: `go vet ./...`, `go test ./...` from `desktop/`, and the real ConPTY run without `-short` (see header).
+- [x] 1a.8 Open PR1a (base PR0 branch). Opened as #18 with size:exception (~750 lines) accepted by the maintainer.
 
 ## PR1b: Ring buffer and session manager (branch `feat/bythos-terminal-fase1-01b-gestor`, base `feat/bythos-terminal-fase1-01a-conpty`)
 
