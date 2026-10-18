@@ -8,6 +8,7 @@ package db
 
 import (
 	"database/sql"
+	"strconv"
 	"strings"
 )
 
@@ -31,9 +32,22 @@ type Recurso struct {
 	Titulo      string
 	Imagen      string
 	Descripcion string
-	Tipo        string // "youtube" | "articulo" | "otro"
+	Tipo        string // "youtube" | "articulo" | "otro" | "pdf" | "video" | "imagen" | "documento"
 	Estado      string // "pendiente" | "en_curso" | "completado"
 	Progreso    int    // 0-100, percentage studied per link
+	// ArchivoID es 0 para un recurso de LINK (el caso de siempre).
+	// Distinto de 0 significa que este recurso es un ARCHIVO subido (ver
+	// archivos.go y GuardarArchivo más abajo): URL vale "archivo:<id>" y
+	// el byte a byte real vive en desktop/archivos.
+	ArchivoID int64
+}
+
+// TiposArchivoValidos son los únicos content_type que puede tener un
+// recurso de ARCHIVO (a diferencia de youtube/articulo/otro, que son de
+// links). El detector de tipo por contenido (ver desktop/archivos) es
+// quien decide cuál de estos cuatro corresponde.
+var TiposArchivoValidos = map[string]bool{
+	"pdf": true, "video": true, "imagen": true, "documento": true,
 }
 
 // Guardar crea un recurso en estado pendiente.
@@ -53,14 +67,50 @@ func Guardar(base *sql.DB, carpetaID int64, url, titulo, imagen, descripcion, ti
 	}
 
 	var r Recurso
+	var archivoID sql.NullInt64
 	err := base.QueryRow(
 		`INSERT INTO resources (folder_id, url, title, image, description, content_type, status, progreso)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, 0)
-		 RETURNING id, folder_id, url, title, image, description, content_type, status, progreso`,
+		 RETURNING id, folder_id, url, title, image, description, content_type, status, progreso, archivo_id`,
 		carpetaID, url, titulo, imagen, descripcion, tipo, EstadoPendiente,
-	).Scan(&r.ID, &r.CarpetaID, &r.URL, &r.Titulo, &r.Imagen, &r.Descripcion, &r.Tipo, &r.Estado, &r.Progreso)
+	).Scan(&r.ID, &r.CarpetaID, &r.URL, &r.Titulo, &r.Imagen, &r.Descripcion, &r.Tipo, &r.Estado, &r.Progreso, &archivoID)
 	if err != nil {
 		return Recurso{}, err
+	}
+	if archivoID.Valid {
+		r.ArchivoID = archivoID.Int64
+	}
+	return r, nil
+}
+
+// GuardarArchivo crea un recurso que apunta a un archivo ya subido y
+// guardado en disco (ver desktop/archivos.Guardar + db.CrearArchivo para
+// los metadatos), en vez de a una URL externa. Nace pendiente en 0, igual
+// que Guardar. url queda como "archivo:<archivoID>": una forma interna,
+// nunca una URL real — UI/export/MCP la tratan como marcador y saben que
+// el contenido real vive en GET /api/archivos/{id}/contenido.
+func GuardarArchivo(base *sql.DB, carpetaID, archivoID int64, titulo, tipo string) (Recurso, error) {
+	if carpetaID == 0 || archivoID == 0 {
+		return Recurso{}, sql.ErrNoRows
+	}
+	if !TiposArchivoValidos[tipo] {
+		return Recurso{}, sql.ErrNoRows
+	}
+	url := "archivo:" + strconv.FormatInt(archivoID, 10)
+
+	var r Recurso
+	var archivoIDLeido sql.NullInt64
+	err := base.QueryRow(
+		`INSERT INTO resources (folder_id, url, title, image, description, content_type, status, progreso, archivo_id)
+		 VALUES (?, ?, ?, '', '', ?, ?, 0, ?)
+		 RETURNING id, folder_id, url, title, image, description, content_type, status, progreso, archivo_id`,
+		carpetaID, url, titulo, tipo, EstadoPendiente, archivoID,
+	).Scan(&r.ID, &r.CarpetaID, &r.URL, &r.Titulo, &r.Imagen, &r.Descripcion, &r.Tipo, &r.Estado, &r.Progreso, &archivoIDLeido)
+	if err != nil {
+		return Recurso{}, err
+	}
+	if archivoIDLeido.Valid {
+		r.ArchivoID = archivoIDLeido.Int64
 	}
 	return r, nil
 }
@@ -71,15 +121,19 @@ func Guardar(base *sql.DB, carpetaID int64, url, titulo, imagen, descripcion, ti
 // cambio para poder mostrar "antes → después" en el detalle del evento.
 func ObtenerRecurso(base *sql.DB, id int64) (Recurso, bool, error) {
 	var r Recurso
+	var archivoID sql.NullInt64
 	err := base.QueryRow(
-		`SELECT id, folder_id, url, title, image, description, content_type, status, progreso
+		`SELECT id, folder_id, url, title, image, description, content_type, status, progreso, archivo_id
 		   FROM resources WHERE id = ?`, id,
-	).Scan(&r.ID, &r.CarpetaID, &r.URL, &r.Titulo, &r.Imagen, &r.Descripcion, &r.Tipo, &r.Estado, &r.Progreso)
+	).Scan(&r.ID, &r.CarpetaID, &r.URL, &r.Titulo, &r.Imagen, &r.Descripcion, &r.Tipo, &r.Estado, &r.Progreso, &archivoID)
 	if err == sql.ErrNoRows {
 		return Recurso{}, false, nil
 	}
 	if err != nil {
 		return Recurso{}, false, err
+	}
+	if archivoID.Valid {
+		r.ArchivoID = archivoID.Int64
 	}
 	return r, true, nil
 }
@@ -89,7 +143,7 @@ func ObtenerRecurso(base *sql.DB, id int64) (Recurso, bool, error) {
 // Porque la query solo cambia en un WHERE. Dos funciones duplicarían
 // el Scan de 9 campos y duplicar es deuda técnica.
 func ListarRecursos(base *sql.DB, carpetaID int64) ([]Recurso, error) {
-	query := `SELECT id, folder_id, url, title, image, description, content_type, status, progreso
+	query := `SELECT id, folder_id, url, title, image, description, content_type, status, progreso, archivo_id
 	          FROM resources`
 	args := []interface{}{}
 	if carpetaID != 0 {
@@ -107,8 +161,12 @@ func ListarRecursos(base *sql.DB, carpetaID int64) ([]Recurso, error) {
 	out := []Recurso{}
 	for rows.Next() {
 		var r Recurso
-		if err := rows.Scan(&r.ID, &r.CarpetaID, &r.URL, &r.Titulo, &r.Imagen, &r.Descripcion, &r.Tipo, &r.Estado, &r.Progreso); err != nil {
+		var archivoID sql.NullInt64
+		if err := rows.Scan(&r.ID, &r.CarpetaID, &r.URL, &r.Titulo, &r.Imagen, &r.Descripcion, &r.Tipo, &r.Estado, &r.Progreso, &archivoID); err != nil {
 			return nil, err
+		}
+		if archivoID.Valid {
+			r.ArchivoID = archivoID.Int64
 		}
 		out = append(out, r)
 	}

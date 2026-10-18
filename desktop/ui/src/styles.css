@@ -53,7 +53,7 @@ a { color: var(--ink-accent); }
 /* ── App shell ─────────────────────────────── */
 .app { height: 100vh; width: 100vw; display: flex; background: var(--bg); color: var(--ink); overflow: hidden; }
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
-.content { flex: 1; overflow-y: auto; padding: 24px; }
+.content { flex: 1; overflow-y: auto; padding: 24px; position: relative; }
 
 /* ── Sidebar (220px) ───────────────────────── */
 .sidebar {
@@ -166,8 +166,13 @@ a { color: var(--ink-accent); }
   transition: border-color 0.2s, transform 0.2s;
 }
 .res-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+/* Tarjeta de archivo: toda la tarjeta abre el visor (ver ResourceCard en
+   App.jsx), no solo el título. focus-visible reusa el mismo outline que
+   el resto de controles del tema (ver la regla genérica más abajo). */
+.res-card-clickable { cursor: pointer; }
 .thumb { height: 78px; position: relative; border-bottom: 1px solid var(--border); overflow: hidden; }
-.thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.thumb img, .thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.thumb-video { pointer-events: none; } /* sin controles: la tarjeta abre el visor, no reproduce acá */
 .thumb-v1 { background: linear-gradient(135deg, #1e1e1e, #2a2a2a); }
 .thumb-v2 { background: linear-gradient(135deg, #232323, #2e2e2e); }
 .thumb-v3 { background: linear-gradient(135deg, #1a1a1a, #242424); }
@@ -386,7 +391,7 @@ a { color: var(--ink-accent); }
 }
 
 /* Generic form controls keep the dark theme outside the modal too */
-input:focus-visible, select:focus-visible, button:focus-visible {
+input:focus-visible, select:focus-visible, button:focus-visible, .res-card-clickable:focus-visible {
   outline: 2px solid var(--ink-dim);
   outline-offset: 1px;
 }
@@ -406,4 +411,68 @@ input:focus-visible, select:focus-visible, button:focus-visible {
   .progress-grid { grid-template-columns: 1fr; }
   .page-header { flex-direction: column; align-items: flex-start; }
   .content { padding: 16px; }
+}
+
+/* ── Archivos (Paso 0): botón de título de tarjeta de ARCHIVO ─────── */
+/* Mismo look que el <a> de un link (.res-title), pero es un <button>:
+   un recurso de archivo abre el visor in-app, no navega a ningún lado. */
+.res-title-btn {
+  display: block; width: 100%; text-align: left;
+  background: transparent; border: none; padding: 0; margin: 0;
+  cursor: pointer; text-decoration: none; color: inherit; font-family: inherit;
+}
+.field-error { font-size: 11px; color: var(--red); margin: 4px 0 0; }
+
+/* ── Drag & drop de archivos sobre el área principal ───────────────── */
+.drag-overlay {
+  position: absolute; inset: 12px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  background: rgba(10,10,10,0.92);
+  border: 2px dashed var(--border-strong); border-radius: 12px;
+  color: var(--ink-muted); font-size: 13px; font-weight: 500;
+  pointer-events: none; z-index: 5;
+}
+.content.drag-activo { outline: none; }
+
+/* ── Visor de archivo (PDF/video/imagen/documento) ─────────────────── */
+.viewer-modal { max-width: 860px; width: 100%; }
+.viewer-body {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  min-height: 300px; max-height: 72vh; overflow: auto;
+}
+.viewer-frame { width: 100%; height: 72vh; border: none; border-radius: 8px; }
+.viewer-video { width: 100%; max-height: 72vh; border-radius: 8px; display: block; }
+.viewer-image { max-width: 100%; max-height: 72vh; object-fit: contain; display: block; }
+.viewer-doc {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 48px 24px; color: var(--ink-muted); text-align: center;
+}
+.viewer-doc .btn-solid { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; margin-top: 4px; }
+
+/* Vista de texto de Office/txt-md dentro del visor (ver DocPreview en
+   Archivos.jsx): a diferencia del fallback "no se puede previsualizar"
+   de arriba (centrado, texto corto), acá el contenido es largo y va
+   alineado a la izquierda, con scroll propio. */
+.viewer-doc-preview { align-items: stretch; text-align: left; padding: 20px 24px; }
+.doc-preview-note { text-align: left; margin: 0 0 12px; }
+.doc-preview { max-height: 52vh; overflow: auto; padding-right: 4px; }
+.doc-heading { color: var(--ink); margin: 16px 0 8px; font-size: 14px; }
+.doc-heading:first-child { margin-top: 0; }
+.doc-paragraph { color: var(--ink-muted); font-size: 12px; line-height: 1.6; margin: 0 0 10px; }
+.doc-list { margin: 0 0 10px; padding-left: 20px; }
+.doc-list-item { color: var(--ink-muted); font-size: 12px; line-height: 1.6; margin-bottom: 4px; }
+.doc-slide { margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+.doc-slide:last-child { border-bottom: none; }
+.doc-slide-title { color: var(--ink); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 8px; }
+.doc-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.doc-table td { border: 1px solid var(--border); padding: 4px 8px; color: var(--ink-muted); }
+.doc-plain {
+  font-family: ui-monospace, Consolas, monospace; font-size: 11px; line-height: 1.6;
+  color: var(--ink-muted); white-space: pre-wrap; word-break: break-word; margin: 0;
+}
+
+@media (max-width: 720px) {
+  .viewer-modal { max-width: 100%; }
+  .viewer-frame, .viewer-video, .viewer-image { max-height: 60vh; }
 }

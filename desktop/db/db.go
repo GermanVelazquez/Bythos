@@ -18,21 +18,29 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// RutaPorDefecto devuelve dónde vive bythos.db.
+// CarpetaDatos devuelve %APPDATA%/Bythos (o ~/.config/bythos en Linux/Mac):
+// la carpeta base que comparten bythos.db y el almacenamiento de archivos
+// (ver desktop/archivos). Separado de RutaPorDefecto para que ese paquete
+// pueda reusar la misma resolución sin tener que abrir un *sql.DB ni saber
+// nada de SQL.
 // ¿Por qué NO al lado del .exe?
 // Porque si instalas en "Archivos de Programa", Windows bloquea escritura ahí.
-// AppData (%APPDATA%/Bythos/bythos.db) SIEMPRE se puede escribir.
-// En Linux/Mac usa ~/.config/bythos/bythos.db automáticamente.
-func RutaPorDefecto() string {
+// AppData SIEMPRE se puede escribir. En Linux/Mac usa ~/.config/bythos.
+func CarpetaDatos() string {
 	base, err := os.UserConfigDir()
 	if err != nil {
 		// Plan B: carpeta actual (solo para no romper en PCs raros)
-		return "bythos.db"
+		return "."
 	}
 	dir := filepath.Join(base, "Bythos")
 	// MkdirAll no falla si ya existe, así que es seguro llamarlo siempre
 	_ = os.MkdirAll(dir, 0755)
-	return filepath.Join(dir, "bythos.db")
+	return dir
+}
+
+// RutaPorDefecto devuelve dónde vive bythos.db, dentro de CarpetaDatos().
+func RutaPorDefecto() string {
+	return filepath.Join(CarpetaDatos(), "bythos.db")
 }
 
 // Abrir conecta al archivo SQLite y deja las tablas listas.
@@ -109,7 +117,8 @@ func crearTablas(base *sql.DB) error {
 			content_type TEXT NOT NULL DEFAULT 'otro',
 			status TEXT NOT NULL DEFAULT 'pendiente',
 			progreso INTEGER NOT NULL DEFAULT 0 CHECK(progreso BETWEEN 0 AND 100),
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			archivo_id INTEGER NULL REFERENCES archivos(id) ON DELETE SET NULL
 		);`,
 		`CREATE TABLE IF NOT EXISTS agenda (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -136,6 +145,15 @@ func crearTablas(base *sql.DB) error {
 		return err
 	}
 	if err := migrarImportLotes(base); err != nil {
+		return err
+	}
+	// archivos (v1.2+): tabla nueva, CREATE TABLE IF NOT EXISTS alcanza
+	// (igual que eventos). Va ANTES de migrarArchivoID: esa migración
+	// agrega resources.archivo_id, que REFERENCES archivos(id).
+	if err := crearTablaArchivos(base); err != nil {
+		return err
+	}
+	if err := migrarArchivoID(base); err != nil {
 		return err
 	}
 	// eventos es tabla nueva (v1.1+): CREATE TABLE IF NOT EXISTS alcanza,
@@ -213,5 +231,36 @@ func migrarImportLotes(base *sql.DB) error {
 		return err
 	}
 	_, err = base.Exec(`ALTER TABLE agenda ADD COLUMN lote_id INTEGER NULL REFERENCES import_lotes(id) ON DELETE CASCADE`)
+	return err
+}
+
+// migrarArchivoID adds resources.archivo_id on databases created before
+// v1.2 (Paso 0: archivos). New installs already have the column via
+// CREATE TABLE above. Same style as migrarProgreso/migrarImportLotes:
+// PRAGMA table_info first, so Abrir stays idempotent y las filas viejas
+// (todas con archivo_id NULL, o sea "es un link") sobreviven intactas.
+func migrarArchivoID(base *sql.DB) error {
+	rows, err := base.Query(`PRAGMA table_info(resources)`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull int
+		var dflt interface{}
+		var pk int
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return err
+		}
+		if name == "archivo_id" {
+			return rows.Err()
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	_, err = base.Exec(`ALTER TABLE resources ADD COLUMN archivo_id INTEGER NULL REFERENCES archivos(id) ON DELETE SET NULL`)
 	return err
 }

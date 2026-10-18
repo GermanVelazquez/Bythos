@@ -77,10 +77,13 @@ type salidaListarRecursos struct {
 func registrarListarRecursos(s *mcp.Server, c *Cliente) {
 	mcp.AddTool(s, &mcp.Tool{
 		Name: "listar_recursos",
-		Description: "Lista los recursos (links) guardados en Bythos. Si mandás " +
-			"carpeta_id, filtra solo esa carpeta; si lo omitís (o mandás 0), trae los " +
-			"de todas las carpetas. Cada recurso trae su progreso (0 a 100) y estado " +
-			"(pendiente, en_curso, completado).",
+		Description: "Lista los recursos guardados en Bythos: links (youtube/articulo/otro) " +
+			"y archivos subidos (pdf/video/imagen/documento). Si mandás carpeta_id, filtra " +
+			"solo esa carpeta; si lo omitís (o mandás 0), trae los de todas las carpetas. " +
+			"Cada recurso trae su progreso (0 a 100) y estado (pendiente, en_curso, " +
+			"completado); un recurso de ARCHIVO además trae \"archivo\" con nombre, mime, " +
+			"tamaño y la ruta absoluta en esta PC, lista para abrir con tus propias " +
+			"herramientas de lectura de archivos.",
 		Annotations: soloLectura(),
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in entradaListarRecursos) (*mcp.CallToolResult, salidaListarRecursos, error) {
 		ruta := "/api/recursos"
@@ -110,9 +113,10 @@ func registrarLeerRecurso(s *mcp.Server, c *Cliente) {
 		Name: "leer_recurso",
 		Description: "Trae el detalle completo de un recurso por su id: url, título, " +
 			"tipo, descripción, imagen, progreso (0 a 100), estado y la carpeta que lo " +
-			"contiene. Bythos no tiene un \"buscar por id\" propio; esta herramienta " +
-			"filtra la lista completa, así que es más lenta que listar_recursos si ya " +
-			"tenés el recurso a mano.",
+			"contiene. Si es un ARCHIVO (pdf/video/imagen/documento), también trae " +
+			"\"archivo\" con nombre, mime, tamaño y la ruta absoluta en esta PC. Bythos " +
+			"no tiene un \"buscar por id\" propio; esta herramienta filtra la lista " +
+			"completa, así que es más lenta que listar_recursos si ya tenés el recurso a mano.",
 		Annotations: soloLectura(),
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in entradaLeerRecurso) (*mcp.CallToolResult, RecursoDetalle, error) {
 		var recursos []wireRecurso
@@ -144,6 +148,7 @@ func registrarLeerRecurso(s *mcp.Server, c *Cliente) {
 				Estado:      r.Estado,
 				CarpetaID:   r.CarpetaID,
 				Carpeta:     carpeta,
+				Archivo:     aArchivoSalida(r.Archivo),
 			}, nil
 		}
 		return nil, RecursoDetalle{}, fmt.Errorf("no existe un recurso con id %d", in.ID)

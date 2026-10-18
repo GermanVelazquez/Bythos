@@ -6,6 +6,7 @@ package agentes
 import (
 	"testing"
 
+	"bythos-desktop/archivos"
 	"bythos-desktop/db"
 )
 
@@ -61,6 +62,76 @@ func TestListarYLeerRecursoHappyPath(t *testing.T) {
 	}
 	if detalle.Titulo != "Intro a React" || detalle.Carpeta != "React" || detalle.CarpetaID != carpeta.ID {
 		t.Fatalf("detalle inesperado: %+v", detalle)
+	}
+}
+
+// TestLeerRecursoDeArchivoExponeRutaLocal confirma el requisito central
+// de Paso 0 para el agente: un recurso de ARCHIVO trae, además de lo
+// normal, nombre/mime/tamaño y la ruta ABSOLUTA en esta PC — para que un
+// CLI de IA lo abra con sus propias herramientas de lectura de archivos,
+// sin pedirle el contenido a Bythos por HTTP. Sembramos directo por db/
+// (como crearCarpetaSemilla/guardarRecursoSemilla): no hace falta subir
+// un archivo de verdad para probar que el MCP expone bien lo que ya está
+// en la fila.
+func TestLeerRecursoDeArchivoExponeRutaLocal(t *testing.T) {
+	c, base := bythosDePrueba(t)
+	carpeta, err := db.CrearCarpeta(base, "PDFs")
+	if err != nil {
+		t.Fatalf("semilla CrearCarpeta: %v", err)
+	}
+	a, err := db.CrearArchivo(base, "sha-semilla", "apuntes.pdf", "application/pdf", 12345, "sh/sha-semilla.pdf")
+	if err != nil {
+		t.Fatalf("semilla CrearArchivo: %v", err)
+	}
+	rec, err := db.GuardarArchivo(base, carpeta.ID, a.ID, "Apuntes", "pdf")
+	if err != nil {
+		t.Fatalf("semilla GuardarArchivo: %v", err)
+	}
+
+	sesion := sesionDePrueba(t, c)
+
+	rutaEsperada := archivos.Absoluta(a.Ruta)
+
+	var listado salidaListarRecursos
+	isErr, msg := llamar(t, sesion, "listar_recursos", map[string]any{"carpeta_id": carpeta.ID}, &listado)
+	if isErr {
+		t.Fatalf("listar_recursos devolvió error: %s", msg)
+	}
+	if len(listado.Recursos) != 1 || listado.Recursos[0].Archivo == nil {
+		t.Fatalf("esperaba 1 recurso con Archivo: %+v", listado.Recursos)
+	}
+	if listado.Recursos[0].Archivo.RutaLocal != rutaEsperada {
+		t.Fatalf("ruta local mal: %q, quería %q", listado.Recursos[0].Archivo.RutaLocal, rutaEsperada)
+	}
+	if listado.Recursos[0].Archivo.NombreOriginal != "apuntes.pdf" || listado.Recursos[0].Archivo.Tamano != 12345 {
+		t.Fatalf("metadata de archivo mal: %+v", listado.Recursos[0].Archivo)
+	}
+
+	var detalle RecursoDetalle
+	isErr, msg = llamar(t, sesion, "leer_recurso", map[string]any{"id": rec.ID}, &detalle)
+	if isErr {
+		t.Fatalf("leer_recurso devolvió error: %s", msg)
+	}
+	if detalle.Archivo == nil || detalle.Archivo.RutaLocal != rutaEsperada {
+		t.Fatalf("leer_recurso debió traer la misma ruta local: %+v", detalle.Archivo)
+	}
+	if detalle.Tipo != "pdf" {
+		t.Fatalf("tipo debió ser pdf: %q", detalle.Tipo)
+	}
+
+	// Un recurso de LINK normal sigue sin Archivo (nil), no se rompió
+	// nada de lo viejo.
+	link, err := db.Guardar(base, carpeta.ID, "http://ejemplo.com", "Un link", "", "", "articulo")
+	if err != nil {
+		t.Fatalf("semilla Guardar link: %v", err)
+	}
+	var detalleLink RecursoDetalle
+	isErr, msg = llamar(t, sesion, "leer_recurso", map[string]any{"id": link.ID}, &detalleLink)
+	if isErr {
+		t.Fatalf("leer_recurso (link) devolvió error: %s", msg)
+	}
+	if detalleLink.Archivo != nil {
+		t.Fatalf("un link no debió traer Archivo: %+v", detalleLink.Archivo)
 	}
 }
 

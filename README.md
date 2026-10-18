@@ -32,6 +32,7 @@
 | | |
 |---|---|
 | 💾 **Guardar en 1 clic** | Desde el navegador, con la extensión. Sin copiar ni pegar links. |
+| 📎 **Guardar archivos** | PDFs, documentos, videos e imágenes: se suben enteros, no solo el link. Con preview en la tarjeta y vista previa del contenido, sin salir de Bythos. |
 | 🗂️ **Organizar por temas** | Carpetas para React, Inglés, lo que estés estudiando. |
 | 📊 **Ver tu progreso real** | Cada link tiene su %, cada carpeta su promedio. |
 | 📅 **Planear con calendario** | Agenda tus sesiones de estudio y mira tu historia de avance. |

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from './api.js'
+import { AddFileModal, FileViewerModal, ArchivoPreview } from './Archivos.jsx'
 
 // App.jsx — Bythos desktop UI: sidebar + topbar + cards + modal (dark theme).
 // Single-file layout on purpose: the whole product flow fits here.
@@ -11,6 +12,18 @@ const normCarpeta = (c) => ({
   id: c.ID ?? c.id,
   nombre: c.Nombre ?? c.nombre ?? c.name ?? '',
 })
+
+// normArchivo lee el objeto Archivo que trae un recurso de ARCHIVO (ver
+// api/archivos.go: archivoInfoJSON). null si el recurso es un link.
+const normArchivo = (a) => {
+  if (!a) return null
+  return {
+    id: a.ID ?? a.id,
+    nombre: a.NombreOriginal ?? a.nombre_original ?? '',
+    mime: a.Mime ?? a.mime ?? '',
+    tamano: Number(a.Tamano ?? a.tamano ?? 0),
+  }
+}
 
 const normRecurso = (r) => {
   const raw = r.Progreso ?? r.progreso ?? 0
@@ -25,6 +38,7 @@ const normRecurso = (r) => {
     tipo: String(r.Tipo ?? r.tipo ?? r.type ?? 'otro').toLowerCase(),
     estado: r.Estado ?? r.estado ?? r.status ?? 'pendiente',
     progreso: Number.isFinite(num) ? Math.min(100, Math.max(0, Math.round(num))) : 0,
+    archivo: normArchivo(r.Archivo ?? r.archivo),
   }
 }
 
@@ -77,7 +91,14 @@ const toCardStatus = (estado) =>
   estado === 'completado' ? 'done' : estado === 'en_curso' ? 'progress' : 'pending'
 const SIGUIENTE_ESTADO = { pendiente: 'en_curso', en_curso: 'completado', completado: 'pendiente' }
 
-const TIPO_LABEL = { youtube: 'YOUTUBE', articulo: 'ARTÍCULO', otro: 'OTRO' }
+const TIPO_LABEL = {
+  youtube: 'YOUTUBE', articulo: 'ARTÍCULO', otro: 'OTRO',
+  pdf: 'PDF', video: 'VIDEO', imagen: 'IMAGEN', documento: 'DOC',
+}
+// Icono por tipo de tarjeta: youtube/video comparten "play" (ambos se
+// reproducen), imagen tiene su propio icono, pdf/documento/otro caen en
+// "file" (el genérico de siempre).
+const ICONO_TIPO = { youtube: 'play', video: 'play', imagen: 'image' }
 const thumbVariant = (id) => `thumb-v${(Number(id) || 0) % 6 + 1}`
 
 function hostDe(url) {
@@ -96,7 +117,7 @@ const Logo = ({ size = 22 }) => (
   </svg>
 )
 
-const Icon = ({ name, size = 14 }) => {
+export const Icon = ({ name, size = 14 }) => {
   const icons = {
     book: (<><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></>),
     folder: (<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />),
@@ -109,6 +130,7 @@ const Icon = ({ name, size = 14 }) => {
     more: (<><circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" /></>),
     play: (<path d="M8 5v14l11-7z" />),
     file: (<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></>),
+    image: (<><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></>),
     trash: (<><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></>),
     x: (<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>),
     external: (<><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></>),
@@ -191,7 +213,7 @@ function Sidebar({ currentView, onChangeView, counts, onAbrirAgente, agenteEstad
 /* ───────── TOPBAR ───────── */
 // showSearch se apaga en la vista Todos: ahí no hay lista que filtrar,
 // solo calendario. Default true para no tocar las demás vistas.
-function Topbar({ query, onQueryChange, onAdd, showSearch = true }) {
+function Topbar({ query, onQueryChange, onAdd, onAddFile, showSearch = true }) {
   return (
     <div className="topbar">
       {showSearch ? (
@@ -211,6 +233,10 @@ function Topbar({ query, onQueryChange, onAdd, showSearch = true }) {
         <button className="btn-primary" onClick={onAdd}>
           <Icon name="plus" size={12} />
           Añadir link
+        </button>
+        <button className="btn-outline" onClick={onAddFile}>
+          <Icon name="file" size={12} />
+          Añadir archivo
         </button>
         <button className="icon-btn" title="Más opciones">
           <Icon name="more" size={13} />
@@ -287,19 +313,41 @@ function ResourceCard({ resource, folderName, onCycleStatus, onDelete, onOpen })
   const [hovered, setHovered] = useState(false)
   const status = CARD_STATUS[toCardStatus(resource.estado)]
   const pct = Number.isFinite(Number(resource.progreso)) ? Math.min(100, Math.max(0, Math.round(Number(resource.progreso)))) : 0
-  const isYouTube = resource.tipo === 'youtube'
+  const esArchivo = !!resource.archivo
   const secondary = resource.descripcion
     || [folderName, hostDe(resource.url)].filter(Boolean).join(' · ')
     || 'Sin descripción'
 
+  // Tarjeta completa clickeable SOLO para recursos de archivo (pedido
+  // explícito: no tocar el comportamiento de los recursos de link, que
+  // siguen abriendo solo por su título/botón "Abrir"). role="button" +
+  // tabIndex + Enter/Space la hacen accesible por teclado, igual que
+  // cualquier botón nativo. El guardia `e.target !== e.currentTarget` en
+  // onKeyDown evita doble disparo cuando el Enter/Space nativo de un
+  // <button> anidado (título, thumb-actions, status) ya burbujeó su
+  // propio click con stopPropagation.
+  const onKeyDownCard = (e) => {
+    if (e.target !== e.currentTarget) return
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onOpen(resource)
+    }
+  }
+
   return (
     <div
-      className="res-card"
+      className={`res-card${esArchivo ? ' res-card-clickable' : ''}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      role={esArchivo ? 'button' : undefined}
+      tabIndex={esArchivo ? 0 : undefined}
+      onClick={esArchivo ? () => onOpen(resource) : undefined}
+      onKeyDown={esArchivo ? onKeyDownCard : undefined}
     >
       <div className={`thumb ${thumbVariant(resource.id)}`}>
-        {resource.imagen && (
+        {esArchivo ? (
+          <ArchivoPreview resource={resource} />
+        ) : resource.imagen && (
           <img
             src={resource.imagen}
             alt=""
@@ -308,7 +356,7 @@ function ResourceCard({ resource, folderName, onCycleStatus, onDelete, onOpen })
           />
         )}
         <div className="thumb-badge">
-          <Icon name={isYouTube ? 'play' : 'file'} size={8} />
+          <Icon name={ICONO_TIPO[resource.tipo] ?? 'file'} size={8} />
           {TIPO_LABEL[resource.tipo] ?? 'OTRO'}
         </div>
         {hovered && (
@@ -323,17 +371,28 @@ function ResourceCard({ resource, folderName, onCycleStatus, onDelete, onOpen })
         )}
       </div>
       <div className="res-body">
-        <a
-          className="res-title line-clamp-2"
-          title={`${resource.titulo || resource.url} — Abrir`}
-          href={resource.url || '#'}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => { if (!resource.url) e.preventDefault(); e.stopPropagation() }}
-          style={{ display: 'block', cursor: resource.url ? 'pointer' : 'default', textDecoration: 'none', color: 'inherit' }}
-        >
-          {resource.titulo || resource.url}
-        </a>
+        {esArchivo ? (
+          <button
+            type="button"
+            className="res-title line-clamp-2 res-title-btn"
+            title={`${resource.titulo || resource.archivo.nombre} — Abrir`}
+            onClick={(e) => { e.stopPropagation(); onOpen(resource) }}
+          >
+            {resource.titulo || resource.archivo.nombre}
+          </button>
+        ) : (
+          <a
+            className="res-title line-clamp-2"
+            title={`${resource.titulo || resource.url} — Abrir`}
+            href={resource.url || '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => { if (!resource.url) e.preventDefault(); e.stopPropagation() }}
+            style={{ display: 'block', cursor: resource.url ? 'pointer' : 'default', textDecoration: 'none', color: 'inherit' }}
+          >
+            {resource.titulo || resource.url}
+          </a>
+        )}
         <div className="res-meta line-clamp-2" title={secondary}>{secondary}</div>
         <div className="res-foot">
           <div className="bar">
@@ -2179,6 +2238,10 @@ export default function App() {
   const [view, setView] = useState('all')
   const [query, setQuery] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
+  const [addFileOpen, setAddFileOpen] = useState(false)
+  const [archivoPreset, setArchivoPreset] = useState(null) // File soltado por drag&drop, precargado en el modal
+  const [viewerResource, setViewerResource] = useState(null)
+  const [dragActivo, setDragActivo] = useState(false)
 
   const [carpetas, setCarpetas] = useState([])
   const [recursos, setRecursos] = useState([])
@@ -2330,6 +2393,10 @@ export default function App() {
   }
 
   function handleOpen(resource) {
+    // Un recurso de ARCHIVO se abre en el visor propio (PDF/video/imagen
+    // in-app, documento con botón Descargar): resource.url NO es una URL
+    // real para esos ("archivo:<id>", ver GuardarArchivo en Go).
+    if (resource.archivo) { setViewerResource(resource); return }
     if (resource.url) window.open(resource.url, '_blank', 'noopener')
   }
 
@@ -2340,6 +2407,38 @@ export default function App() {
     } catch (e) {
       setError(e.message)
     }
+  }
+
+  // Sube un archivo (PDF/video/imagen/documento). onProgress la pasa
+  // AddFileModal para pintar la barra; el error se re-lanza para que el
+  // modal lo muestre inline (no cierra el modal si falla).
+  async function handleSubirArchivo(archivo, carpetaId, onProgress) {
+    await api.subirArchivo(archivo, carpetaId, onProgress)
+    recargar()
+  }
+
+  function abrirModalArchivo(archivoPrecargado = null) {
+    setArchivoPreset(archivoPrecargado)
+    setAddFileOpen(true)
+  }
+
+  // Drag & drop sobre el área principal: si hay un archivo, precarga el
+  // modal de subida (el usuario igual elige la carpeta ahí, "Todos" no
+  // tiene una carpeta natural para inferir).
+  function handleDragOver(e) {
+    if (!e.dataTransfer?.types?.includes('Files')) return
+    e.preventDefault()
+    setDragActivo(true)
+  }
+  function handleDragLeave(e) {
+    if (e.currentTarget.contains(e.relatedTarget)) return
+    setDragActivo(false)
+  }
+  function handleDrop(e) {
+    if (!e.dataTransfer?.files?.length) return
+    e.preventDefault()
+    setDragActivo(false)
+    abrirModalArchivo(e.dataTransfer.files[0])
   }
 
   async function handleCrearCarpeta(e) {
@@ -2427,9 +2526,26 @@ export default function App() {
         agenteEstado={agenteEstado}
       />
       <main className="main">
-        <Topbar query={query} onQueryChange={setQuery} onAdd={() => setModalOpen(true)} showSearch={view !== 'all'} />
-        <div className="content">
+        <Topbar
+          query={query}
+          onQueryChange={setQuery}
+          onAdd={() => setModalOpen(true)}
+          onAddFile={() => abrirModalArchivo()}
+          showSearch={view !== 'all'}
+        />
+        <div
+          className={`content${dragActivo ? ' drag-activo' : ''}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           <PageHeader title={pageTitle} subtitle={pageSubtitle} showFilter={false} />
+          {dragActivo && (
+            <div className="drag-overlay animate-fade-in">
+              <Icon name="file" size={22} />
+              <p>Soltá el archivo para subirlo a Bythos</p>
+            </div>
+          )}
 
           {error && (
             <div className="error-banner">
@@ -2505,6 +2621,17 @@ export default function App() {
         onClose={() => setModalOpen(false)}
         onAdd={handleAdd}
         carpetas={carpetas}
+      />
+      <AddFileModal
+        open={addFileOpen}
+        onClose={() => { setAddFileOpen(false); setArchivoPreset(null) }}
+        onUpload={handleSubirArchivo}
+        carpetas={carpetas}
+        presetFile={archivoPreset}
+      />
+      <FileViewerModal
+        resource={viewerResource}
+        onClose={() => setViewerResource(null)}
       />
     </div>
   )
