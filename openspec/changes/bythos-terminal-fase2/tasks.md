@@ -94,7 +94,7 @@ Satisfies: WA Rehydration, Entry Paths (Adjuntar), Session Privacy (cross-sessio
 - [x] 3b.2 Modify `T/Pizarra.jsx`: "Adjuntar" button (file picker) feeding the same upload flow; pass the known-sha set to `sanearEscena`; `onPaste` returns `false` when an image or card references a sha unknown to this session (cross-session internal paste). (D10; WA: Adjuntar)
 - [x] 3b.3 Add Spanish strings for Adjuntar, errors and unavailable elements to `T/` string constants (reuse the existing strings module). (WA: Failure Handling)
 - [ ] 3b.4 Verify: `pnpm build`; `go vet ./...`, `go test ./...`. Manual: M.4 to M.7.
-- [ ] 3b.5 Open PR3b (base PR3a branch) with M.4 to M.7.
+- [x] 3b.5 Open PR3b (base PR3a branch) with M.4 to M.7. (#35)
 
 ## PR4a: Agent routes and helpers (branch `feat/bythos-terminal-fase2-04a-agente-rutas`, base `feat/bythos-terminal-fase2-03b-ui-rehidratar`)
 
