@@ -72,7 +72,7 @@ Satisfies: WB Scene Limits; WA Foreign Attachment Reference; TS Delete keeps fil
 - [x] 2.2 Modify `D/api/sesiones.go`: `reducirEscena(raw, permitidos)` rejects as in D9 (fail closed) and keeps `files:{}`; the PUT handler builds `permitidos` from the sha set of the session's links. (D9)
 - [x] 2.3 RED then fix: delete session removes link rows and keeps `archivos` rows and blobs; delete of A leaves B's attachment listed and readable; closing a tab (no API call) keeps links. (TS: Delete with attachments, Shared content survives, Close tab, Library resource survives)
 - [x] 2.4 Verify: `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...`.
-- [ ] 2.5 Open PR2 (base PR1b branch).
+- [x] 2.5 Open PR2 (base PR1b branch). (#33)
 
 ## PR3a: Client upload and insertion (branch `feat/bythos-terminal-fase2-03a-ui-insertar`, base `feat/bythos-terminal-fase2-02-escena`)
 
