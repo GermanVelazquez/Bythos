@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape>
+            <solid android:color="@color/surface" />
+            <stroke android:width="@dimen/borde" android:color="@color/border_strong" />
+            <corners android:radius="@dimen/radio_boton" />
+        </shape>
+    </item>
+    <item>
+        <shape>
+            <solid android:color="@color/surface" />
+            <stroke android:width="@dimen/borde" android:color="@color/border" />
+            <corners android:radius="@dimen/radio_boton" />
+        </shape>
+    </item>
+</selector>

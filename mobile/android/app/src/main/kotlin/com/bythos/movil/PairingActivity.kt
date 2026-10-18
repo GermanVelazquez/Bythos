@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Button
-import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import java.net.ConnectException
@@ -33,49 +32,38 @@ class PairingActivity : ActividadRedLocal() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        estado = TextView(this)
+        estado = Estilo.cuerpo(this)
         progreso = ProgressBar(this).apply { isIndeterminate = true; visibility = View.GONE }
         pegado = PegadoManual.vista(this, ::alTexto).apply { visibility = View.GONE }
-        escanear = Button(this).apply {
-            text = getString(R.string.escanear_qr)
-            setOnClickListener { Escaner.escanear(this@PairingActivity, ::alTexto, ::mostrarPegado) }
+        // Un solo botón primario por pantalla: "Escanear QR" sin emparejar, "Enviar" ya emparejado.
+        escanear = Estilo.botonPrimario(this, getString(R.string.escanear_qr)) {
+            Escaner.escanear(this@PairingActivity, ::alTexto, ::mostrarPegado)
         }
-        pegar = Button(this).apply {
-            text = getString(R.string.pegar_enlace)
-            setOnClickListener { mostrarPegado() }
+        pegar = Estilo.botonSecundario(this, getString(R.string.pegar_enlace)) { mostrarPegado() }
+        enviar = Estilo.botonPrimario(this, getString(R.string.enviar_archivo)) {
+            startActivity(Intent(this@PairingActivity, ShareReceiverActivity::class.java))
         }
-        enviar = Button(this).apply {
-            text = getString(R.string.enviar_archivo)
-            setOnClickListener { startActivity(Intent(this@PairingActivity, ShareReceiverActivity::class.java)) }
+        // The paired view stays until a valid QR arrives: cancelling the scan keeps it.
+        reemparejar = Estilo.botonSecundario(this, getString(R.string.volver_a_emparejar)) {
+            Escaner.escanear(this@PairingActivity, ::alTexto, ::mostrarPegado)
         }
-        reemparejar = Button(this).apply {
-            text = getString(R.string.volver_a_emparejar)
-            // The paired view stays until a valid QR arrives: cancelling the scan keeps it.
-            setOnClickListener { Escaner.escanear(this@PairingActivity, ::alTexto, ::mostrarPegado) }
+        Estilo.pantalla(this).apply {
+            addView(Estilo.titulo(context, getString(R.string.emparejar_titulo)))
+            addView(estado)
+            addView(progreso)
+            addView(enviar)
+            addView(reemparejar)
+            addView(escanear)
+            addView(pegar)
+            addView(pegado)
         }
-        setContentView(
-            LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(48, 96, 48, 48)
-                addView(TextView(context).apply {
-                    text = getString(R.string.emparejar_titulo)
-                    textSize = 22f
-                })
-                addView(estado)
-                addView(progreso)
-                addView(enviar)
-                addView(reemparejar)
-                addView(escanear)
-                addView(pegar)
-                addView(pegado)
-            },
-        )
         if (clienteEmparejado(this) != null) modoEmparejado() else modoSinEmparejar()
     }
 
     private fun modoEmparejado() {
         val guardado = getSharedPreferences("bythos", MODE_PRIVATE).getString("nombrePC", null)
         estado.text = getString(R.string.emparejado_con, nombreVisiblePC(guardado, getString(R.string.pc_sin_nombre)))
+        Estilo.tono(estado, Tono.NORMAL)
         progreso.visibility = View.GONE
         pegado.visibility = View.GONE
         enviar.visibility = View.VISIBLE
@@ -86,6 +74,7 @@ class PairingActivity : ActividadRedLocal() {
 
     private fun modoSinEmparejar() {
         estado.text = getString(R.string.emparejar_instruccion)
+        Estilo.tono(estado, Tono.NORMAL)
         enviar.visibility = View.GONE
         reemparejar.visibility = View.GONE
         escanear.visibility = View.VISIBLE
@@ -105,6 +94,7 @@ class PairingActivity : ActividadRedLocal() {
             conPermisoRedLocal { emparejar(leido) }
         } catch (e: QrInvalidoException) {
             estado.text = getString(R.string.qr_invalido, e.message)
+            Estilo.tono(estado, Tono.ERROR)
         }
     }
 
@@ -127,7 +117,7 @@ class PairingActivity : ActividadRedLocal() {
                 while (System.currentTimeMillis() < limite) {
                     val e = api.estado(solicitud.id)
                     traza("sondeo ${e.estado}")
-                    if (e.estado == "rechazado") return@Thread mostrar(getString(R.string.rechazado))
+                    if (e.estado == "rechazado") return@Thread mostrar(getString(R.string.rechazado), tono = Tono.ERROR)
                     if (e.estado == "aprobado" && e.token != null) {
                         val prefs = getSharedPreferences("bythos", MODE_PRIVATE)
                         KeystoreTokenStore.deContexto(prefs).guardar(e.token)
@@ -141,7 +131,7 @@ class PairingActivity : ActividadRedLocal() {
                 }
             } catch (e: Exception) {
                 traza("fallo ${e.javaClass.simpleName}")
-                mostrar(textoFalloPareo(e))
+                mostrar(textoFalloPareo(e), tono = Tono.ERROR)
             }
         }.start()
     }
@@ -153,8 +143,9 @@ class PairingActivity : ActividadRedLocal() {
         return if (sinRespuesta && inalcanzable) getString(R.string.pc_no_recibe) else textoFallo(e)
     }
 
-    private fun mostrar(texto: String, girando: Boolean = false) = runOnUiThread {
+    private fun mostrar(texto: String, girando: Boolean = false, tono: Tono = Tono.NORMAL) = runOnUiThread {
         estado.text = texto
+        Estilo.tono(estado, tono)
         progreso.visibility = if (girando) View.VISIBLE else View.GONE
     }
 

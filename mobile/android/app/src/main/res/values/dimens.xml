@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="pantalla_padding">24dp</dimen>
+    <dimen name="radio_tarjeta">12dp</dimen>
+    <dimen name="radio_dialogo">16dp</dimen>
+    <dimen name="radio_boton">8dp</dimen>
+    <dimen name="borde">1dp</dimen>
+    <dimen name="objetivo_tactil">48dp</dimen>
+    <dimen name="separacion">12dp</dimen>
+    <dimen name="tarjeta_padding">16dp</dimen>
+    <dimen name="texto_titulo">22sp</dimen>
+    <dimen name="texto_panel">16sp</dimen>
+    <dimen name="texto_cuerpo">15sp</dimen>
+    <dimen name="texto_tenue">13sp</dimen>
+    <dimen name="texto_micro">12sp</dimen>
+    <dimen name="texto_boton">14sp</dimen>
+</resources>

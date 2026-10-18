@@ -4,9 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.text.InputType
 import android.view.View
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -43,17 +40,15 @@ object Escaner {
 object PegadoManual {
 
     fun vista(activity: Activity, alTexto: (String) -> Unit): View {
-        val campo = EditText(activity).apply {
+        val campo = Estilo.campo(activity).apply {
             hint = activity.getString(R.string.pegar_pista)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             minLines = 3
         }
-        val boton = Button(activity).apply {
-            text = activity.getString(R.string.usar_enlace)
-            setOnClickListener { alTexto(campo.text.toString()) }
-        }
-        return LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
+        // El texto pegado solo se entrega a [alTexto]; ningún mensaje lo repite en pantalla.
+        // Secundario: "Escanear QR" sigue visible en esta pantalla y es la única acción primaria.
+        val boton = Estilo.botonSecundario(activity, activity.getString(R.string.usar_enlace)) { alTexto(campo.text.toString()) }
+        return Estilo.columna(activity).apply {
             addView(campo)
             addView(boton)
         }

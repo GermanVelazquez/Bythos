@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mismos tokens que el escritorio (desktop/ui/src/styles.css). Solo tema oscuro. -->
+<resources>
+    <color name="bg">#0A0A0A</color>
+    <color name="bg_alt">#0F0F0F</color>
+    <color name="surface">#141414</color>
+    <color name="surface_2">#1A1A1A</color>
+    <color name="surface_3">#202020</color>
+    <color name="border">#1F1F1F</color>
+    <color name="border_strong">#2A2A2A</color>
+    <color name="ink">#EDEDED</color>
+    <color name="ink_muted">#8A8A8A</color>
+    <color name="ink_dim">#5A5A5A</color>
+    <color name="ink_accent">#C8C8C8</color>
+    <color name="green">#5FA97B</color>
+    <color name="amber">#C9964A</color>
+    <color name="red">#E07A7A</color>
+</resources>
