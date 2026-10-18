@@ -13,8 +13,17 @@ import (
 	"context"
 	"fmt"
 
+	"bythos-desktop/workspace"
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+// Instrucciones es el texto que el servidor MCP le da al agente. Las reglas
+// de borrado vienen de workspace: misma frase que AGENTS.md.
+const Instrucciones = "Bythos es un gestor de recursos de estudio (links + progreso + " +
+	"agenda). Estas herramientas hablan por HTTP con la app real: si no responden, " +
+	"es porque Bythos no está abierto en la PC del usuario. " +
+	workspace.ReglaBiblioteca + " " + workspace.ReglaPizarra
 
 // NuevoServidor arma el servidor MCP con el cliente HTTP dado. Separado
 // de Ejecutar para que los tests puedan armar un servidor con un cliente
@@ -24,12 +33,11 @@ func NuevoServidor(c *Cliente, version string) *mcp.Server {
 		Name:    "bythos",
 		Version: version,
 	}, &mcp.ServerOptions{
-		Instructions: "Bythos es un gestor de recursos de estudio (links + progreso + " +
-			"agenda). Estas herramientas hablan por HTTP con la app real: si no responden, " +
-			"es porque Bythos no está abierto en la PC del usuario.",
+		Instructions: Instrucciones,
 	})
 	RegistrarLectura(s, c)
 	RegistrarEscritura(s, c)
+	RegistrarPizarra(s, c)
 	return s
 }
 
