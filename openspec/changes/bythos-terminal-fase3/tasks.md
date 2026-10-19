@@ -85,10 +85,10 @@ Satisfies: WB Quitar marcas, Forged mark; WH tagging round trip (D4, D10, D11). 
 
 Satisfies: WT pizarra_marcar, MODIFIED pizarra_dibujar, citation rules (D3, D7, D8, D19). Threat: HTTP routing, prompt injection, PTY write N/A server side.
 
-- [ ] 4.1 RED: `D/api/pizarra_test.go`: valid mark call enqueues the 2-op batch and returns 200; foreign Origin -> 403 and empty Origin accepted on Agente routes only; citation resource outside the session folder -> 400; session without folder with citation -> 400; >20 marks -> 400; unknown target id -> 400; batch uses IMMEDIATELY capture. (D7, D8, D19)
-- [ ] 4.2 Modify `D/api/pizarra.go`: `marcarPizarra` handler; refactor shared `encolarYEsperar`; citation resolution against the session folder (title "<título>, pág. N"). Wire in `D/api/server.go`. (D3, D8)
-- [ ] 4.3 RED: `D/agentes/pizarra_test.go` (in-memory MCP client): `pizarra_marcar` happy path, schema caps, error messages, untrusted-data wording; `pizarra_dibujar` still rejects `datos` and `marca-` ids. (WT)
-- [ ] 4.4 Modify `D/agentes/pizarra.go` (tool `pizarra_marcar`, calls the route) and `D/agentes/cliente.go` if the client call lives there. (WT)
+- [x] 4.1 RED: `D/api/pizarra_test.go`: valid mark call enqueues the 2-op batch and returns 200; foreign Origin -> 403 and empty Origin accepted on Agente routes only; citation resource outside the session folder -> 400; session without folder with citation -> 400; >20 marks -> 400; unknown target id -> 400; batch uses IMMEDIATELY capture. (D7, D8, D19)
+- [x] 4.2 Modify `D/api/pizarra.go`: `marcarPizarra` handler; refactor shared `encolarYEsperar`; citation resolution against the session folder (title "<título>, pág. N"). Wire in `D/api/server.go`. (D3, D8)
+- [x] 4.3 RED: `D/agentes/pizarra_test.go` (in-memory MCP client): `pizarra_marcar` happy path, schema caps, error messages, untrusted-data wording; `pizarra_dibujar` still rejects `datos` and `marca-` ids. (WT)
+- [x] 4.4 Modify `D/agentes/pizarra.go` (tool `pizarra_marcar`, calls the route) and `D/agentes/cliente.go` if the client call lives there. (WT)
 - [ ] 4.5 Verify: Go commands. Manual: M.6.
 - [ ] 4.6 Open PR4 (base PR3 branch) with M.6.
 
