@@ -260,3 +260,128 @@ func TestAdjuntoContenidoYTexto(t *testing.T) {
 		t.Fatalf("texto: %d %s", w.Code, w.Body.String())
 	}
 }
+
+// sesionConCarpeta crea una carpeta y una sesión vinculada a ella.
+func sesionConCarpeta(t *testing.T, s *Servidor) (db.Sesion, db.Carpeta) {
+	t.Helper()
+	c, _ := db.CrearCarpeta(s.Base, "Mates")
+	se := crearSesionT(t, s, fmt.Sprintf(`{"nombre":"P","modo":"dibujo","carpeta_id":%d}`, c.ID))
+	return se, c
+}
+
+func contarRecursos(t *testing.T, s *Servidor, carpetaID int64) int {
+	t.Helper()
+	rs, err := db.ListarRecursos(s.Base, carpetaID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return len(rs)
+}
+
+func TestAdjuntoGuardarEnCarpeta(t *testing.T) {
+	usarArchivosPrueba(t)
+	s := basePrueba(t)
+	se, c := sesionConCarpeta(t, s)
+	adj := int64(decodificarAdj(t, subirAdj(t, s, se.ID, origenUI, "foto.png", pngAdj+"g"))["id"].(float64))
+	ruta := rutaAdj(se.ID, fmt.Sprintf("/%d/guardar", adj))
+
+	// Subir nunca crea recurso (sin guardado automático).
+	if n := contarRecursos(t, s, c.ID); n != 0 {
+		t.Fatalf("subir creó %d recursos", n)
+	}
+	for _, origen := range []string{"chrome-extension://abc", ""} {
+		if w := pedirTerminal(s, "POST", ruta, "", origen); w.Code != 403 {
+			t.Fatalf("guardar con Origin %q: %d, quería 403", origen, w.Code)
+		}
+	}
+
+	w := ventanaT(s, "POST", ruta, "")
+	if w.Code != 201 {
+		t.Fatalf("guardar: %d %s", w.Code, w.Body.String())
+	}
+	r1 := decodificarRecurso(t, w)
+	if r1.CarpetaID != c.ID || r1.Tipo != "imagen" || r1.ArchivoID == 0 {
+		t.Fatalf("recurso mal armado: %+v", r1)
+	}
+	if n := blobsEnDisco(t); n != 1 {
+		t.Fatalf("blobs = %d, quería 1 (sin copiar bytes)", n)
+	}
+	// El adjunto sigue en la pizarra.
+	if w := ventanaT(s, "GET", rutaAdj(se.ID, fmt.Sprintf("/%d/contenido", adj)), ""); w.Code != 200 {
+		t.Fatalf("el adjunto debía seguir: %d", w.Code)
+	}
+
+	// Mismo contenido ya en la carpeta: 200 con el recurso existente.
+	w = ventanaT(s, "POST", ruta, "")
+	if w.Code != 200 || decodificarRecurso(t, w).ID != r1.ID {
+		t.Fatalf("repetido: %d %s", w.Code, w.Body.String())
+	}
+	if n := contarRecursos(t, s, c.ID); n != 1 {
+		t.Fatalf("recursos = %d, quería 1", n)
+	}
+}
+
+func TestAdjuntoGuardarSinCarpetaOAjeno(t *testing.T) {
+	s, se := prepararAdjuntos(t)
+	adj := int64(decodificarAdj(t, subirAdj(t, s, se.ID, origenUI, "foto.png", pngAdj+"g"))["id"].(float64))
+	w := ventanaT(s, "POST", rutaAdj(se.ID, fmt.Sprintf("/%d/guardar", adj)), "")
+	if w.Code != 409 || !strings.Contains(w.Body.String(), "La sesión no tiene carpeta") {
+		t.Fatalf("sin carpeta: %d %s", w.Code, w.Body.String())
+	}
+	if w := ventanaT(s, "POST", rutaAdj(se.ID, "/9999/guardar"), ""); w.Code != 404 {
+		t.Fatalf("adjunto inexistente: %d, quería 404", w.Code)
+	}
+}
+
+func TestAdjuntoDesdeRecurso(t *testing.T) {
+	usarArchivosPrueba(t)
+	s := basePrueba(t)
+	se, c := sesionConCarpeta(t, s)
+	otra, _ := db.CrearCarpeta(s.Base, "Otra")
+	ruta := rutaAdj(se.ID, "/desde-recurso")
+	cuerpo := func(id int64) string { return fmt.Sprintf(`{"recurso_id":%d}`, id) }
+	sembrar := func(carpeta int64, sha, mime, tipo string) db.Recurso {
+		a, _ := db.CrearArchivo(s.Base, sha, "x", mime, 5, sha[:2]+"/"+sha)
+		r, err := db.GuardarArchivo(s.Base, carpeta, a.ID, "R", tipo)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
+	img := sembrar(c.ID, "aa11", "image/png", "imagen")
+
+	for _, origen := range []string{"chrome-extension://abc", ""} {
+		if w := pedirTerminal(s, "POST", ruta, cuerpo(img.ID), origen); w.Code != 403 {
+			t.Fatalf("Origin %q: %d, quería 403", origen, w.Code)
+		}
+	}
+	if w := ventanaT(s, "POST", ruta, cuerpo(img.ID)); w.Code != 201 {
+		t.Fatalf("recurso de la carpeta: %d %s", w.Code, w.Body.String())
+	}
+	if w := ventanaT(s, "POST", ruta, cuerpo(img.ID)); w.Code != 201 {
+		t.Fatalf("segunda vez: %d", w.Code)
+	}
+	var lista []db.Adjunto
+	json.Unmarshal(ventanaT(s, "GET", rutaAdj(se.ID, ""), "").Body.Bytes(), &lista)
+	if len(lista) != 1 {
+		t.Fatalf("el mismo recurso dos veces debía dar un vínculo: %+v", lista)
+	}
+
+	ajeno := sembrar(otra.ID, "bb22", "image/png", "imagen")
+	video := sembrar(c.ID, "cc33", "video/mp4", "video")
+	enlace, _ := db.Guardar(s.Base, c.ID, "https://x.dev", "L", "", "", "otro")
+	for nombre, id := range map[string]int64{"otra carpeta": ajeno.ID, "video": video.ID, "enlace": enlace.ID, "inexistente": 9999} {
+		if w := ventanaT(s, "POST", ruta, cuerpo(id)); w.Code != 400 {
+			t.Fatalf("%s: %d, quería 400", nombre, w.Code)
+		}
+	}
+	if w := ventanaT(s, "POST", ruta, `no json`); w.Code != 400 {
+		t.Fatalf("JSON inválido: %d", w.Code)
+	}
+
+	sinCarpeta := crearSesionT(t, s, `{"nombre":"S","modo":"dibujo"}`)
+	w := ventanaT(s, "POST", rutaAdj(sinCarpeta.ID, "/desde-recurso"), cuerpo(img.ID))
+	if w.Code != 409 || !strings.Contains(w.Body.String(), "La sesión no tiene carpeta") {
+		t.Fatalf("sin carpeta: %d %s", w.Code, w.Body.String())
+	}
+}
