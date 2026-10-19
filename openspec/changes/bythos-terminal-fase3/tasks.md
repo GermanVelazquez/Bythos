@@ -46,10 +46,10 @@ Notes: strategy already chosen, so apply proceeds with PR 1. Apply measures the 
 
 Satisfies: TS Revisar (5 scenarios) (D1, D2).
 
-- [ ] 1.1 Runtime check R1 (first task): in the real app, paste the template through the WebSocket path into Claude Code, Codex, OpenCode and pwsh; confirm the text lands unsubmitted (no Enter). Fallback if any CLI submits or mangles it: shorter template plus a documented caveat in the PR. Record results in the PR description and adjust 1.3. (R1)
-- [ ] 1.2 Modify `T/conexionPty.js` (near lines 87-89): expose a `pegar(texto)` path that returns `false` when `conexion.abierta()` is false, otherwise calls `term.paste`. Strip C0 control characters and DEL. (D1, D2)
-- [ ] 1.3 Modify `T/PanelTerminal.jsx` (line ~49): `escribirRef` exposing the paste; sanitize id with `/^\d{1,12}$/`; template "Revisa la pizarra de la sesión ${id}: léela con pizarra_leer y marca cada paso con pizarra_marcar según las reglas de tutor."; order vaciar → paste → focus; no Enter. (D1, D2; TS Revisar sends, Not connected)
-- [ ] 1.4 Modify `T/PanelSesion.jsx`: "Revisar" button wired to `escribirRef`; when not connected show "La terminal no está conectada: no se escribió el pedido." and write nothing. (D2; TS Not connected)
+- [ ] 1.1 (manual, see M.1) Runtime check R1 (first task): in the real app, paste the template through the WebSocket path into Claude Code, Codex, OpenCode and pwsh; confirm the text lands unsubmitted (no Enter). Fallback if any CLI submits or mangles it: shorter template plus a documented caveat in the PR. Record results in the PR description and adjust 1.3. (R1)
+- [x] 1.2 Modify `T/conexionPty.js` (near lines 87-89): expose a `pegar(texto)` path that returns `false` when `conexion.abierta()` is false, otherwise calls `term.paste`. Strip C0 control characters and DEL. (D1, D2)
+- [x] 1.3 Modify `T/PanelTerminal.jsx` (line ~49): `escribirRef` exposing the paste; sanitize id with `/^\d{1,12}$/`; template "Revisa la pizarra de la sesión ${id}: léela con pizarra_leer y marca cada paso con pizarra_marcar según las reglas de tutor."; order vaciar → paste → focus; no Enter. (D1, D2; TS Revisar sends, Not connected)
+- [x] 1.4 Modify `T/PanelSesion.jsx`: "Revisar" button wired to `escribirRef`; when not connected show "La terminal no está conectada: no se escribió el pedido." and write nothing. (D2; TS Not connected)
 - [ ] 1.5 Verify: `pnpm build`, `git checkout -- desktop/ui/dist/.gitkeep`; `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...`. Manual: M.1, M.2.
 - [ ] 1.6 Open PR1 (base `master`) with the chain diagram, R1 results, M.1, M.2.
 
