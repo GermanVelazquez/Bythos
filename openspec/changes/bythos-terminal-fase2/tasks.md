@@ -123,11 +123,11 @@ Satisfies: WT leer_imagen, leer_archivo, Agent Reads On Request, Attachment Tool
 
 Satisfies: WA Guardar en carpeta, Pick folder resource, Session without folder (Interfaces). Needs only PR1b functionally.
 
-- [ ] 5a.1 RED: `D/db` lookup test for a resource by `(carpeta_id, archivo_id)` (found, not found). Create the lookup in `D/db/archivos.go`. (WA: Duplicate in folder)
-- [ ] 5a.2 RED: `D/api/adjuntos_test.go`: `POST .../{adj}/guardar` creates a resource in the session's folder -> 201 and the attachment stays; identical content already in the folder -> 200 with the existing resource, no duplicate; session without folder -> 409 "La sesión no tiene carpeta"; uploading a file never creates a resource (no automatic save). (WA: Manual save, No automatic save, Duplicate in folder, Session without folder)
-- [ ] 5a.3 RED: `POST sesiones/{id}/adjuntos/desde-recurso {recurso_id}`: resource in the session's folder -> 201 link; resource of another folder -> 400; video resource -> 400; session without folder -> 409; same resource twice -> one link. (WA: Pick folder resource, Session without folder)
-- [ ] 5a.4 Implement both handlers in `D/api/adjuntos.go` under the Ventana guard (foreign/empty Origin -> 403) and wire in `D/api/server.go`. (Interfaces)
-- [ ] 5a.5 Verify: `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...`.
+- [x] 5a.1 RED: `D/db` lookup test for a resource by `(carpeta_id, archivo_id)` (found, not found). Create the lookup in `D/db/archivos.go`. (WA: Duplicate in folder)
+- [x] 5a.2 RED: `D/api/adjuntos_test.go`: `POST .../{adj}/guardar` creates a resource in the session's folder -> 201 and the attachment stays; identical content already in the folder -> 200 with the existing resource, no duplicate; session without folder -> 409 "La sesión no tiene carpeta"; uploading a file never creates a resource (no automatic save). (WA: Manual save, No automatic save, Duplicate in folder, Session without folder)
+- [x] 5a.3 RED: `POST sesiones/{id}/adjuntos/desde-recurso {recurso_id}`: resource in the session's folder -> 201 link; resource of another folder -> 400; video resource -> 400; session without folder -> 409; same resource twice -> one link. (WA: Pick folder resource, Session without folder)
+- [x] 5a.4 Implement both handlers in `D/api/adjuntos.go` under the Ventana guard (foreign/empty Origin -> 403) and wire in `D/api/server.go`. (Interfaces)
+- [x] 5a.5 Verify: `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...`.
 - [ ] 5a.6 Open PR5a (base PR4b branch).
 
 ## PR5b: Card open, selection toolbar, folder picker (branch `feat/bythos-terminal-fase2-05b-ui-acciones`, base `feat/bythos-terminal-fase2-05a-carpeta-api`)
