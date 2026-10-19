@@ -141,6 +141,19 @@ func ContarRecursosPorArchivo(base *sql.DB, archivoID int64) (int, error) {
 	return n, err
 }
 
+// ContarReferenciasArchivo cuenta TODO lo que mantiene vivo un archivo:
+// recursos de la biblioteca más adjuntos de sesiones de Terminal. Es lo que
+// debe consultar el caller antes de borrar el blob (design D2): contar solo
+// recursos borraría un blob que una pizarra todavía usa.
+func ContarReferenciasArchivo(base *sql.DB, archivoID int64) (int, error) {
+	var n int
+	err := base.QueryRow(
+		`SELECT (SELECT COUNT(*) FROM resources WHERE archivo_id = ?)
+		      + (SELECT COUNT(*) FROM terminal_adjuntos WHERE archivo_id = ?)`,
+		archivoID, archivoID).Scan(&n)
+	return n, err
+}
+
 // BorrarArchivo elimina la fila de metadatos. NO toca el disco: eso es
 // archivos.Eliminar, que el caller llama por separado (mismo principio
 // que todo db/: memoria tonta, nunca I/O de archivos).

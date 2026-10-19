@@ -385,7 +385,9 @@ func recursosConArchivo(base *sql.DB, rs []db.Recurso) []recursoJSON {
 // el borrado que ya sucedió: solo queda log, mismo criterio que
 // registrarEvento.
 func (s *Servidor) limpiarArchivoSiHuerfano(archivoID int64) {
-	n, err := db.ContarRecursosPorArchivo(s.Base, archivoID)
+	// Cuenta recursos Y adjuntos de sesiones: un blob que una pizarra usa
+	// no es huérfano aunque ya no quede ningún recurso (design D2).
+	n, err := db.ContarReferenciasArchivo(s.Base, archivoID)
 	if err != nil {
 		logAvisoArchivo("No se pudo contar referencias del archivo:", err)
 		return
@@ -397,14 +399,17 @@ func (s *Servidor) limpiarArchivoSiHuerfano(archivoID int64) {
 	if err != nil || !ok {
 		return
 	}
+	// Primero la fila: si entre el conteo y acá una sesión adjuntó el
+	// archivo, la FK de terminal_adjuntos frena el borrado y el blob queda.
+	if err := db.BorrarArchivo(s.Base, archivoID); err != nil {
+		logAvisoArchivo("No se pudo borrar los metadatos del archivo:", err)
+		return
+	}
 	if err := archivos.Eliminar(a.Ruta); err != nil {
 		logAvisoArchivo("No se pudo borrar el blob del archivo:", err)
 	}
 	if err := archivos.EliminarMiniatura(a.SHA256); err != nil {
 		logAvisoArchivo("No se pudo borrar la miniatura cacheada del archivo:", err)
-	}
-	if err := db.BorrarArchivo(s.Base, archivoID); err != nil {
-		logAvisoArchivo("No se pudo borrar los metadatos del archivo:", err)
 	}
 }
 
