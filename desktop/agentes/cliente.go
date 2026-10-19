@@ -21,6 +21,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -196,4 +199,49 @@ func (c *Cliente) obtenerTexto(ctx context.Context, ruta string) (string, error)
 		return "", err
 	}
 	return string(datos), nil
+}
+
+// rutaAdjunto arma la ruta de las rutas del agente de un adjunto, con la
+// sesión elegida y la pista del entorno (BYTHOS_SESION).
+func (c *Cliente) rutaAdjunto(adjunto int64, vista string, sesionID *int64) string {
+	q := url.Values{}
+	if sesionID != nil {
+		q.Set("sesion_id", strconv.FormatInt(*sesionID, 10))
+	}
+	if p := pistaEntorno(); p != "" {
+		q.Set("pista", p)
+	}
+	return "/api/terminal/adjuntos/" + strconv.FormatInt(adjunto, 10) + "/" + vista + "?" + q.Encode()
+}
+
+// cabeceraImagen son los datos X-Bythos-* de una imagen adjunta. Mime vacío
+// significa que la app no mandó bytes (imagen demasiado grande): el cuerpo es JSON.
+type cabeceraImagen struct {
+	Mime, Nombre, Tipo, Ruta string
+	ID, Tamano               int64
+}
+
+// imagenAdjunto pide la imagen de un adjunto: bytes + cabeceras.
+func (c *Cliente) imagenAdjunto(ctx context.Context, adjunto int64, sesionID *int64) ([]byte, cabeceraImagen, error) {
+	datos, h, err := c.hacer(ctx, c.http(), http.MethodGet, c.rutaAdjunto(adjunto, "imagen", sesionID), nil)
+	if err != nil {
+		return nil, cabeceraImagen{}, err
+	}
+	mime := h.Get("Content-Type")
+	if !strings.HasPrefix(mime, "image/") {
+		return datos, cabeceraImagen{}, nil
+	}
+	desescapar := func(clave string) string {
+		v, err := url.QueryUnescape(h.Get(clave))
+		if err != nil {
+			return h.Get(clave)
+		}
+		return v
+	}
+	id, _ := strconv.ParseInt(h.Get("X-Bythos-Adjunto"), 10, 64)
+	tamano, _ := strconv.ParseInt(h.Get("X-Bythos-Tamano"), 10, 64)
+	return datos, cabeceraImagen{
+		Mime: mime, Nombre: desescapar("X-Bythos-Nombre"), Tipo: h.Get("X-Bythos-Tipo"),
+		Ruta: desescapar("X-Bythos-Ruta"), ID: id, Tamano: tamano,
+	}, nil
 }

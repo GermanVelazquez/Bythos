@@ -23,7 +23,7 @@ import (
 const Instrucciones = "Bythos es un gestor de recursos de estudio (links + progreso + " +
 	"agenda). Estas herramientas hablan por HTTP con la app real: si no responden, " +
 	"es porque Bythos no está abierto en la PC del usuario. " +
-	workspace.ReglaBiblioteca + " " + workspace.ReglaPizarra
+	workspace.ReglaBiblioteca + " " + workspace.ReglaPizarra + " " + workspace.ReglaAdjuntos
 
 // NuevoServidor arma el servidor MCP con el cliente HTTP dado. Separado
 // de Ejecutar para que los tests puedan armar un servidor con un cliente
@@ -38,6 +38,7 @@ func NuevoServidor(c *Cliente, version string) *mcp.Server {
 	RegistrarLectura(s, c)
 	RegistrarEscritura(s, c)
 	RegistrarPizarra(s, c)
+	RegistrarAdjuntos(s, c)
 	return s
 }
 

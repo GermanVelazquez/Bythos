@@ -12,7 +12,7 @@ import (
 )
 
 func TestInstruccionesMCPTraenAmbasReglas(t *testing.T) {
-	for _, frase := range []string{workspace.ReglaBiblioteca, workspace.ReglaPizarra} {
+	for _, frase := range []string{workspace.ReglaBiblioteca, workspace.ReglaPizarra, workspace.ReglaAdjuntos} {
 		if !strings.Contains(agentes.Instrucciones, frase) {
 			t.Fatalf("Instructions sin la frase %q", frase)
 		}
