@@ -393,10 +393,11 @@ func validarElemento(el json.RawMessage, permitidos map[string]bool) (borrado, o
 		if json.Unmarshal(v, &datos) != nil || !clavesExactas(datos, "sha256", "bythos") {
 			return false, false
 		}
-		// D11: una marca nunca referencia un adjunto, ni siquiera uno propio.
+		// D11: una marca nunca referencia un adjunto (sha256 ni fileId), ni siquiera uno propio.
 		var etiqueta string
 		json.Unmarshal(datos["bythos"], &etiqueta)
-		if _, trae := datos["sha256"]; trae && etiqueta == "marca" {
+		_, conArchivo := m["fileId"]
+		if _, trae := datos["sha256"]; (trae || conArchivo) && etiqueta == "marca" {
 			return false, false
 		}
 		if sha, hay := datos["sha256"]; hay && !referenciaPermitida(sha, permitidos) {

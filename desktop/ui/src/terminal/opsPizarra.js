@@ -60,8 +60,9 @@ function convertir(esqueletos) {
   return convertirElementos(lista).map((e) => (trazos.has(e.id) ? comoTrazo(e) : e))
 }
 
-// Marca del agente: por customData o, si Excalidraw lo perdió (R2), por el prefijo del id.
-export const esMarca = (e) => e?.customData?.bythos === 'marca' || String(e?.id ?? '').startsWith('marca-')
+// Marca del agente: por customData o, si Excalidraw lo perdió (R2), por el id completo
+// que genera el servidor (marca-<10>-m|t); un id de usuario que solo empiece igual no cuenta.
+export const esMarca = (e) => e?.customData?.bythos === 'marca' || /^marca-[A-Za-z0-9_-]{10}-[mt]$/.test(String(e?.id ?? ''))
 
 const nueva = (el, cambios) => ({
   ...el, ...cambios, version: (el.version ?? 0) + 1, versionNonce: Math.floor(Math.random() * 2 ** 31), updated: Date.now(),

@@ -260,6 +260,7 @@ func TestReducirEscenaValidaReferenciasContraAdjuntos(t *testing.T) {
 		{"marca legítima sin sha256", `{"type":"rectangle","customData":{"bythos":"marca","veredicto":"ok","clave":"area:x"}}`, true},
 		{"marca con sha256 ajeno", `{"type":"rectangle","customData":{"bythos":"marca","sha256":"` + ajeno + `"}}`, false},
 		{"marca con sha256 de adjunto propio", `{"type":"rectangle","customData":{"bythos":"marca","sha256":"` + propio + `"}}`, false},
+		{"marca con fileId de adjunto propio", `{"type":"image","fileId":"` + propio + `","customData":{"bythos":"marca"}}`, false},
 		{"marca con Bythos en mayúsculas", `{"type":"rectangle","customData":{"Bythos":"marca","sha256":"` + propio + `"}}`, false},
 		{"marca con BYTHOS y bythos duplicados", `{"type":"rectangle","customData":{"bythos":"adjunto","BYTHOS":"marca","sha256":"` + propio + `"}}`, false},
 		{"tarjeta de adjunto heredada", `{"type":"rectangle","customData":{"bythos":"adjunto","sha256":"` + propio + `"}}`, true},
