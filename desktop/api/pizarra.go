@@ -27,6 +27,8 @@ import (
 )
 
 const (
+	limiteAck            = 2 << 20   // el ack con inversa se lee con su propio techo (D13)
+	topeInversa          = 512 << 10 // una inversa mayor se descarta: el lote queda sin deshacer
 	esperaOpsDefecto     = 8 * time.Second
 	esperaCapturaDefecto = 15 * time.Second
 	vigenciaLatido       = 3 * time.Second // sin latido en este tiempo, la pizarra no está montada
@@ -202,6 +204,7 @@ func (s *Servidor) rutasPizarra(mux *http.ServeMux) {
 	mux.HandleFunc("POST "+p+"pizarra/captura", conAgente(s.pedirCaptura))
 	mux.HandleFunc("POST "+p+"latido", conVentana(s.latido))
 	mux.HandleFunc("POST "+p+"pizarra/ops/{id}/ack", conVentana(s.ackOp))
+	mux.HandleFunc("GET "+p+"sesiones/{id}/cambios", conVentanaLectura(s.listarCambios))
 	mux.HandleFunc("POST "+p+"pizarra/capturas/{id}", conVentana(s.subirCaptura))
 }
 
@@ -302,15 +305,7 @@ func (s *Servidor) ackOp(w http.ResponseWriter, r *http.Request) {
 		responderError(w, 404, "Operación no encontrada")
 		return
 	}
-	var b struct {
-		OK    bool     `json:"ok"`
-		IDs   []string `json:"ids"`
-		Error string   `json:"error"`
-	}
-	if err := leerJSON(w, r, &b); err != nil {
-		responderError(w, 400, "JSON inválido")
-		return
-	}
+	b, inversa, versiones := leerAck(r)
 	if b.IDs == nil {
 		b.IDs = []string{}
 	}
@@ -319,7 +314,7 @@ func (s *Servidor) ackOp(w http.ResponseWriter, r *http.Request) {
 		j, _ := json.Marshal(map[string][]string{"ids": b.IDs})
 		resultado = string(j)
 	}
-	sesion, err := db.ResponderOp(s.Base, id, b.OK, resultado)
+	sesion, op, err := db.ResponderOpHistorial(s.Base, id, b.OK, resultado, inversa, versiones)
 	switch {
 	case errors.Is(err, db.ErrOpNoPendiente):
 		responderError(w, http.StatusConflict, "La operación ya no está pendiente")
@@ -333,7 +328,11 @@ func (s *Servidor) ackOp(w http.ResponseWriter, r *http.Request) {
 	}
 	if b.OK {
 		// Las ops solo las encola un agente (ruta Agente): el evento es suyo aunque el ack venga de la UI.
-		if err := db.RegistrarEvento(s.Base, db.OrigenAgente, "", db.AccionPizarraEditada, sesion, fmt.Sprintf("pizarra_dibujar · %d elementos", len(b.IDs))); err != nil {
+		detalle := fmt.Sprintf("pizarra_dibujar · %d elementos", len(b.IDs))
+		if tipo, n := pizarra.Describir(op); tipo == "marcas" {
+			detalle = fmt.Sprintf("pizarra_marcar · %d elementos de marcas", n)
+		}
+		if err := db.RegistrarEvento(s.Base, db.OrigenAgente, "", db.AccionPizarraEditada, sesion, detalle); err != nil {
 			log.Println("No se pudo registrar evento de historial:", err)
 		}
 	}
@@ -655,4 +654,63 @@ func adjuntosEnPizarra(s *Servidor, sesionID int64, escena []byte, elementos []p
 		elementos[i].Adjunto = porSHA[elementos[i].SHA]
 	}
 	return salida, nil
+}
+
+type ackOpBody struct {
+	OK          bool            `json:"ok"`
+	IDs         []string        `json:"ids"`
+	Error       string          `json:"error"`
+	Inversa     json.RawMessage `json:"inversa"`
+	Versiones   json.RawMessage `json:"versiones"`
+	SinDeshacer bool            `json:"sin_deshacer"`
+}
+
+// leerAck lee el ack con su propio techo de 2 MiB (no el de 1 MiB de leerJSON:
+// rechazarlo dejaría vencer la op). Devuelve también la inversa y las versiones
+// a guardar; nil (NULL) si no vienen, si el lote es sin_deshacer o si la
+// inversa pasa de 512 KiB. Un body de más de 2 MiB no se puede leer: se toma
+// como aplicado sin ids ni inversa, para que la op igual se complete.
+func leerAck(r *http.Request) (b ackOpBody, inversa, versiones *string) {
+	datos, err := io.ReadAll(io.LimitReader(r.Body, limiteAck+1))
+	if err == nil && len(datos) > limiteAck {
+		return ackOpBody{OK: true}, nil, nil
+	}
+	if err := json.Unmarshal(datos, &b); err != nil {
+		return ackOpBody{}, nil, nil
+	}
+	guardar := func(crudo json.RawMessage, tope int) *string {
+		if b.SinDeshacer || len(crudo) == 0 || len(crudo) > tope || string(crudo) == "null" {
+			return nil
+		}
+		s := string(crudo)
+		return &s
+	}
+	inversa = guardar(b.Inversa, topeInversa)
+	if inversa != nil {
+		versiones = guardar(b.Versiones, limiteAck)
+	}
+	return b, inversa, versiones
+}
+
+// listarCambios (GET sesiones/{id}/cambios): los lotes del agente con su
+// estado de deshacer, sin la inversa (D17).
+func (s *Servidor) listarCambios(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		responderError(w, 404, "Sesión no encontrada")
+		return
+	}
+	if _, ok, err := db.ObtenerSesion(s.Base, id); err != nil {
+		responderError(w, 500, "No se pudo leer la sesión")
+		return
+	} else if !ok {
+		noExiste(w, id)
+		return
+	}
+	lista, err := db.ListarCambios(s.Base, id)
+	if err != nil {
+		responderError(w, 500, "No se pudieron leer los cambios")
+		return
+	}
+	responder(w, lista)
 }

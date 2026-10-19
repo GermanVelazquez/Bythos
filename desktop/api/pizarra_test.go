@@ -6,6 +6,7 @@ package api
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -545,5 +546,101 @@ func TestMarcasGuardaAgente(t *testing.T) {
 	}
 	if rec := pedirTerminal(s, "POST", "pizarra/marcas", cuerpo, ""); rec.Code != 200 {
 		t.Errorf("sin Origin = %d, el agente lo admite", rec.Code)
+	}
+}
+
+// --- historial del agente: ack con inversa y GET cambios ---
+
+func columnasOp(s *Servidor, id int64) (inversa, versiones sql.NullString, estado string) {
+	s.Base.QueryRow(`SELECT inversa, versiones, estado FROM terminal_pizarra_ops WHERE id = ?`, id).Scan(&inversa, &versiones, &estado)
+	return
+}
+
+func TestAckGuardaInversaYVersiones(t *testing.T) {
+	s := basePrueba(t)
+	se, _ := db.CrearSesion(s.Base, "A", "dibujo", nil)
+	id, _ := db.EncolarOp(s.Base, se.ID, `[{"accion":"borrar","ids":["a"]}]`)
+	cuerpo := `{"ok":true,"ids":["a"],"inversa":{"restaurar":[{"id":"a"}],"quitar":[]},"versiones":{"a":[2,9]}}`
+	if rec := ack(s, id, cuerpo); rec.Code != 200 {
+		t.Fatalf("ack: %d %s", rec.Code, rec.Body.String())
+	}
+	inv, ver, _ := columnasOp(s, id)
+	if inv.String != `{"restaurar":[{"id":"a"}],"quitar":[]}` || ver.String != `{"a":[2,9]}` {
+		t.Fatalf("guardado = %q %q", inv.String, ver.String)
+	}
+}
+
+func TestAckSinInversaOSinDeshacerGuardaNull(t *testing.T) {
+	s := basePrueba(t)
+	se, _ := db.CrearSesion(s.Base, "A", "dibujo", nil)
+	for _, cuerpo := range []string{
+		`{"ok":true,"ids":["a"]}`, // ack de la versión anterior de la UI
+		`{"ok":true,"ids":["a"],"inversa":null,"sin_deshacer":true}`,
+		`{"ok":true,"ids":["a"],"inversa":{"quitar":["a"]},"sin_deshacer":true}`,
+	} {
+		id, _ := db.EncolarOp(s.Base, se.ID, `[]`)
+		if rec := ack(s, id, cuerpo); rec.Code != 200 {
+			t.Fatalf("ack %s: %d", cuerpo, rec.Code)
+		}
+		if inv, ver, est := columnasOp(s, id); inv.Valid || ver.Valid || est != "aplicada" {
+			t.Errorf("%s: inversa=%v versiones=%v estado=%s", cuerpo, inv, ver, est)
+		}
+	}
+}
+
+func TestAckConInversaGrandeGuardaNullYCompleta(t *testing.T) {
+	s := basePrueba(t)
+	se, _ := db.CrearSesion(s.Base, "A", "dibujo", nil)
+	// 600 KiB de inversa: pasa el lector de 2 MiB pero supera el tope de 512 KiB.
+	grande := fmt.Sprintf(`{"ok":true,"ids":["a"],"inversa":{"quitar":["%s"]},"versiones":{"a":[1,1]}}`, strings.Repeat("x", 600<<10))
+	id, _ := db.EncolarOp(s.Base, se.ID, `[]`)
+	if rec := ack(s, id, grande); rec.Code != 200 {
+		t.Fatalf("ack grande: %d", rec.Code)
+	}
+	if inv, ver, est := columnasOp(s, id); inv.Valid || ver.Valid || est != "aplicada" {
+		t.Fatalf("inversa=%v versiones=%v estado=%s", inv.Valid, ver.Valid, est)
+	}
+	// Body de más de 2 MiB: tampoco se rechaza (la op vencería); queda sin inversa.
+	enorme := fmt.Sprintf(`{"ok":true,"ids":["a"],"inversa":{"quitar":["%s"]}}`, strings.Repeat("x", 3<<20))
+	id2, _ := db.EncolarOp(s.Base, se.ID, `[]`)
+	if rec := ack(s, id2, enorme); rec.Code != 200 {
+		t.Fatalf("ack enorme: %d", rec.Code)
+	}
+	if inv, _, est := columnasOp(s, id2); inv.Valid || est != "aplicada" {
+		t.Fatalf("inversa=%v estado=%s", inv.Valid, est)
+	}
+}
+
+func TestAckDeMarcasRegistraEventoDeMarcas(t *testing.T) {
+	s := basePrueba(t)
+	se, _ := db.CrearSesion(s.Base, "A", "dibujo", nil)
+	id, _ := db.EncolarOp(s.Base, se.ID, `[{"accion":"agregar","elemento":{"id":"marca-x-m"}},{"accion":"agregar","elemento":{"id":"marca-x-t"}}]`)
+	ack(s, id, `{"ok":true,"ids":["marca-x-m","marca-x-t"]}`)
+	ev, _ := db.ListarEventos(s.Base, db.FiltroEventos{})
+	if len(ev) != 1 || !strings.Contains(ev[0].Detalle, "pizarra_marcar") || strings.Contains(ev[0].Detalle, "pizarra_dibujar") {
+		t.Fatalf("un lote de marcas no es un dibujo: %+v", ev)
+	}
+}
+
+func TestGetCambiosListaYGuarda(t *testing.T) {
+	s := basePrueba(t)
+	se, _ := db.CrearSesion(s.Base, "A", "dibujo", nil)
+	id, _ := db.EncolarOp(s.Base, se.ID, `[{"accion":"borrar","ids":["a","b"]}]`)
+	ack(s, id, `{"ok":true,"ids":["a","b"],"inversa":{"quitar":[]},"versiones":{}}`)
+	ruta := fmt.Sprintf("sesiones/%d/cambios", se.ID)
+	rec := pedirTerminal(s, "GET", ruta, "", "", "Sec-Fetch-Site", "same-origin")
+	var lista []map[string]any
+	json.Unmarshal(rec.Body.Bytes(), &lista)
+	if rec.Code != 200 || len(lista) != 1 || lista[0]["estado"] != "deshacible" || lista[0]["tipo"] != "dibujo" || lista[0]["elementos"] != float64(2) || lista[0]["inversa"] != nil {
+		t.Fatalf("cambios: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := pedirTerminal(s, "GET", ruta, "", "", "Sec-Fetch-Site", "cross-site"); rec.Code != 403 {
+		t.Errorf("cross-site = %d, debía ser 403", rec.Code)
+	}
+	if rec := pedirTerminal(s, "GET", ruta, "", "chrome-extension://abcdef"); rec.Code != 403 {
+		t.Errorf("Origin de extensión = %d, debía ser 403", rec.Code)
+	}
+	if rec := pedirTerminal(s, "GET", "sesiones/999/cambios", "", ""); rec.Code != 404 {
+		t.Errorf("sesión inexistente = %d, debía ser 404", rec.Code)
 	}
 }
