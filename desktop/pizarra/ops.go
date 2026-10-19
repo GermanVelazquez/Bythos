@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"regexp"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -45,6 +46,8 @@ type Elemento struct {
 	Puntos [][2]float64 `json:"puntos,omitempty"`
 	Desde  string       `json:"desde,omitempty"`
 	Hasta  string       `json:"hasta,omitempty"`
+	// Datos solo lo fija el servidor (marcas, design D4): Validar lo rechaza si lo manda el agente.
+	Datos *DatosMarca `json:"datos,omitempty"`
 }
 
 // Op es un verbo de pizarra_dibujar: agregar{elemento}, actualizar{id,cambios},
@@ -84,6 +87,9 @@ func validarOp(op Op) error {
 		if op.Elemento.Tipo == "" {
 			return fmt.Errorf("el elemento necesita tipo")
 		}
+		if err := rechazarReservado(*op.Elemento); err != nil {
+			return err
+		}
 		return validarElemento(*op.Elemento)
 	case "actualizar":
 		if !idValido.MatchString(op.ID) {
@@ -91,6 +97,9 @@ func validarOp(op Op) error {
 		}
 		if op.Cambios == nil {
 			return fmt.Errorf("actualizar necesita cambios")
+		}
+		if err := rechazarReservado(*op.Cambios); err != nil {
+			return err
 		}
 		return validarElemento(*op.Cambios)
 	case "borrar":
@@ -108,6 +117,18 @@ func validarOp(op Op) error {
 		return rango("dy", *op.DY, -MaxCoord, MaxCoord)
 	}
 	return fmt.Errorf("acción desconocida %q (usa agregar, actualizar, borrar o mover)", op.Accion)
+}
+
+// rechazarReservado impide que el agente falsifique marcas: ni `datos` ni ids con
+// el prefijo reservado (design D4).
+func rechazarReservado(e Elemento) error {
+	if e.Datos != nil {
+		return fmt.Errorf("el campo datos no está permitido")
+	}
+	if strings.HasPrefix(e.ID, prefijoMarca) {
+		return fmt.Errorf("los ids que empiezan con %q están reservados", prefijoMarca)
+	}
+	return nil
 }
 
 func validarIDs(ids []string) error {
