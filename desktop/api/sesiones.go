@@ -245,8 +245,10 @@ func (s *Servidor) leerPizarra(w http.ResponseWriter, r *http.Request) {
 }
 
 // reducirEscena deja solo {elements (sin isDeleted), appState:{viewBackgroundColor},
-// files:{}} (design D10). ok false = imágenes o JSON inválido (400).
-func reducirEscena(raw json.RawMessage) (string, bool) {
+// files:{}} (design D10). permitidos = sha256 de los adjuntos de la sesión (D9):
+// ok false = JSON inválido, imagen o tarjeta que no apunta a un adjunto propio,
+// o embeddable/iframe (400, falla cerrado).
+func reducirEscena(raw json.RawMessage, permitidos map[string]bool) (string, bool) {
 	var e struct {
 		Elements []json.RawMessage `json:"elements"`
 		AppState struct {
@@ -258,14 +260,11 @@ func reducirEscena(raw json.RawMessage) (string, bool) {
 	}
 	elementos := make([]json.RawMessage, 0, len(e.Elements))
 	for _, el := range e.Elements {
-		var meta struct {
-			Tipo    string `json:"type"`
-			Borrado bool   `json:"isDeleted"`
-		}
-		if json.Unmarshal(el, &meta) != nil || meta.Tipo == "image" {
+		borrado, ok := validarElemento(el, permitidos)
+		if !ok {
 			return "", false
 		}
-		if !meta.Borrado {
+		if !borrado {
 			elementos = append(elementos, el)
 		}
 	}
@@ -298,9 +297,18 @@ func (s *Servidor) guardarPizarra(w http.ResponseWriter, r *http.Request) {
 		responderError(w, 400, "JSON inválido. Manda {\"escena\":{...},\"version\":N}")
 		return
 	}
-	escena, ok := reducirEscena(body.Escena)
+	adjuntos, err := db.ListarAdjuntos(s.Base, id)
+	if err != nil {
+		responderError(w, 500, "No se pudo leer la pizarra")
+		return
+	}
+	permitidos := make(map[string]bool, len(adjuntos))
+	for _, a := range adjuntos {
+		permitidos[a.SHA256] = true
+	}
+	escena, ok := reducirEscena(body.Escena, permitidos)
 	if !ok {
-		responderError(w, 400, "Escena inválida: no se admiten imágenes")
+		responderError(w, 400, "Escena inválida: referencia imágenes o tarjetas que no son adjuntos de esta sesión")
 		return
 	}
 	nueva, err := db.GuardarPizarra(s.Base, id, escena, body.Version)
@@ -332,4 +340,62 @@ func (s *Servidor) entornoTerminal(w http.ResponseWriter, r *http.Request) {
 		"engram":   errEngram == nil,
 		"sesiones": vivas,
 	})
+}
+
+// clavesExactas: encoding/json compara claves sin distinguir mayúsculas y JS
+// no; una clave que solo difiere en mayúsculas de las leídas es ambigua (400).
+func clavesExactas(m map[string]json.RawMessage, leidas ...string) bool {
+	for k := range m {
+		for _, l := range leidas {
+			if k != l && strings.EqualFold(k, l) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// referenciaPermitida: el valor debe ser un string presente en permitidos.
+func referenciaPermitida(v json.RawMessage, permitidos map[string]bool) bool {
+	var s string
+	return json.Unmarshal(v, &s) == nil && permitidos[s]
+}
+
+// validarElemento lee solo las claves exactas type, fileId, isDeleted y
+// customData.sha256 (D9). Falla cerrado: fileId o sha256 presentes en cualquier
+// tipo deben ser adjuntos propios. Lista de denegados, no de permitidos, para
+// no romper escenas heredadas; `link` y `frame` se admiten (el enlace lo abre
+// el anfitrión con onLinkOpen y frame solo agrupa).
+func validarElemento(el json.RawMessage, permitidos map[string]bool) (borrado, ok bool) {
+	var m map[string]json.RawMessage
+	if json.Unmarshal(el, &m) != nil || !clavesExactas(m, "type", "fileId", "isDeleted", "customData") {
+		return false, false
+	}
+	var tipo string
+	json.Unmarshal(m["type"], &tipo)
+	if tipo == "embeddable" || tipo == "iframe" || tipo == "magicframe" {
+		return false, false
+	}
+	if v, hay := m["isDeleted"]; hay && json.Unmarshal(v, &borrado) != nil {
+		return false, false
+	}
+	if borrado {
+		return true, true
+	}
+	if v, hay := m["fileId"]; hay && !referenciaPermitida(v, permitidos) {
+		return false, false
+	}
+	if tipo == "image" && m["fileId"] == nil {
+		return false, false
+	}
+	if v, hay := m["customData"]; hay && string(v) != "null" {
+		var datos map[string]json.RawMessage
+		if json.Unmarshal(v, &datos) != nil || !clavesExactas(datos, "sha256") {
+			return false, false
+		}
+		if sha, hay := datos["sha256"]; hay && !referenciaPermitida(sha, permitidos) {
+			return false, false
+		}
+	}
+	return false, true
 }

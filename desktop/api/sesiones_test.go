@@ -231,3 +231,96 @@ func TestGuardaVentanaMutaciones(t *testing.T) {
 		t.Fatalf("una mutación rechazada creó sesiones: %+v", l)
 	}
 }
+
+func TestReducirEscenaValidaReferenciasContraAdjuntos(t *testing.T) {
+	propio := strings.Repeat("a", 64)
+	ajeno := strings.Repeat("b", 64)
+	permitidos := map[string]bool{propio: true}
+	casos := []struct {
+		nombre, escena string
+		ok             bool
+	}{
+		{"imagen propia", `{"type":"image","fileId":"` + propio + `"}`, true},
+		{"tarjeta propia", `{"type":"rectangle","customData":{"bythos":"adjunto","sha256":"` + propio + `"}}`, true},
+		{"imagen ajena", `{"type":"image","fileId":"` + ajeno + `"}`, false},
+		{"imagen sin fileId", `{"type":"image"}`, false},
+		{"tarjeta ajena", `{"type":"rectangle","customData":{"sha256":"` + ajeno + `"}}`, false},
+		{"embeddable", `{"type":"embeddable","link":"https://ejemplo.com"}`, false},
+		{"iframe", `{"type":"iframe"}`, false},
+		{"escena heredada", `{"type":"rectangle","customData":{"otro":1}}`, true},
+		{"type duplicado en mayúsculas", `{"type":"embeddable","Type":"rectangle"}`, false},
+		{"fileId duplicado en mayúsculas", `{"type":"image","fileId":"` + ajeno + `","FILEID":"` + propio + `"}`, false},
+		{"sha256 duplicado en mayúsculas", `{"type":"rectangle","customData":{"sha256":"` + ajeno + `","SHA256":"` + propio + `"}}`, false},
+		{"rectángulo con fileId ajeno", `{"type":"rectangle","fileId":"` + ajeno + `"}`, false},
+		{"sha256 vacío", `{"type":"rectangle","customData":{"sha256":""}}`, false},
+		{"fileId no string", `{"type":"image","fileId":5}`, false},
+		{"sha256 no string", `{"type":"rectangle","customData":{"sha256":5}}`, false},
+		{"magicframe", `{"type":"magicframe"}`, false},
+		{"enlace y frame heredados", `{"type":"frame","link":"https://ejemplo.com"}`, true},
+	}
+	for _, c := range casos {
+		salida, ok := reducirEscena(json.RawMessage(`{"elements":[`+c.escena+`]}`), permitidos)
+		if ok != c.ok {
+			t.Errorf("%s: ok = %v, quería %v", c.nombre, ok, c.ok)
+		}
+		if ok && !strings.Contains(salida, `"files":{}`) {
+			t.Errorf("%s: la escena guardada debe llevar files vacío: %s", c.nombre, salida)
+		}
+	}
+	// Elementos borrados no cuentan: una imagen ajena ya borrada se descarta sin error.
+	if salida, ok := reducirEscena(json.RawMessage(`{"elements":[{"type":"image","fileId":"`+ajeno+`","isDeleted":true}]}`), permitidos); !ok || strings.Contains(salida, ajeno) {
+		t.Errorf("imagen borrada: ok=%v %s", ok, salida)
+	}
+}
+
+func TestPizarraPutConAdjuntosPropiosAjenosYBytes(t *testing.T) {
+	s, se := prepararAdjuntos(t)
+	otra := crearSesionT(t, s, `{"nombre":"B","modo":"dibujo"}`)
+	propio := decodificarAdj(t, subirAdj(t, s, se.ID, origenUI, "a.png", pngAdj+"propio"))["sha256"].(string)
+	ajeno := decodificarAdj(t, subirAdj(t, s, otra.ID, origenUI, "b.png", pngAdj+"ajeno"))["sha256"].(string)
+	ruta := "sesiones/" + strconv.FormatInt(se.ID, 10) + "/pizarra"
+
+	ok := `{"version":0,"escena":{"elements":[{"id":"i","type":"image","fileId":"` + propio + `"}],"files":{"` + propio + `":{"dataURL":"data:x"}}}}`
+	if rec := ventanaT(s, "PUT", ruta, ok); rec.Code != 200 {
+		t.Fatalf("imagen propia: %d %s", rec.Code, rec.Body.String())
+	}
+	guardada, _, _, _ := db.ObtenerPizarra(s.Base, se.ID)
+	if strings.Contains(guardada, "dataURL") || !strings.Contains(guardada, `"files":{}`) {
+		t.Fatalf("los bytes no se descartaron: %s", guardada)
+	}
+	mal := `{"version":1,"escena":{"elements":[{"id":"i","type":"image","fileId":"` + ajeno + `"}]}}`
+	if rec := ventanaT(s, "PUT", ruta, mal); rec.Code != 400 {
+		t.Fatalf("imagen ajena debía dar 400, dio %d", rec.Code)
+	}
+	if despues, ver, _, _ := db.ObtenerPizarra(s.Base, se.ID); despues != guardada || ver != 1 {
+		t.Fatal("el 400 no debía tocar la escena guardada")
+	}
+}
+
+func TestBorrarSesionConservaArchivosYOtrasSesiones(t *testing.T) {
+	s, a := prepararAdjuntos(t)
+	b := crearSesionT(t, s, `{"nombre":"B","modo":"dibujo"}`)
+	subirAdj(t, s, a.ID, origenUI, "a.png", pngAdj+"comun")
+	subirAdj(t, s, b.ID, origenUI, "b.png", pngAdj+"comun")
+	solo := decodificarAdj(t, subirAdj(t, s, a.ID, origenUI, "solo.png", pngAdj+"solo de A"))["sha256"].(string)
+	if rec := ventanaT(s, "DELETE", "sesiones/"+strconv.FormatInt(a.ID, 10), ""); rec.Code != 200 {
+		t.Fatalf("borrar: %d %s", rec.Code, rec.Body.String())
+	}
+	if l, _ := db.ListarAdjuntos(s.Base, a.ID); len(l) != 0 {
+		t.Fatalf("quedaron %d vínculos de la sesión borrada", len(l))
+	}
+	lista, _ := db.ListarAdjuntos(s.Base, b.ID)
+	if len(lista) != 1 || blobsEnDisco(t) != 2 {
+		t.Fatalf("la otra sesión perdió el adjunto o se borró un blob: %d vínculos, %d blobs", len(lista), blobsEnDisco(t))
+	}
+	if _, ok, _ := db.ObtenerArchivo(s.Base, lista[0].ArchivoID); !ok {
+		t.Fatal("la fila de archivos debía quedar")
+	}
+	if _, ok, _ := db.ObtenerArchivoPorSHA256(s.Base, solo); !ok {
+		t.Fatal("la fila del adjunto exclusivo de A debía quedar")
+	}
+	rec := pedirTerminal(s, "GET", rutaAdj(b.ID, "/"+strconv.FormatInt(lista[0].ID, 10)+"/contenido"), "", "", "Sec-Fetch-Site", "same-origin")
+	if rec.Code != 200 {
+		t.Fatalf("contenido de la otra sesión: %d", rec.Code)
+	}
+}
