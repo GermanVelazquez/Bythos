@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"errors"
 	"testing"
 )
@@ -90,5 +91,190 @@ func TestSesionRecientePorActualizado(t *testing.T) {
 	base.Exec(`UPDATE terminal_sesiones SET actualizado = datetime('now','localtime','-1 hour') WHERE id = ?`, b.ID)
 	if s, ok, _ := SesionReciente(base); !ok || s.ID != a.ID {
 		t.Fatalf("reciente = %+v", s)
+	}
+}
+
+// --- historial del agente (inversa, retención, cambios) ---
+
+func columnasOps(t *testing.T, base *sql.DB) map[string]bool {
+	t.Helper()
+	rows, err := base.Query(`PRAGMA table_info(terminal_pizarra_ops)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	out := map[string]bool{}
+	for rows.Next() {
+		var cid, notnull, pk int
+		var nombre, tipo string
+		var dflt interface{}
+		rows.Scan(&cid, &nombre, &tipo, &notnull, &dflt, &pk)
+		out[nombre] = true
+	}
+	return out
+}
+
+func TestMigrarOpsHistorialAgregaColumnasEIdempotente(t *testing.T) {
+	base := basePrueba(t)
+	// Tabla vieja: sin las columnas nuevas, con una fila que debe sobrevivir.
+	base.Exec(`DROP TABLE terminal_pizarra_ops`)
+	base.Exec(`CREATE TABLE terminal_pizarra_ops (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		sesion_id INTEGER NOT NULL REFERENCES terminal_sesiones(id) ON DELETE CASCADE,
+		op TEXT NOT NULL DEFAULT '',
+		estado TEXT NOT NULL DEFAULT 'pendiente' CHECK(estado IN ('pendiente','aplicada','fallida','vencida')),
+		resultado TEXT NOT NULL DEFAULT '',
+		creado TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+		aplicado TEXT NULL
+	)`)
+	s, _ := CrearSesion(base, "A", "dibujo", nil)
+	base.Exec(`INSERT INTO terminal_pizarra_ops (sesion_id, op) VALUES (?, '[]')`, s.ID)
+	for i := 0; i < 2; i++ { // dos veces: idempotente
+		if err := crearTablaOps(base); err != nil {
+			t.Fatalf("crearTablaOps #%d: %v", i, err)
+		}
+	}
+	cols := columnasOps(t, base)
+	for _, c := range []string{"inversa", "versiones", "deshecho"} {
+		if !cols[c] {
+			t.Errorf("falta la columna %s", c)
+		}
+	}
+	var n int
+	base.QueryRow(`SELECT COUNT(*) FROM terminal_pizarra_ops`).Scan(&n)
+	if n != 1 {
+		t.Fatalf("la fila vieja debía sobrevivir: %d", n)
+	}
+}
+
+func TestResponderOpGuardaInversaYVersiones(t *testing.T) {
+	base := basePrueba(t)
+	s, _ := CrearSesion(base, "A", "dibujo", nil)
+	id, _ := EncolarOp(base, s.ID, `[{"accion":"borrar","ids":["a"]}]`)
+	inv, ver := `{"restaurar":[],"quitar":["a"]}`, `{"a":[1,7]}`
+	sid, op, err := ResponderOpHistorial(base, id, true, `{"ids":["a"]}`, &inv, &ver)
+	if err != nil || sid != s.ID || op != `[{"accion":"borrar","ids":["a"]}]` {
+		t.Fatalf("sid=%d op=%q err=%v", sid, op, err)
+	}
+	var gi, gv sql.NullString
+	base.QueryRow(`SELECT inversa, versiones FROM terminal_pizarra_ops WHERE id = ?`, id).Scan(&gi, &gv)
+	if gi.String != inv || gv.String != ver {
+		t.Fatalf("guardado = %q %q", gi.String, gv.String)
+	}
+}
+
+func TestResponderOpSinInversaGuardaNull(t *testing.T) {
+	base := basePrueba(t)
+	s, _ := CrearSesion(base, "A", "dibujo", nil)
+	id, _ := EncolarOp(base, s.ID, `[]`)
+	if _, err := ResponderOp(base, id, true, ""); err != nil {
+		t.Fatal(err)
+	}
+	var gi sql.NullString
+	base.QueryRow(`SELECT inversa FROM terminal_pizarra_ops WHERE id = ?`, id).Scan(&gi)
+	if gi.Valid {
+		t.Fatalf("un ack sin inversa guarda NULL: %q", gi.String)
+	}
+}
+
+func aplicarOp(t *testing.T, base *sql.DB, sesion int64, conInversa bool) int64 {
+	t.Helper()
+	id, _ := EncolarOp(base, sesion, `[{"accion":"borrar","ids":["a"]}]`)
+	var inv *string
+	if conInversa {
+		x := `{"restaurar":[],"quitar":["a"]}`
+		inv = &x
+	}
+	if _, _, err := ResponderOpHistorial(base, id, true, "", inv, nil); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+func existeOp(base *sql.DB, id int64) bool {
+	var n int
+	base.QueryRow(`SELECT COUNT(*) FROM terminal_pizarra_ops WHERE id = ?`, id).Scan(&n)
+	return n == 1
+}
+
+func TestRetencionDosTopesIndependientes(t *testing.T) {
+	base := basePrueba(t)
+	s, _ := CrearSesion(base, "A", "dibujo", nil)
+	otra, _ := CrearSesion(base, "B", "dibujo", nil)
+	primeraDeshacible := aplicarOp(t, base, s.ID, true)
+	primeraSin := aplicarOp(t, base, s.ID, false)
+	ajena := aplicarOp(t, base, otra.ID, true)
+	pendiente, _ := EncolarOp(base, s.ID, `[]`)
+	for i := 0; i < 55; i++ {
+		aplicarOp(t, base, s.ID, false) // no desalojan a las deshacibles
+	}
+	for i := 0; i < 49; i++ {
+		aplicarOp(t, base, s.ID, true)
+	}
+	if !existeOp(base, primeraDeshacible) {
+		t.Fatal("los lotes sin deshacer no desalojan a los deshacibles")
+	}
+	aplicarOp(t, base, s.ID, true) // la 51ª con inversa: la primera sale
+	if existeOp(base, primeraDeshacible) {
+		t.Fatal("la deshacible más vieja debía podarse al pasar de 50")
+	}
+	if existeOp(base, primeraSin) {
+		t.Fatal("la sin-deshacer más vieja debía podarse (tope propio de 50)")
+	}
+	if !existeOp(base, ajena) || !existeOp(base, pendiente) {
+		t.Fatal("no se poda otra sesión ni una pendiente")
+	}
+	var conInv, sinInv int
+	base.QueryRow(`SELECT COUNT(*) FROM terminal_pizarra_ops WHERE sesion_id = ? AND inversa IS NOT NULL`, s.ID).Scan(&conInv)
+	base.QueryRow(`SELECT COUNT(*) FROM terminal_pizarra_ops WHERE sesion_id = ? AND inversa IS NULL AND estado = 'aplicada'`, s.ID).Scan(&sinInv)
+	if conInv != 50 || sinInv != 50 {
+		t.Fatalf("con inversa=%d sin inversa=%d, ambos debían ser 50", conInv, sinInv)
+	}
+}
+
+func TestListarCambiosEstadosYOcultas(t *testing.T) {
+	base := basePrueba(t)
+	s, _ := CrearSesion(base, "A", "dibujo", nil)
+	deshacible := aplicarOp(t, base, s.ID, true)
+	deshecho := aplicarOp(t, base, s.ID, true)
+	base.Exec(`UPDATE terminal_pizarra_ops SET deshecho = datetime('now') WHERE id = ?`, deshecho)
+	sin := aplicarOp(t, base, s.ID, false)
+	marcas := `[{"accion":"agregar","elemento":{"id":"marca-x-m","tipo":"rectangle"}},{"accion":"agregar","elemento":{"id":"marca-x-t","tipo":"text"}}]`
+	idMarcas, _ := EncolarOp(base, s.ID, marcas)
+	x := `{"restaurar":[],"quitar":["marca-x-m","marca-x-t"]}`
+	ResponderOpHistorial(base, idMarcas, true, "", &x, nil)
+	venc, _ := EncolarOp(base, s.ID, `[]`)
+	base.Exec(`UPDATE terminal_pizarra_ops SET creado = datetime('now','localtime','-31 seconds') WHERE id = ?`, venc)
+	fall, _ := EncolarOp(base, s.ID, `[]`)
+	ResponderOp(base, fall, false, "error")
+	EncolarOp(base, s.ID, `[]`) // pendiente: oculta
+
+	lista, err := ListarCambios(base, s.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[int64]Cambio{}
+	for _, c := range lista {
+		got[c.ID] = c
+	}
+	quiero := map[int64]string{deshacible: "deshacible", deshecho: "deshecho", sin: "sin_deshacer", idMarcas: "deshacible", venc: "sin_deshacer"}
+	if len(lista) != len(quiero) {
+		t.Fatalf("lista = %+v, la fallida y la pendiente no se listan", lista)
+	}
+	for id, est := range quiero {
+		if got[id].Estado != est {
+			t.Errorf("op %d: estado %q, quería %q", id, got[id].Estado, est)
+		}
+	}
+	if c := got[idMarcas]; c.Tipo != "marcas" || c.Elementos != 2 {
+		t.Errorf("marcas = %+v", c)
+	}
+	if c := got[deshacible]; c.Tipo != "dibujo" || c.Elementos != 1 || c.Creado == "" {
+		t.Errorf("dibujo = %+v", c)
+	}
+	for i := 1; i < len(lista); i++ {
+		if lista[i-1].ID < lista[i].ID {
+			t.Fatal("más nuevo primero")
+		}
 	}
 }

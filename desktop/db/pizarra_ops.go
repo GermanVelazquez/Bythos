@@ -9,7 +9,13 @@ package db
 import (
 	"database/sql"
 	"errors"
+
+	"bythos-desktop/pizarra"
 )
+
+// topeHistorial: filas que se conservan por sesión en cada una de las dos
+// ramas de la retención (design D18).
+const topeHistorial = 50
 
 // ErrOpNoPendiente: el ack llegó para una op que ya no está pendiente
 // (ya respondida o vencida).
@@ -30,11 +36,48 @@ func crearTablaOps(base *sql.DB) error {
 			estado TEXT NOT NULL DEFAULT 'pendiente' CHECK(estado IN ('pendiente','aplicada','fallida','vencida')),
 			resultado TEXT NOT NULL DEFAULT '',
 			creado TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-			aplicado TEXT NULL
+			aplicado TEXT NULL,
+			inversa TEXT NULL,
+			versiones TEXT NULL,
+			deshecho TEXT NULL
 		);`,
 		`CREATE INDEX IF NOT EXISTS idx_pizarra_ops_sesion_estado ON terminal_pizarra_ops(sesion_id, estado);`,
 	} {
 		if _, err := base.Exec(q); err != nil {
+			return err
+		}
+	}
+	return migrarOpsHistorial(base)
+}
+
+// migrarOpsHistorial agrega inversa/versiones/deshecho (NULL) en bases
+// anteriores. PRAGMA table_info primero: ALTER falla si la columna existe y
+// así Abrir sigue idempotente (design D12).
+func migrarOpsHistorial(base *sql.DB) error {
+	rows, err := base.Query(`PRAGMA table_info(terminal_pizarra_ops)`)
+	if err != nil {
+		return err
+	}
+	tiene := map[string]bool{}
+	for rows.Next() {
+		var cid, notnull, pk int
+		var nombre, tipo string
+		var dflt interface{}
+		if err := rows.Scan(&cid, &nombre, &tipo, &notnull, &dflt, &pk); err != nil {
+			rows.Close()
+			return err
+		}
+		tiene[nombre] = true
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, c := range []string{"inversa", "versiones", "deshecho"} {
+		if tiene[c] {
+			continue
+		}
+		if _, err := base.Exec(`ALTER TABLE terminal_pizarra_ops ADD COLUMN ` + c + ` TEXT NULL`); err != nil {
 			return err
 		}
 	}
@@ -89,25 +132,100 @@ func ContarOpsPendientes(base *sql.DB, sesionID int64) (n int, err error) {
 
 // ResponderOp registra el ack (aplicada o fallida) y devuelve la sesión de la
 // op. ErrOpNoPendiente si ya no estaba pendiente; sql.ErrNoRows si no existe.
+// No guarda inversa: el lote queda "sin deshacer".
 func ResponderOp(base *sql.DB, id int64, aplicada bool, resultado string) (int64, error) {
+	sesion, _, err := ResponderOpHistorial(base, id, aplicada, resultado, nil, nil)
+	return sesion, err
+}
+
+// ResponderOpHistorial es ResponderOp con la inversa y las versiones del lote
+// (JSON; nil guarda NULL) y devuelve además el lote (op) para describirlo.
+// Tras el ack poda el historial de la sesión (D18).
+func ResponderOpHistorial(base *sql.DB, id int64, aplicada bool, resultado string, inversa, versiones *string) (int64, string, error) {
 	if err := barrerOps(base); err != nil {
-		return 0, err
+		return 0, "", err
 	}
 	estado := "fallida"
 	if aplicada {
 		estado = "aplicada"
 	}
 	var sesion int64
-	err := base.QueryRow(`UPDATE terminal_pizarra_ops SET estado = ?, resultado = ?, aplicado = datetime('now','localtime')
-		WHERE id = ? AND estado = 'pendiente' RETURNING sesion_id`, estado, resultado, id).Scan(&sesion)
+	var op string
+	err := base.QueryRow(`UPDATE terminal_pizarra_ops SET estado = ?, resultado = ?, inversa = ?, versiones = ?, aplicado = datetime('now','localtime')
+		WHERE id = ? AND estado = 'pendiente' RETURNING sesion_id, op`, estado, resultado, inversa, versiones, id).Scan(&sesion, &op)
 	if err != sql.ErrNoRows {
-		return sesion, err
+		if err != nil {
+			return 0, "", err
+		}
+		return sesion, op, podarOps(base, sesion)
 	}
 	var existe int
 	if err := base.QueryRow(`SELECT 1 FROM terminal_pizarra_ops WHERE id = ?`, id).Scan(&existe); err != nil {
-		return 0, err // sql.ErrNoRows = no existe
+		return 0, "", err // sql.ErrNoRows = no existe
 	}
-	return 0, ErrOpNoPendiente
+	return 0, "", ErrOpNoPendiente
+}
+
+// podarOps aplica los dos topes independientes de la sesión: las 50 más
+// nuevas con inversa y las 50 más nuevas vencida/fallida/aplicada sin inversa.
+// Las pendientes nunca se podan.
+func podarOps(base *sql.DB, sesionID int64) error {
+	for _, cond := range []string{
+		`inversa IS NOT NULL`,
+		`inversa IS NULL AND estado IN ('vencida','fallida','aplicada')`,
+	} {
+		_, err := base.Exec(`DELETE FROM terminal_pizarra_ops WHERE sesion_id = ? AND `+cond+` AND id NOT IN (
+			SELECT id FROM terminal_pizarra_ops WHERE sesion_id = ? AND `+cond+` ORDER BY id DESC LIMIT ?)`,
+			sesionID, sesionID, topeHistorial)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Cambio es una fila del historial del agente (sin la inversa).
+type Cambio struct {
+	ID        int64  `json:"id"`
+	Creado    string `json:"creado"`
+	Tipo      string `json:"tipo"`
+	Elementos int    `json:"elementos"`
+	Estado    string `json:"estado"`
+}
+
+// ListarCambios devuelve los lotes de la sesión, el más nuevo primero, con
+// estado deshacible|deshecho|sin_deshacer. Fallidas y pendientes no se listan;
+// una vencida es sin_deshacer (D17).
+func ListarCambios(base *sql.DB, sesionID int64) ([]Cambio, error) {
+	if err := barrerOps(base); err != nil {
+		return nil, err
+	}
+	rows, err := base.Query(`SELECT id, creado, op, estado, inversa IS NOT NULL, deshecho IS NOT NULL
+		FROM terminal_pizarra_ops WHERE sesion_id = ? AND estado IN ('aplicada','vencida') ORDER BY id DESC`, sesionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Cambio{}
+	for rows.Next() {
+		var c Cambio
+		var op, estado string
+		var conInversa, deshecho bool
+		if err := rows.Scan(&c.ID, &c.Creado, &op, &estado, &conInversa, &deshecho); err != nil {
+			return nil, err
+		}
+		c.Tipo, c.Elementos = pizarra.Describir(op)
+		switch {
+		case deshecho:
+			c.Estado = "deshecho"
+		case estado == "aplicada" && conInversa:
+			c.Estado = "deshacible"
+		default:
+			c.Estado = "sin_deshacer"
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
 }
 
 // EstadoOp lee el estado y el resultado guardados de una op (sin barrer:
