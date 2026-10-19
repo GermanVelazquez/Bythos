@@ -300,6 +300,12 @@ export const api = {
   },
   listarAdjuntos: (sesionId) =>
     fetch(`${BASE}/api/terminal/sesiones/${sesionId}/adjuntos`, { headers: CABECERAS_ORIGEN }).then(leer),
+  // Bytes de un adjunto como Blob (rehidratación de la pizarra).
+  bytesAdjunto: async (sesionId, adjId) => {
+    const res = await fetch(`${BASE}/api/terminal/sesiones/${sesionId}/adjuntos/${adjId}/contenido`, { headers: CABECERAS_ORIGEN })
+    if (!res.ok) throw new Error(`Error ${res.status}`)
+    return res.blob()
+  },
   urlContenidoAdjunto: (sesionId, adjId) => `${BASE}/api/terminal/sesiones/${sesionId}/adjuntos/${adjId}/contenido`,
   // Agente en la pizarra: latido {ops, capturas}; ack de un lote; PNG de una captura.
   latidoPizarra: (sesionId) =>
@@ -328,4 +334,8 @@ export const TEXTO_PIZARRA = {
   error: 'Error al guardar',
   otraVentana: 'Actualizada desde otra ventana',
   revisar: 'Revisar',
+  adjuntar: 'Adjuntar',
+  adjuntarAyuda: 'Adjuntar imágenes o documentos a la pizarra',
+  adjuntoNoDisponible: 'Algunos adjuntos no están disponibles',
+  adjuntosSinListar: 'No se pudieron leer los adjuntos de la sesión',
 }

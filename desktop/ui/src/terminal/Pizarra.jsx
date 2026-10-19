@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Excalidraw, sanearEscena, versionEscena, insertarAdjunto, shaDeElemento } from './excalidrawAdapter.js'
 import { subirArchivo, leerComoDataURL } from './adjuntos.js'
-import { api } from '../api.js'
+import { TEXTO_PIZARRA } from '../api.js'
 
 const UI_OPCIONES = {
   tools: { image: false },
@@ -21,23 +21,16 @@ const archivosDe = (dt) => {
 // Pegar y soltar se interceptan en captura (antes de que Excalidraw los vea) y van
 // al flujo de adjuntos: subir -> addFiles -> updateScene -> vaciar. Las imágenes
 // solo entran por ahí (herramienta oculta).
-export default function Pizarra({ sesionId, inicial, alCambiar, alTenerApi, vaciar }) {
+// `archivos` y `conocidosIniciales` los trae useAutoguardado.cargar(): los bytes van en
+// initialData.files y los conocidos (null = no se pudo listar) ya existen al montar.
+export default function Pizarra({ sesionId, inicial, archivos, conocidosIniciales, alCambiar, alTenerApi, vaciar }) {
   const [aviso, setAviso] = useState('')
-  const [listo, setListo] = useState(false)
   const ultima = useRef(null)
   const apiLienzo = useRef(null)
-  const conocidos = useRef(null) // shas de los adjuntos de la sesión; null = no se pudo listar
+  const selector = useRef(null)
+  const conocidos = useRef(conocidosIniciales)
 
-  // Los conocidos se cargan antes de montar el lienzo: sin ellos sanearEscena
-  // descartaría las imágenes ya guardadas en el primer cambio.
-  useEffect(() => {
-    let vivo = true
-    api.listarAdjuntos(sesionId)
-      .then((lista) => { conocidos.current = new Set(lista.map((a) => a.sha256)) })
-      .catch(() => { conocidos.current = null })
-      .finally(() => vivo && setListo(true))
-    return () => { vivo = false; clearTimeout(ultima.current) }
-  }, [sesionId])
+  useEffect(() => () => clearTimeout(ultima.current), [])
 
   function mostrar(texto) {
     setAviso(texto)
@@ -78,18 +71,23 @@ export default function Pizarra({ sesionId, inicial, alCambiar, alTenerApi, vaci
 
   return (
     <div className="term-lienzo" onDropCapture={interceptar} onPasteCapture={interceptar}>
-      {listo && (
-        <Excalidraw
-          excalidrawAPI={(a) => { apiLienzo.current = a; alTenerApi(a) }}
-          initialData={{ elements: inicial.elements, appState: inicial.appState, scrollToContent: true }}
-          UIOptions={UI_OPCIONES}
-          aiEnabled={false}
-          theme="dark"
-          onPaste={alPegar}
-          langCode="es-ES"
-          onChange={(elements, appState) => alCambiar(sanearEscena(elements, appState, conocidos.current), `${versionEscena(elements)}|${appState.viewBackgroundColor}`)}
-        />
-      )}
+      <button type="button" className="btn-outline term-adjuntar" title={TEXTO_PIZARRA.adjuntarAyuda} onClick={() => selector.current?.click()}>
+        {TEXTO_PIZARRA.adjuntar}
+      </button>
+      <input
+        ref={selector} type="file" multiple hidden
+        onChange={(e) => { const lista = Array.from(e.target.files ?? []); e.target.value = ''; if (lista.length) adjuntar(lista) }}
+      />
+      <Excalidraw
+        excalidrawAPI={(a) => { apiLienzo.current = a; alTenerApi(a) }}
+        initialData={{ elements: inicial.elements, appState: inicial.appState, files: archivos, scrollToContent: true }}
+        UIOptions={UI_OPCIONES}
+        aiEnabled={false}
+        theme="dark"
+        onPaste={alPegar}
+        langCode="es-ES"
+        onChange={(elements, appState) => alCambiar(sanearEscena(elements, appState, conocidos.current), `${versionEscena(elements)}|${appState.viewBackgroundColor}`)}
+      />
       {aviso && <div className="term-aviso">{aviso}</div>}
     </div>
   )
