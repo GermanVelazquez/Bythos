@@ -459,9 +459,13 @@ func (s *Servidor) adjuntarDesdeRecurso(w http.ResponseWriter, r *http.Request) 
 		responderError(w, 400, "El recurso no es un archivo de la carpeta de la sesión")
 		return
 	}
-	a, _, err := db.ObtenerArchivo(s.Base, rec.ArchivoID)
+	a, hay, err := db.ObtenerArchivo(s.Base, rec.ArchivoID)
 	if err != nil {
 		responderError(w, 500, "No se pudo leer el archivo")
+		return
+	}
+	if !hay {
+		responderError(w, 400, "El recurso no es un archivo de la carpeta de la sesión")
 		return
 	}
 	if rec.Tipo == "video" || archivos.TipoRecurso(a.Mime) == "video" {
