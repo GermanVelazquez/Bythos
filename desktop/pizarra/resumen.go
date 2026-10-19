@@ -1,6 +1,10 @@
 package pizarra
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"math"
+)
 
 // ElementoResumen es un elemento de Excalidraw en el vocabulario del agente.
 // Puntos va como conteo (los puntos crudos de un trazo pesan mucho).
@@ -145,4 +149,57 @@ func Referencias(escena []byte) (map[string][]string, error) {
 		}
 	}
 	return refs, nil
+}
+
+// Caja es el rectángulo de un elemento de la escena guardada.
+type Caja struct{ X, Y, Ancho, Alto float64 }
+
+// Cajas resuelve cada id contra la escena guardada (design D7). Un elemento
+// lineal usa la caja de sus puntos (relativos a x, y). Un id que no existe o
+// está borrado es un error: el agente no puede marcar lo que no hay.
+func Cajas(escena []byte, ids []string) (map[string]Caja, error) {
+	cajas := map[string]Caja{}
+	if len(ids) == 0 {
+		return cajas, nil
+	}
+	var e struct {
+		Elements []struct {
+			ID      string       `json:"id"`
+			Borrado bool         `json:"isDeleted"`
+			X       float64      `json:"x"`
+			Y       float64      `json:"y"`
+			Width   float64      `json:"width"`
+			Height  float64      `json:"height"`
+			Points  [][2]float64 `json:"points"`
+		} `json:"elements"`
+	}
+	if len(escena) > 0 {
+		if err := json.Unmarshal(escena, &e); err != nil {
+			return nil, err
+		}
+	}
+	vivos := map[string]int{}
+	for i, el := range e.Elements {
+		if !el.Borrado {
+			vivos[el.ID] = i
+		}
+	}
+	for _, id := range ids {
+		i, ok := vivos[id]
+		if !ok {
+			return nil, fmt.Errorf("el elemento %q no existe en la pizarra", id)
+		}
+		el := e.Elements[i]
+		c := Caja{X: el.X, Y: el.Y, Ancho: el.Width, Alto: el.Height}
+		if len(el.Points) > 0 {
+			minX, minY, maxX, maxY := el.Points[0][0], el.Points[0][1], el.Points[0][0], el.Points[0][1]
+			for _, p := range el.Points[1:] {
+				minX, maxX = math.Min(minX, p[0]), math.Max(maxX, p[0])
+				minY, maxY = math.Min(minY, p[1]), math.Max(maxY, p[1])
+			}
+			c = Caja{X: el.X + minX, Y: el.Y + minY, Ancho: maxX - minX, Alto: maxY - minY}
+		}
+		cajas[id] = c
+	}
+	return cajas, nil
 }

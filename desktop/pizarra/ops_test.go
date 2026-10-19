@@ -94,3 +94,23 @@ func TestAsignarIDsSoloALosFaltantes(t *testing.T) {
 		t.Fatalf("tras asignar ids debe seguir válido: %v", err)
 	}
 }
+
+func TestValidarRechazaDatosYPrefijoReservado(t *testing.T) {
+	casos := []struct{ nombre, js, error string }{
+		{"datos en agregar", agregar(`{"tipo":"rectangle","x":0,"y":0,"datos":{"bythos":"marca","veredicto":"ok","clave":"k"}}`), "datos"},
+		{"datos en actualizar", `[{"accion":"actualizar","id":"a","cambios":{"datos":{"bythos":"marca"}}}]`, "datos"},
+		{"id marca- en agregar", agregar(`{"id":"marca-abc-m","tipo":"rectangle","x":0,"y":0}`), "marca-"},
+		{"id parecido sin guion", agregar(`{"id":"marcador","tipo":"rectangle","x":0,"y":0}`), ""},
+	}
+	for _, c := range casos {
+		t.Run(c.nombre, func(t *testing.T) {
+			err := Validar(opsDe(t, c.js))
+			switch {
+			case c.error == "" && err != nil:
+				t.Fatalf("debía ser válido: %v", err)
+			case c.error != "" && (err == nil || !strings.Contains(err.Error(), c.error)):
+				t.Fatalf("error = %v, debía mencionar %q", err, c.error)
+			}
+		})
+	}
+}

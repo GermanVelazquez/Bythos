@@ -72,3 +72,37 @@ func TestResumirEscenaInvalida(t *testing.T) {
 		t.Fatalf("escena vacía: %+v %v", r, err)
 	}
 }
+
+func TestCajasResuelveIDsDeLaEscenaGuardada(t *testing.T) {
+	escena := `{"elements":[
+		{"id":"r1","type":"rectangle","x":10,"y":20,"width":100,"height":50},
+		{"id":"fl","type":"arrow","x":200,"y":100,"width":0,"height":0,"points":[[0,0],[40,-30],[80,10]]},
+		{"id":"borrado","type":"rectangle","x":0,"y":0,"width":5,"height":5,"isDeleted":true}
+	]}`
+	c, err := Cajas([]byte(escena), []string{"r1", "fl"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := c["r1"]; got != (Caja{X: 10, Y: 20, Ancho: 100, Alto: 50}) {
+		t.Fatalf("r1 = %+v", got)
+	}
+	// Los elementos lineales usan la caja de sus puntos (relativos a x,y).
+	if got := c["fl"]; got != (Caja{X: 200, Y: 70, Ancho: 80, Alto: 40}) {
+		t.Fatalf("fl = %+v", got)
+	}
+}
+
+func TestCajasIDDesconocidoOBorradoFalla(t *testing.T) {
+	escena := `{"elements":[{"id":"borrado","type":"rectangle","x":0,"y":0,"width":5,"height":5,"isDeleted":true}]}`
+	for _, id := range []string{"nada", "borrado"} {
+		if _, err := Cajas([]byte(escena), []string{id}); err == nil || !strings.Contains(err.Error(), id) {
+			t.Fatalf("%s: error = %v", id, err)
+		}
+	}
+	if _, err := Cajas(nil, []string{"a"}); err == nil {
+		t.Fatal("una escena vacía no tiene el id")
+	}
+	if c, err := Cajas([]byte(escena), nil); err != nil || len(c) != 0 {
+		t.Fatalf("sin ids no hay nada que resolver: %v %v", c, err)
+	}
+}
