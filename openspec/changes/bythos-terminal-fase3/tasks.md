@@ -67,7 +67,7 @@ Split in two: 02 (validation) and 02b (expansion).
 - [x] 2.5b Create `D/pizarra/marcas_expandir.go` (wrapping, ids, geometry, `ExpandirMarcas`, `Describir`). (D3 to D8) [PR 02b]
 - [x] 2.6 Modify `D/pizarra/resumen.go` (`Cajas`) and `D/pizarra/ops.go` (`Elemento.Datos`, reserved prefix check in `Validar`). (D4, D7)
 - [x] 2.7 Verify: `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...`.
-- [ ] 2.8 Open PR2 (base PR1 branch).
+- [x] 2.8 Open PR2 (base PR1 branch). (#42, #43)
 
 ## PR3: Marks UI, Quitar marcas, forged-mark guard (branch `feat/bythos-terminal-fase3-03-marcas-ui`, base `feat/bythos-terminal-fase3-02-marcas-dominio`)
 
