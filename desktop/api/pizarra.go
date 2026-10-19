@@ -198,6 +198,7 @@ func (s *Servidor) rutasPizarra(mux *http.ServeMux) {
 	const p = "/api/terminal/"
 	mux.HandleFunc("GET "+p+"pizarra", conAgente(s.leerPizarraAgente))
 	mux.HandleFunc("POST "+p+"pizarra/ops", conAgente(s.encolarOps))
+	mux.HandleFunc("POST "+p+"pizarra/marcas", conAgente(s.marcarPizarra))
 	mux.HandleFunc("POST "+p+"pizarra/captura", conAgente(s.pedirCaptura))
 	mux.HandleFunc("POST "+p+"latido", conVentana(s.latido))
 	mux.HandleFunc("POST "+p+"pizarra/ops/{id}/ack", conVentana(s.ackOp))
@@ -363,12 +364,18 @@ func (s *Servidor) encolarOps(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	s.encolarYEsperar(w, r, se, resolucion, b.Ops)
+}
+
+// encolarYEsperar es el cuerpo común de pizarra/ops y pizarra/marcas: exige la
+// pizarra montada, encola el lote y espera el ack (la UI lo recoge por latido).
+func (s *Servidor) encolarYEsperar(w http.ResponseWriter, r *http.Request, se db.Sesion, resolucion string, ops []pizarra.Op) {
 	if !s.pizarra.montada(se.ID) {
 		responderError(w, http.StatusConflict, msgPizarraCerrada)
 		return
 	}
-	pizarra.AsignarIDs(b.Ops)
-	lote, _ := json.Marshal(b.Ops)
+	pizarra.AsignarIDs(ops)
+	lote, _ := json.Marshal(ops)
 	opID, err := db.EncolarOp(s.Base, se.ID, string(lote))
 	if err != nil {
 		responderError(w, 500, "No se pudo encolar la operación")
@@ -397,6 +404,86 @@ func (s *Servidor) encolarOps(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	responder(w, salida)
+}
+
+// marcarPizarra (pizarra_marcar): valida las marcas, resuelve los objetivos
+// contra la escena guardada y las citas contra la carpeta de la sesión, las
+// expande a ops (marco + píldora) y las encola como un solo lote (design D3, D7, D8).
+func (s *Servidor) marcarPizarra(w http.ResponseWriter, r *http.Request) {
+	var b struct {
+		SesionID *int64          `json:"sesion_id"`
+		Pista    string          `json:"pista"`
+		Marcas   []pizarra.Marca `json:"marcas"`
+	}
+	if err := leerJSON(w, r, &b); err != nil {
+		if esBodyDemasiadoGrande(err) {
+			responderError(w, http.StatusRequestEntityTooLarge, "El cuerpo de la petición es demasiado grande")
+			return
+		}
+		responderError(w, 400, "JSON inválido. Manda {\"marcas\":[...]}")
+		return
+	}
+	if err := pizarra.ValidarMarcas(b.Marcas); err != nil {
+		responderError(w, 400, err.Error())
+		return
+	}
+	se, resolucion, ok := s.resolverSesion(w, textoID(b.SesionID), b.Pista)
+	if !ok {
+		return
+	}
+	citas, codigo, msg := s.titulosDeCitas(se, b.Marcas)
+	if msg != "" {
+		responderError(w, codigo, msg)
+		return
+	}
+	escena, _, _, err := db.ObtenerPizarra(s.Base, se.ID)
+	if err != nil {
+		responderError(w, 500, "No se pudo leer la pizarra")
+		return
+	}
+	var ids []string
+	for _, m := range b.Marcas {
+		ids = append(ids, m.Objetivo.IDs...)
+	}
+	cajas, err := pizarra.Cajas([]byte(escena), ids)
+	if err != nil {
+		responderError(w, 400, err.Error())
+		return
+	}
+	ops, err := pizarra.ExpandirMarcas(se.ID, b.Marcas, cajas, citas)
+	if err != nil {
+		responderError(w, 400, err.Error())
+		return
+	}
+	s.encolarYEsperar(w, r, se, resolucion, ops)
+}
+
+// titulosDeCitas resuelve cada recurso citado contra la carpeta de la sesión y
+// devuelve su título guardado en la BD (el agente nunca lo pone). msg no vacío
+// es el motivo del error (400, o 500 si falla la BD).
+func (s *Servidor) titulosDeCitas(se db.Sesion, marcas []pizarra.Marca) (map[int64]string, int, string) {
+	citas := map[int64]string{}
+	for _, m := range marcas {
+		if m.Cita == nil {
+			continue
+		}
+		id := m.Cita.RecursoID
+		if _, hecho := citas[id]; hecho {
+			continue
+		}
+		if se.CarpetaID == nil {
+			return nil, 400, "La sesión no tiene carpeta"
+		}
+		rec, existe, err := db.ObtenerRecurso(s.Base, id)
+		if err != nil {
+			return nil, 500, "No se pudo leer el recurso"
+		}
+		if !existe || rec.CarpetaID != *se.CarpetaID {
+			return nil, 400, fmt.Sprintf("El recurso %d no está en la carpeta de la sesión", id)
+		}
+		citas[id] = rec.Titulo
+	}
+	return citas, 0, ""
 }
 
 // completarDesdeBD vuelca a salida una op ya respondida según la fila guardada.
