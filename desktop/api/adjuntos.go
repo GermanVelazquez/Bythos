@@ -10,6 +10,8 @@ package api
 // GET   .../sesiones/{id}/adjuntos                    (Ventana-lectura)
 // GET   .../sesiones/{id}/adjuntos/{adj}/contenido    (Ventana-lectura)
 // GET   .../sesiones/{id}/adjuntos/{adj}/texto        (Ventana-lectura)
+// POST  .../sesiones/{id}/adjuntos/{adj}/guardar      (Ventana)
+// POST  .../sesiones/{id}/adjuntos/desde-recurso      (Ventana)
 // GET   .../adjuntos/{adj}/imagen|texto             (Agente: solo lo que está en la pizarra guardada)
 
 import (
@@ -36,6 +38,8 @@ func (s *Servidor) rutasAdjuntos(mux *http.ServeMux) {
 	mux.HandleFunc("GET "+p, conVentanaLectura(s.listarAdjuntos))
 	mux.HandleFunc("GET "+p+"/{adj}/contenido", conVentanaLectura(s.contenidoAdjunto))
 	mux.HandleFunc("GET "+p+"/{adj}/texto", conVentanaLectura(s.textoAdjunto))
+	mux.HandleFunc("POST "+p+"/desde-recurso", conVentana(s.adjuntarDesdeRecurso))
+	mux.HandleFunc("POST "+p+"/{adj}/guardar", conVentana(s.guardarAdjuntoEnCarpeta))
 }
 
 // lectorAcotado falla con *http.MaxBytesError apenas el contenido pasa del
@@ -191,10 +195,7 @@ func (s *Servidor) subirAdjunto(w http.ResponseWriter, r *http.Request) {
 		responderError(w, 500, "No se pudo adjuntar el archivo")
 		return
 	}
-	responderCreado(w, map[string]any{
-		"id": adj.ID, "sha256": adj.SHA256, "nombre": adj.Nombre,
-		"mime": adj.Mime, "tipo": archivos.TipoRecurso(adj.Mime),
-	})
+	responderCreado(w, fichaAdjunto(adj))
 }
 
 // listarAdjuntos atiende GET .../sesiones/{id}/adjuntos.
@@ -360,4 +361,117 @@ func (s *Servidor) textoAdjuntoAgente(w http.ResponseWriter, r *http.Request) {
 	plano := extraido.Plano()
 	ficha["texto"], ficha["truncado"], ficha["caracteres_totales"] = plano.Texto, plano.Truncado, plano.CaracteresTotales
 	responder(w, ficha)
+}
+
+// fichaAdjunto es la respuesta de subir o adjuntar: lo que la UI necesita
+// para pintar la tarjeta.
+func fichaAdjunto(adj db.Adjunto) map[string]any {
+	return map[string]any{
+		"id": adj.ID, "sha256": adj.SHA256, "nombre": adj.Nombre,
+		"mime": adj.Mime, "tipo": archivos.TipoRecurso(adj.Mime),
+	}
+}
+
+// carpetaDeSesion devuelve la carpeta vinculada a la sesión; ok false ya
+// respondió 409 (sin carpeta) o 500.
+func (s *Servidor) carpetaDeSesion(w http.ResponseWriter, sesionID int64) (int64, bool) {
+	se, _, err := db.ObtenerSesion(s.Base, sesionID)
+	if err != nil {
+		responderError(w, 500, "No se pudo leer la sesión")
+		return 0, false
+	}
+	if se.CarpetaID == nil {
+		responderError(w, http.StatusConflict, "La sesión no tiene carpeta")
+		return 0, false
+	}
+	return *se.CarpetaID, true
+}
+
+// guardarAdjuntoEnCarpeta atiende POST .../adjuntos/{adj}/guardar: crea en la
+// carpeta de la sesión un recurso que apunta al mismo archivo (sin copiar
+// bytes). Si la carpeta ya lo tiene, 200 con el recurso existente.
+func (s *Servidor) guardarAdjuntoEnCarpeta(w http.ResponseWriter, r *http.Request) {
+	sesionID, ok := s.sesionDeRuta(w, r)
+	if !ok {
+		return
+	}
+	raw := r.PathValue("adj")
+	adjID, _ := strconv.ParseInt(raw, 10, 64)
+	adj, existe, err := db.ObtenerAdjunto(s.Base, sesionID, adjID)
+	if err != nil {
+		responderError(w, 500, "No se pudo leer el adjunto")
+		return
+	}
+	if !existe {
+		responderError(w, http.StatusNotFound, "El adjunto "+raw+" no existe")
+		return
+	}
+	carpetaID, ok := s.carpetaDeSesion(w, sesionID)
+	if !ok {
+		return
+	}
+	previo, hay, err := db.ObtenerRecursoPorCarpetaYArchivo(s.Base, carpetaID, adj.ArchivoID)
+	if err != nil {
+		responderError(w, 500, "No se pudo leer la carpeta")
+		return
+	}
+	if hay {
+		responder(w, recursoConArchivo(s.Base, previo))
+		return
+	}
+	rec, err := db.GuardarArchivo(s.Base, carpetaID, adj.ArchivoID, tituloDeArchivo(adj.Nombre), archivos.TipoRecurso(adj.Mime))
+	if err != nil {
+		responderError(w, 500, "No se pudo guardar en la carpeta")
+		return
+	}
+	s.registrarEvento(r, db.AccionArchivoSubido, rec.ID, tituloOUrl(rec))
+	responderCreado(w, recursoConArchivo(s.Base, rec))
+}
+
+// adjuntarDesdeRecurso atiende POST .../adjuntos/desde-recurso {recurso_id}:
+// vincula a la pizarra un recurso de archivo de la carpeta de la sesión.
+func (s *Servidor) adjuntarDesdeRecurso(w http.ResponseWriter, r *http.Request) {
+	sesionID, ok := s.sesionDeRuta(w, r)
+	if !ok {
+		return
+	}
+	var cuerpo struct {
+		RecursoID int64 `json:"recurso_id"`
+	}
+	if err := leerJSON(w, r, &cuerpo); err != nil {
+		if esBodyDemasiadoGrande(err) {
+			responderError(w, http.StatusRequestEntityTooLarge, "Petición demasiado grande")
+			return
+		}
+		responderError(w, 400, "JSON inválido")
+		return
+	}
+	carpetaID, ok := s.carpetaDeSesion(w, sesionID)
+	if !ok {
+		return
+	}
+	rec, existe, err := db.ObtenerRecurso(s.Base, cuerpo.RecursoID)
+	if err != nil {
+		responderError(w, 500, "No se pudo leer el recurso")
+		return
+	}
+	if !existe || rec.CarpetaID != carpetaID || rec.ArchivoID == 0 {
+		responderError(w, 400, "El recurso no es un archivo de la carpeta de la sesión")
+		return
+	}
+	a, _, err := db.ObtenerArchivo(s.Base, rec.ArchivoID)
+	if err != nil {
+		responderError(w, 500, "No se pudo leer el archivo")
+		return
+	}
+	if rec.Tipo == "video" || archivos.TipoRecurso(a.Mime) == "video" {
+		responderError(w, 400, "Los videos no se pueden adjuntar a la pizarra")
+		return
+	}
+	adj, err := db.CrearAdjunto(s.Base, sesionID, a.ID, a.NombreOriginal)
+	if err != nil {
+		responderError(w, 500, "No se pudo adjuntar el archivo")
+		return
+	}
+	responderCreado(w, fichaAdjunto(adj))
 }

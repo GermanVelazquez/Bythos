@@ -287,3 +287,22 @@ func TestMigracionArchivoIDNoRompeDBVieja(t *testing.T) {
 		t.Fatalf("migración repetida debió ser no-op: %v", err)
 	}
 }
+
+func TestObtenerRecursoPorCarpetaYArchivo(t *testing.T) {
+	base := basePrueba(t)
+	c1, _ := CrearCarpeta(base, "React")
+	c2, _ := CrearCarpeta(base, "Go")
+	a, _ := CrearArchivo(base, "sha-x", "apuntes.pdf", "application/pdf", 500, "sh/sha-x.pdf")
+
+	if _, ok, err := ObtenerRecursoPorCarpetaYArchivo(base, c1.ID, a.ID); err != nil || ok {
+		t.Fatalf("sin recurso debió no encontrar: ok=%v err=%v", ok, err)
+	}
+	r, _ := GuardarArchivo(base, c1.ID, a.ID, "Apuntes", "pdf")
+	got, ok, err := ObtenerRecursoPorCarpetaYArchivo(base, c1.ID, a.ID)
+	if err != nil || !ok || got.ID != r.ID {
+		t.Fatalf("debió encontrar el recurso %d: %+v ok=%v err=%v", r.ID, got, ok, err)
+	}
+	if _, ok, _ := ObtenerRecursoPorCarpetaYArchivo(base, c2.ID, a.ID); ok {
+		t.Fatal("otra carpeta no debió encontrarlo")
+	}
+}

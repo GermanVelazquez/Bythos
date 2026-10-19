@@ -161,3 +161,20 @@ func BorrarArchivo(base *sql.DB, id int64) error {
 	_, err := base.Exec(`DELETE FROM archivos WHERE id = ?`, id)
 	return err
 }
+
+// ObtenerRecursoPorCarpetaYArchivo busca el recurso de la carpeta que ya
+// apunta a ese archivo (dedupe de "Guardar en carpeta"). Segundo valor false
+// si no hay, sin error.
+func ObtenerRecursoPorCarpetaYArchivo(base *sql.DB, carpetaID, archivoID int64) (Recurso, bool, error) {
+	var id int64
+	err := base.QueryRow(
+		`SELECT id FROM resources WHERE folder_id = ? AND archivo_id = ? ORDER BY id LIMIT 1`,
+		carpetaID, archivoID).Scan(&id)
+	if err == sql.ErrNoRows {
+		return Recurso{}, false, nil
+	}
+	if err != nil {
+		return Recurso{}, false, err
+	}
+	return ObtenerRecurso(base, id)
+}
