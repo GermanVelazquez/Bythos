@@ -96,14 +96,14 @@ Satisfies: WT pizarra_marcar, MODIFIED pizarra_dibujar, citation rules (D3, D7, 
 
 Satisfies: WH Storage, Ack payload, List Changes, Retention (D12, D13, D17, D18). Threat: HTTP routing.
 
-- [ ] 5.1 RED: `D/db/pizarra_ops_test.go`: `migrarOpsHistorial` adds nullable `inversa`, `versiones`, `deshecho` columns (PRAGMA first), idempotent on an old DB; ack stores inversa/versiones; over-cap payload stores NULL. (D12, D13)
-- [ ] 5.2 RED: retention: keep 50 newest rows with an inverse; separately keep 50 newest vencida/fallida/aplicada-without-inverse; pending rows never pruned; batches without undo do not evict undoable ones. (D18; WH Retention)
-- [ ] 5.3 RED: `ListarCambios` returns `[{id, creado, tipo: dibujo|marcas, elementos, estado}]` with estado `deshacible|deshecho|sin_deshacer`; fallida and pendiente hidden; vencida -> `sin_deshacer`. (D17)
-- [ ] 5.4 Modify `D/db/pizarra_ops.go`: columns, migration, ack storage, 2-cap retention, `ListarCambios`. (D12, D17, D18)
-- [ ] 5.5 RED: `D/api/pizarra_test.go`: ack with `inversa {restaurar, quitar}`, `versiones {id:[version, nonce]}` and `sin_deshacer` persists; ack above 2 MiB read via its own reader stores NULL and still completes the op; `GET cambios` guarded by `conVentanaLectura` (cross-site -> 403). (D13, D17)
-- [ ] 5.6 Modify `D/api/pizarra.go` (ack with the 2 MiB reader, `GET sesiones/{id}/pizarra/cambios`) and wire in `D/api/server.go`. (D13, D17)
-- [ ] 5.7 Verify: Go commands.
-- [ ] 5.8 Open PR5 (base PR4 branch).
+- [x] 5.1 RED: `D/db/pizarra_ops_test.go`: `migrarOpsHistorial` adds nullable `inversa`, `versiones`, `deshecho` columns (PRAGMA first), idempotent on an old DB; ack stores inversa/versiones; over-cap payload stores NULL. (D12, D13)
+- [x] 5.2 RED: retention: keep 50 newest rows with an inverse; separately keep 50 newest vencida/fallida/aplicada-without-inverse; pending rows never pruned; batches without undo do not evict undoable ones. (D18; WH Retention)
+- [x] 5.3 RED: `ListarCambios` returns `[{id, creado, tipo: dibujo|marcas, elementos, estado}]` with estado `deshacible|deshecho|sin_deshacer`; fallida and pendiente hidden; vencida -> `sin_deshacer`. (D17)
+- [x] 5.4 Modify `D/db/pizarra_ops.go`: columns, migration, ack storage, 2-cap retention, `ListarCambios`. (D12, D17, D18)
+- [x] 5.5 RED: `D/api/pizarra_test.go`: ack with `inversa {restaurar, quitar}`, `versiones {id:[version, nonce]}` and `sin_deshacer` persists; ack above 2 MiB read via its own reader stores NULL and still completes the op; `GET cambios` guarded by `conVentanaLectura` (cross-site -> 403). (D13, D17)
+- [x] 5.6 Modify `D/api/pizarra.go` (ack with the 2 MiB reader, `GET sesiones/{id}/pizarra/cambios`) and wire in `D/api/server.go`. (D13, D17)
+- [x] 5.7 Verify: Go commands.
+- [x] 5.8 Open PR5 (base PR4 branch). Split in two: #46 (db) and #47 (api).
 
 ## PR6: Inverse, Vitest, CI (branch `feat/bythos-terminal-fase3-06-inversa-vitest`, base `feat/bythos-terminal-fase3-05-historial-db`)
 
