@@ -128,7 +128,7 @@ Satisfies: WA Guardar en carpeta, Pick folder resource, Session without folder (
 - [x] 5a.3 RED: `POST sesiones/{id}/adjuntos/desde-recurso {recurso_id}`: resource in the session's folder -> 201 link; resource of another folder -> 400; video resource -> 400; session without folder -> 409; same resource twice -> one link. (WA: Pick folder resource, Session without folder)
 - [x] 5a.4 Implement both handlers in `D/api/adjuntos.go` under the Ventana guard (foreign/empty Origin -> 403) and wire in `D/api/server.go`. (Interfaces)
 - [x] 5a.5 Verify: `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...`.
-- [ ] 5a.6 Open PR5a (base PR4b branch).
+- [x] 5a.6 Open PR5a (base PR4b branch). (#39)
 
 ## PR5b: Card open, selection toolbar, folder picker (branch `feat/bythos-terminal-fase2-05b-ui-acciones`, base `feat/bythos-terminal-fase2-05a-carpeta-api`)
 
