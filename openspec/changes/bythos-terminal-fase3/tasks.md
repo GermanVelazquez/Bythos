@@ -89,7 +89,7 @@ Satisfies: WT pizarra_marcar, MODIFIED pizarra_dibujar, citation rules (D3, D7, 
 - [x] 4.2 Modify `D/api/pizarra.go`: `marcarPizarra` handler; refactor shared `encolarYEsperar`; citation resolution against the session folder (title "<título>, pág. N"). Wire in `D/api/server.go`. (D3, D8)
 - [x] 4.3 RED: `D/agentes/pizarra_test.go` (in-memory MCP client): `pizarra_marcar` happy path, schema caps, error messages, untrusted-data wording; `pizarra_dibujar` still rejects `datos` and `marca-` ids. (WT)
 - [x] 4.4 Modify `D/agentes/pizarra.go` (tool `pizarra_marcar`, calls the route) and `D/agentes/cliente.go` if the client call lives there. (WT)
-- [ ] 4.5 Verify: Go commands. Manual: M.6.
+- [x] 4.5 Verify: Go commands. Manual: M.6.
 - [ ] 4.6 Open PR4 (base PR3 branch) with M.6.
 
 ## PR5: Schema, ack, retention, GET cambios (branch `feat/bythos-terminal-fase3-05-historial-db`, base `feat/bythos-terminal-fase3-04-marcar-mcp`)
