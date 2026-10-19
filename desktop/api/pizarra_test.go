@@ -433,3 +433,117 @@ func TestGuardasDeLasRutasDeLaPizarra(t *testing.T) {
 		}
 	}
 }
+
+// --- pizarra/marcas (design D3, D7, D8, D19) ---
+
+const escenaConPaso = `{"elements":[{"id":"paso1","type":"rectangle","x":10,"y":20,"width":100,"height":40}],"appState":{},"files":{}}`
+
+// sesionParaMarcar crea una sesión montada con carpeta, un recurso en ella y
+// otro recurso en una carpeta ajena, con un paso dibujado en la escena.
+func sesionParaMarcar(t *testing.T, s *Servidor) (se db.Sesion, propio, ajeno int64) {
+	t.Helper()
+	c, _ := db.CrearCarpeta(s.Base, "Sistemas")
+	otra, _ := db.CrearCarpeta(s.Base, "Otra")
+	r1, err := db.Guardar(s.Base, c.ID, "https://a.example/u3", "Unidad 3 -- Sistemas.pdf", "", "", "otro")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r2, _ := db.Guardar(s.Base, otra.ID, "https://b.example/x", "Secreto", "", "", "otro")
+	se, err = db.CrearSesion(s.Base, "A", "dibujo", &c.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.GuardarPizarra(s.Base, se.ID, escenaConPaso, 0)
+	latir(t, s, se.ID)
+	return se, r1.ID, r2.ID
+}
+
+func cuerpoMarca(sesion int64, marca string) string {
+	return fmt.Sprintf(`{"sesion_id":%d,"marcas":[%s]}`, sesion, marca)
+}
+
+const marcaPaso = `{"objetivo":{"ids":["paso1"]},"veredicto":"error","pista":"revisa el signo"`
+
+func TestMarcasAplicaElLoteDeDosOpsPorMarca(t *testing.T) {
+	s := basePrueba(t)
+	se, propio, _ := sesionParaMarcar(t, s)
+	cuerpo := cuerpoMarca(se.ID, marcaPaso+fmt.Sprintf(`,"cita":{"recurso_id":%d,"pagina":12}}`, propio))
+	resp := asincrono(s, "pizarra/marcas", cuerpo)
+
+	l := esperarLatido(t, s, se.ID, func(r latidoResp) bool { return len(r.Ops) == 1 })
+	var ops []map[string]any
+	json.Unmarshal(l.Ops[0].Op, &ops)
+	if len(ops) != 2 || ops[0]["accion"] != "agregar" || ops[1]["accion"] != "agregar" {
+		t.Fatalf("el lote debía ser 2 ops agregar: %s", l.Ops[0].Op)
+	}
+	if !strings.Contains(string(l.Ops[0].Op), "Unidad 3 -- Sistemas.pdf, pág. 12") || !strings.Contains(string(l.Ops[0].Op), `"bythos":"marca"`) {
+		t.Fatalf("falta la cita armada desde la BD o el customData: %s", l.Ops[0].Op)
+	}
+	ack(s, l.Ops[0].ID, `{"ok":true,"ids":["marca-x-m","marca-x-t"]}`)
+	rec := <-resp
+	m := json2(t, rec)
+	if rec.Code != 200 || m["estado"] != "aplicada" || m["resolucion"] != "argumento" {
+		t.Fatalf("respuesta: %d %v", rec.Code, m)
+	}
+}
+
+func TestMarcasRechazosDan400YNoEncolan(t *testing.T) {
+	s := basePrueba(t)
+	se, propio, ajeno := sesionParaMarcar(t, s)
+	sinCarpeta := sesionMontada(t, s, "Suelta")
+	veintiuna := strings.TrimSuffix(strings.Repeat(marcaPaso+`},`, 21), ",")
+	casos := []struct{ nombre, cuerpo, texto string }{
+		{"cita fuera de la carpeta", cuerpoMarca(se.ID, marcaPaso+fmt.Sprintf(`,"cita":{"recurso_id":%d}}`, ajeno)), "no está en la carpeta de la sesión"},
+		{"recurso inexistente", cuerpoMarca(se.ID, marcaPaso+`,"cita":{"recurso_id":9999}}`), "no está en la carpeta de la sesión"},
+		{"sesión sin carpeta", cuerpoMarca(sinCarpeta.ID, marcaPaso+fmt.Sprintf(`,"cita":{"recurso_id":%d}}`, propio)), "La sesión no tiene carpeta"},
+		{"más de 20 marcas", cuerpoMarca(se.ID, veintiuna), "20"},
+		{"id desconocido", cuerpoMarca(se.ID, `{"objetivo":{"ids":["nope"]},"veredicto":"ok"}`), "nope"},
+		{"veredicto desconocido", cuerpoMarca(se.ID, `{"objetivo":{"ids":["paso1"]},"veredicto":"quizá"}`), "veredicto"},
+		{"JSON inválido", `{"marcas":`, "JSON inválido"},
+	}
+	for _, c := range casos {
+		rec := agenteT(s, "POST", "pizarra/marcas", c.cuerpo)
+		if rec.Code != 400 || !strings.Contains(rec.Body.String(), c.texto) {
+			t.Errorf("%s: %d %s, debía ser 400 con %q", c.nombre, rec.Code, rec.Body.String(), c.texto)
+		}
+	}
+	if contarOps(s) != 0 {
+		t.Fatalf("un rechazo no encola: filas=%d", contarOps(s))
+	}
+}
+
+func TestMarcasSesionNoMontadaDa409(t *testing.T) {
+	s := basePrueba(t)
+	se, _, _ := sesionParaMarcar(t, s)
+	ahora := time.Now().Add(10 * time.Second)
+	s.pizarra.ahora = func() time.Time { return ahora }
+	rec := agenteT(s, "POST", "pizarra/marcas", cuerpoMarca(se.ID, marcaPaso+`}`))
+	if rec.Code != 409 || json2(t, rec)["error"] != textoPizarraCerrada || contarOps(s) != 0 {
+		t.Fatalf("respuesta: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestMarcasResuelveSesionPorPista(t *testing.T) {
+	s := basePrueba(t)
+	s.pizarra.esperaOps = 10 * time.Millisecond
+	se, _, _ := sesionParaMarcar(t, s)
+	rec := agenteT(s, "POST", "pizarra/marcas", fmt.Sprintf(`{"pista":"%d","marcas":[%s}]}`, se.ID, marcaPaso))
+	if m := json2(t, rec); rec.Code != 200 || m["resolucion"] != "entorno" || m["estado"] != "pendiente" {
+		t.Fatalf("respuesta: %d %v", rec.Code, m)
+	}
+}
+
+func TestMarcasGuardaAgente(t *testing.T) {
+	s := basePrueba(t)
+	s.pizarra.esperaOps = 10 * time.Millisecond
+	se, _, _ := sesionParaMarcar(t, s)
+	cuerpo := cuerpoMarca(se.ID, marcaPaso+`}`)
+	for _, origen := range []string{"chrome-extension://abcdef", "http://evil.example", "http://localhost:8080.evil.com"} {
+		if rec := pedirTerminal(s, "POST", "pizarra/marcas", cuerpo, origen); rec.Code != http.StatusForbidden {
+			t.Errorf("Origin %q = %d, debía ser 403", origen, rec.Code)
+		}
+	}
+	if rec := pedirTerminal(s, "POST", "pizarra/marcas", cuerpo, ""); rec.Code != 200 {
+		t.Errorf("sin Origin = %d, el agente lo admite", rec.Code)
+	}
+}
