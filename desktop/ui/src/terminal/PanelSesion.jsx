@@ -33,7 +33,7 @@ export default function PanelSesion({ sesion }) {
         </div>
         {carga && (
           <Suspense fallback={null}>
-            <Pizarra key={carga.n} sesionId={sesion.id} vaciar={vaciar} inicial={carga.escena} archivos={carga.files} conocidosIniciales={carga.conocidos} alCambiar={alCambiar} alTenerApi={setApiLienzo} />
+            <Pizarra key={carga.n} sesionId={sesion.id} carpetaId={sesion.carpeta_id ?? null}vaciar={vaciar} inicial={carga.escena} archivos={carga.files} conocidosIniciales={carga.conocidos} alCambiar={alCambiar} alTenerApi={setApiLienzo} />
           </Suspense>
         )}
       </section>
