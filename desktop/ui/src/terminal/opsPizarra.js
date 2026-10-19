@@ -60,6 +60,10 @@ function convertir(esqueletos) {
   return convertirElementos(lista).map((e) => (trazos.has(e.id) ? comoTrazo(e) : e))
 }
 
+// Marca del agente: por customData o, si Excalidraw lo perdió (R2), por el id completo
+// que genera el servidor (marca-<10>-m|t); un id de usuario que solo empiece igual no cuenta.
+export const esMarca = (e) => e?.customData?.bythos === 'marca' || /^marca-[A-Za-z0-9_-]{10}-[mt]$/.test(String(e?.id ?? ''))
+
 const nueva = (el, cambios) => ({
   ...el, ...cambios, version: (el.version ?? 0) + 1, versionNonce: Math.floor(Math.random() * 2 ** 31), updated: Date.now(),
 })
@@ -74,8 +78,9 @@ export function aplicarOps(elementos, ops) {
   // Los "agregar" se convierten juntos: así una flecha puede enlazar (desde/hasta) a un
   // elemento agregado en el mismo lote.
   const esqueletos = ops.filter((o) => o.accion === 'agregar').map((o) => {
-    const { tipo, desde, hasta, ...resto } = o.elemento
+    const { tipo, desde, hasta, datos, ...resto } = o.elemento
     const s = { type: tipo, id: o.elemento.id, ...propiedades(resto) }
+    if (datos) s.customData = datos // marca del agente: el servidor la etiqueta (D3)
     if (tipo !== 'text' && s.text) { s.label = { text: s.text }; delete s.text; delete s.originalText } // texto dentro de la forma
     if (desde) s.start = { id: desde }
     if (hasta) s.end = { id: hasta }
@@ -96,7 +101,10 @@ export function aplicarOps(elementos, ops) {
     switch (op.accion) {
       case 'agregar': {
         const el = agregados.get(op.elemento.id)
-        for (const e of [el, ...textosDe(convertidos, el.id)]) {
+        for (const nuevoEl of [el, ...textosDe(convertidos, el.id)]) {
+          const previo = mapa.get(nuevoEl.id)
+          // Una marca reemplazada sube de versión: sin eso Excalidraw la reconcilia como igual (D5).
+          const e = previo && esMarca(previo) ? { ...nuevoEl, version: (previo.version ?? 0) + 1 } : nuevoEl
           mapa.delete(e.id) // reubica al final si ya existía
           mapa.set(e.id, e)
         }

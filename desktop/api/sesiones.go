@@ -362,7 +362,7 @@ func referenciaPermitida(v json.RawMessage, permitidos map[string]bool) bool {
 }
 
 // validarElemento lee solo las claves exactas type, fileId, isDeleted y
-// customData.sha256 (D9). Falla cerrado: fileId o sha256 presentes en cualquier
+// customData.sha256 y customData.bythos (D9, D11). Falla cerrado: fileId o sha256 presentes en cualquier
 // tipo deben ser adjuntos propios. Lista de denegados, no de permitidos, para
 // no romper escenas heredadas; `link` y `frame` se admiten (el enlace lo abre
 // el anfitrión con onLinkOpen y frame solo agrupa).
@@ -390,7 +390,14 @@ func validarElemento(el json.RawMessage, permitidos map[string]bool) (borrado, o
 	}
 	if v, hay := m["customData"]; hay && string(v) != "null" {
 		var datos map[string]json.RawMessage
-		if json.Unmarshal(v, &datos) != nil || !clavesExactas(datos, "sha256") {
+		if json.Unmarshal(v, &datos) != nil || !clavesExactas(datos, "sha256", "bythos") {
+			return false, false
+		}
+		// D11: una marca nunca referencia un adjunto (sha256 ni fileId), ni siquiera uno propio.
+		var etiqueta string
+		json.Unmarshal(datos["bythos"], &etiqueta)
+		_, conArchivo := m["fileId"]
+		if _, trae := datos["sha256"]; (trae || conArchivo) && etiqueta == "marca" {
 			return false, false
 		}
 		if sha, hay := datos["sha256"]; hay && !referenciaPermitida(sha, permitidos) {
