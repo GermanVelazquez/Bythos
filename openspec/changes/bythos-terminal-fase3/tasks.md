@@ -73,11 +73,11 @@ Split in two: 02 (validation) and 02b (expansion).
 
 Satisfies: WB Quitar marcas, Forged mark; WH tagging round trip (D4, D10, D11). Threat: scene injection.
 
-- [ ] 3.1 Runtime checks R2 and R4 (first task): (R2) an element created with `customData` through `convertToExcalidrawElements` / `updateScene` survives save and reload; fallback: identify marks by the `marca-` id prefix only. (R4) the glyphs used in the pill render; fallback: ASCII. Record results in the PR. (R2, R4)
-- [ ] 3.2 RED: in `D/api/sesiones_test.go` add the D11 cases: scene PUT with `customData.bythos=="marca"` and a sha256 key -> 400, including when the sha is a permitted attachment; exact-key check for `sha256` and `bythos`; legacy attachment cards still accepted. (D11; WB Forged mark)
-- [ ] 3.3 Modify `validarElemento` in `D/api/sesiones.go` (line ~369) to implement D11. (D11)
-- [ ] 3.4 Modify `T/opsPizarra.js`: map `datos` to `customData`; on replace of an existing `marca-` id bump the element version to prev+1. (D3, D5)
-- [ ] 3.5 Modify `T/Pizarra.jsx`: "Quitar marcas" button, disabled when no marks; removes tagged elements via `updateScene` with `captureUpdate: IMMEDIATELY`; NOT recorded in the agent history; Ctrl+Z restores. (D10; WB Quitar marcas, Undo removal)
+- [ ] 3.1 (manual, see M.3) Runtime checks R2 and R4 (first task): (R2) an element created with `customData` through `convertToExcalidrawElements` / `updateScene` survives save and reload; fallback: identify marks by the `marca-` id prefix only. (R4) the glyphs used in the pill render; fallback: ASCII. Record results in the PR. (R2, R4)
+- [x] 3.2 RED: in `D/api/sesiones_test.go` add the D11 cases: scene PUT with `customData.bythos=="marca"` and a sha256 key -> 400, including when the sha is a permitted attachment; exact-key check for `sha256` and `bythos`; legacy attachment cards still accepted. (D11; WB Forged mark)
+- [x] 3.3 Modify `validarElemento` in `D/api/sesiones.go` (line ~369) to implement D11. (D11)
+- [x] 3.4 Modify `T/opsPizarra.js`: map `datos` to `customData`; on replace of an existing `marca-` id bump the element version to prev+1. (D3, D5)
+- [x] 3.5 Modify `T/Pizarra.jsx`: "Quitar marcas" button, disabled when no marks; removes tagged elements via `updateScene` with `captureUpdate: IMMEDIATELY`; NOT recorded in the agent history; Ctrl+Z restores. (D10; WB Quitar marcas, Undo removal)
 - [ ] 3.6 Verify: `pnpm build`, `git checkout -- desktop/ui/dist/.gitkeep`; Go commands. Manual: M.3 to M.5.
 - [ ] 3.7 Open PR3 (base PR2 branch) with R2, R4 results and M.3 to M.5.
 
