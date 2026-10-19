@@ -350,6 +350,8 @@ export const TEXTO_PIZARRA = {
   revisarSinTerminal: 'La terminal no está conectada: no se escribió el pedido.',
   adjuntar: 'Adjuntar',
   adjuntarAyuda: 'Adjuntar imágenes o documentos a la pizarra',
+  quitarMarcas: 'Quitar marcas',
+  quitarMarcasAyuda: 'Quitar las marcas que dejó el agente (Ctrl+Z las restaura)',
   adjuntoNoDisponible: 'Algunos adjuntos no están disponibles',
   adjuntosSinListar: 'No se pudieron leer los adjuntos de la sesión',
   abrir: 'Abrir',

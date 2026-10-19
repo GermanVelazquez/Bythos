@@ -3,6 +3,7 @@ import { Excalidraw, sanearEscena, versionEscena, insertarAdjunto, shaDeElemento
 import { subirArchivo, leerComoDataURL } from './adjuntos.js'
 import { api, TEXTO_PIZARRA } from '../api.js'
 import { FileViewerModal } from '../Archivos.jsx'
+import { esMarca } from './opsPizarra.js'
 import BarraAdjunto from './BarraAdjunto.jsx'
 import SelectorRecursoCarpeta from './SelectorRecursoCarpeta.jsx'
 
@@ -32,6 +33,7 @@ export default function Pizarra({ sesionId, carpetaId, inicial, archivos, conoci
   const [seleccion, setSeleccion] = useState(null) // adjunto bajo la selección (barra de acciones)
   const [visor, setVisor] = useState(null) // recurso sintético para FileViewerModal
   const [recursos, setRecursos] = useState(null) // null = selector cerrado
+  const [hayMarcas, setHayMarcas] = useState(false) // habilita "Quitar marcas"
   const ultima = useRef(null)
   const apiLienzo = useRef(null)
   const selector = useRef(null)
@@ -105,6 +107,13 @@ export default function Pizarra({ sesionId, carpetaId, inicial, archivos, conoci
     } catch (err) { mostrar(err.message) }
   }
 
+  // Solo la escena: sin llamadas a la API ni historial del agente; el autoguardado normal
+  // lo persiste y Ctrl+Z las restaura (captureUpdate IMMEDIATELY en quitarElementos).
+  function quitarMarcas() {
+    const ids = apiLienzo.current?.getSceneElements().filter(esMarca).map((e) => e.id) ?? []
+    if (ids.length) quitarElementos(apiLienzo.current, ids)
+  }
+
   function interceptar(e) {
     const dt = e.clipboardData ?? e.dataTransfer
     const archivos = archivosDe(dt)
@@ -130,6 +139,9 @@ export default function Pizarra({ sesionId, carpetaId, inicial, archivos, conoci
       {carpetaId != null && (
         <button type="button" className="btn-outline term-adjuntar term-adjuntar-carpeta" onClick={abrirSelector}>{TEXTO_PIZARRA.deCarpeta}</button>
       )}
+      <button type="button" className="btn-outline term-adjuntar term-adjuntar-marcas" title={TEXTO_PIZARRA.quitarMarcasAyuda} disabled={!hayMarcas} onClick={quitarMarcas}>
+        {TEXTO_PIZARRA.quitarMarcas}
+      </button>
       {recursos && <SelectorRecursoCarpeta recursos={recursos} alElegir={adjuntarRecurso} alCerrar={() => setRecursos(null)} />}
       {seleccion && (
         <BarraAdjunto
@@ -163,6 +175,7 @@ export default function Pizarra({ sesionId, carpetaId, inicial, archivos, conoci
         }}
         onChange={(elements, appState) => {
           const s = adjuntoSeleccionado(elements, appState)
+          setHayMarcas(elements.some((e) => !e.isDeleted && esMarca(e)))
           setSeleccion((previa) => (previa?.sha === s?.sha && previa?.ids.join() === s?.ids.join() ? previa : s))
           alCambiar(sanearEscena(elements, appState, conocidos.current), `${versionEscena(elements)}|${appState.viewBackgroundColor}`)
         }}
