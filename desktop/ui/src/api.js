@@ -307,6 +307,19 @@ export const api = {
     return res.blob()
   },
   urlContenidoAdjunto: (sesionId, adjId) => `${BASE}/api/terminal/sesiones/${sesionId}/adjuntos/${adjId}/contenido`,
+  textoAdjunto: (sesionId, adjId) =>
+    fetch(`${BASE}/api/terminal/sesiones/${sesionId}/adjuntos/${adjId}/texto`, { headers: CABECERAS_ORIGEN }).then(leer),
+  // Guarda el adjunto como recurso de la carpeta de la sesión: 201 lo crea, 200 ya existía.
+  // Devuelve { recurso (crudo, con Titulo), existia }.
+  guardarAdjuntoEnCarpeta: async (sesionId, adjId) => {
+    const res = await fetch(`${BASE}/api/terminal/sesiones/${sesionId}/adjuntos/${adjId}/guardar`, { method: 'POST', headers: CABECERAS_ORIGEN })
+    return { recurso: await leer(res), existia: res.status === 200 }
+  },
+  // Vincula a la sesión un recurso de archivo de su carpeta; devuelve la ficha del adjunto.
+  adjuntarDesdeRecurso: (sesionId, recursoId) =>
+    fetch(`${BASE}/api/terminal/sesiones/${sesionId}/adjuntos/desde-recurso`, {
+      method: 'POST', headers: CABECERAS_JSON, body: JSON.stringify({ recurso_id: recursoId }),
+    }).then(leer),
   // Agente en la pizarra: latido {ops, capturas}; ack de un lote; PNG de una captura.
   latidoPizarra: (sesionId) =>
     fetch(`${BASE}/api/terminal/latido`, { method: 'POST', headers: CABECERAS_JSON, body: JSON.stringify({ sesion_id: sesionId }) }).then(leer),
@@ -338,4 +351,11 @@ export const TEXTO_PIZARRA = {
   adjuntarAyuda: 'Adjuntar imágenes o documentos a la pizarra',
   adjuntoNoDisponible: 'Algunos adjuntos no están disponibles',
   adjuntosSinListar: 'No se pudieron leer los adjuntos de la sesión',
+  abrir: 'Abrir',
+  guardarEnCarpeta: 'Guardar en carpeta',
+  quitar: 'Quitar',
+  guardadoEnCarpeta: 'Guardado en la carpeta',
+  yaEnCarpeta: (titulo) => `Ya está en la carpeta como «${titulo}»`,
+  deCarpeta: 'De la carpeta',
+  carpetaVacia: 'La carpeta no tiene archivos para adjuntar',
 }

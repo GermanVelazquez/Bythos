@@ -527,6 +527,11 @@ input:focus-visible, select:focus-visible, button:focus-visible, .res-card-click
 .term-lienzo { flex: 1; min-height: 0; position: relative; }
 .term-lienzo > .excalidraw { position: absolute; inset: 0; }
 .term-adjuntar { position: absolute; bottom: 12px; right: 56px; z-index: 5; }
+.term-adjuntar-carpeta { right: 140px; }
+.term-barra-adjunto { position: absolute; bottom: 52px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 6px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--border, #333); z-index: 10; }
+.term-selector-recurso { position: absolute; bottom: 52px; right: 56px; width: 260px; max-height: 50%; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--border, #333); z-index: 11; }
+.term-selector-item { text-align: left; background: none; border: 0; color: var(--ink); padding: 6px 8px; border-radius: 4px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.term-selector-item:hover { background: var(--surface-3, #2a2a2a); }
 .term-aviso { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); padding: 6px 12px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--amber); color: var(--ink); font-size: 12px; z-index: 10; }
 .term-guardado-guardado { color: var(--green); border-color: var(--green); }
 .term-guardado-guardando { color: var(--amber); border-color: var(--amber); }

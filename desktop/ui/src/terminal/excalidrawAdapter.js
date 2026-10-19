@@ -58,17 +58,51 @@ export const construirImagen = (adjunto, x, y, ancho, alto) => {
   }
 }
 
+// Enlace interno de una tarjeta: da el icono de enlace de Excalidraw. Nunca se navega a él:
+// onLinkOpen lo intercepta con preventDefault (spike f). normalizeLink lo deja intacto (comprobado
+// en 0.18.1: sanitizeUrl solo bloquea javascript/data/vbscript).
+const PREFIJO_ENLACE = 'bythos:adjunto/'
+export const enlaceDeAdjunto = (sha) => `${PREFIJO_ENLACE}${sha}`
+export const shaDeEnlace = (link) => (typeof link === 'string' && link.startsWith(PREFIJO_ENLACE) ? link.slice(PREFIJO_ENLACE.length) : null)
+
 // Tarjeta de un documento: rectángulo con texto ligado (nombre y tipo). Va como
-// esqueleto: pásalo por convertirElementos. Sin `link`: abrir la tarjeta es de la PR 5b.
+// esqueleto: pásalo por convertirElementos.
 export function construirTarjeta(adjunto, x, y) {
   const nombre = adjunto.nombre.length > NOMBRE_TARJETA ? `${adjunto.nombre.slice(0, NOMBRE_TARJETA - 1)}…` : adjunto.nombre
   return {
     type: 'rectangle', id: crypto.randomUUID(), x, y, width: 280, height: 90,
     backgroundColor: '#2a2a2a', fillStyle: 'solid', roundness: { type: 3 },
-    customData: { bythos: 'adjunto', sha256: adjunto.sha256 },
+    customData: { bythos: 'adjunto', sha256: adjunto.sha256 }, link: enlaceDeAdjunto(adjunto.sha256),
     label: { text: `${nombre}
 ${(adjunto.nombre.includes('.') ? adjunto.nombre.split('.').pop() : adjunto.tipo).toUpperCase()}`, fontSize: 18 },
   }
+}
+
+// Adjunto bajo la selección: { sha, tipo: 'imagen'|'tarjeta', ids } o null. Exactamente uno
+// (la imagen o la tarjeta; el texto ligado cuenta como su tarjeta). `ids` incluye el texto ligado.
+export function adjuntoSeleccionado(elements, appState) {
+  const vivos = elements.filter((e) => !e.isDeleted)
+  const base = new Set()
+  for (const id of Object.keys(appState?.selectedElementIds ?? {})) {
+    const e = vivos.find((x) => x.id === id)
+    if (e) base.add(e.type === 'text' && e.containerId ? e.containerId : e.id)
+  }
+  if (base.size !== 1) return null
+  const e = vivos.find((x) => x.id === [...base][0])
+  const tarjeta = e?.customData?.bythos === 'adjunto'
+  if (!e || (e.type !== 'image' && !tarjeta)) return null
+  const sha = shaDeElemento(e)
+  if (!sha) return null
+  return { sha, tipo: tarjeta ? 'tarjeta' : 'imagen', ids: [e.id, ...vivos.filter((x) => x.containerId === e.id).map((x) => x.id)] }
+}
+
+// "Quitar": marca borrados esos elementos (solo la escena; la fila del adjunto se queda, D4) y
+// limpia la selección. captureUpdate IMMEDIATELY: Ctrl+Z los restaura.
+export function quitarElementos(api, ids) {
+  const fuera = new Set(ids)
+  const elements = api.getSceneElementsIncludingDeleted().map((e) =>
+    fuera.has(e.id) ? { ...e, isDeleted: true, version: e.version + 1, versionNonce: Math.floor(Math.random() * 2 ** 31) } : e)
+  api.updateScene({ elements, appState: { selectedElementIds: {} }, captureUpdate: CaptureUpdateAction.IMMEDIATELY })
 }
 
 // D8: primero los bytes (addFiles), luego los elementos con captureUpdate IMMEDIATELY.

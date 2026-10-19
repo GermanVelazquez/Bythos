@@ -233,7 +233,9 @@ function DocPreview({ texto }) {
 // abrirlos con el programa del sistema significaría lanzar un proceso —
 // fuera de alcance de "Paso 0", ver instrucciones — así que Descargar
 // sigue siempre disponible como respaldo (formato exacto, garantizado).
-export function FileViewerModal({ resource, onClose }) {
+// `urlContenido(archivoId)` y `leerTexto(archivoId)` son opcionales: la pizarra los usa para
+// servir los adjuntos de la sesión; sin ellos es el visor de la biblioteca de siempre.
+export function FileViewerModal({ resource, onClose, urlContenido = api.contenidoArchivoUrl, leerTexto = api.textoArchivo }) {
   const [textoDoc, setTextoDoc] = useState(null)
   const [textoCargando, setTextoCargando] = useState(false)
 
@@ -252,16 +254,16 @@ export function FileViewerModal({ resource, onClose }) {
     if (!resource || resource.tipo !== 'documento' || !resource.archivo) return
     let cancelado = false
     setTextoCargando(true)
-    api.textoArchivo(resource.archivo.id)
+    leerTexto(resource.archivo.id)
       .then((data) => { if (!cancelado) setTextoDoc(data) })
       .catch(() => { /* 422 u otro error: textoDoc queda null, cae a Descargar */ })
       .finally(() => { if (!cancelado) setTextoCargando(false) })
     return () => { cancelado = true }
-  }, [resource])
+  }, [resource]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!resource || !resource.archivo) return null
 
-  const src = api.contenidoArchivoUrl(resource.archivo.id)
+  const src = urlContenido(resource.archivo.id)
   const titulo = resource.titulo || resource.archivo.nombre
 
   let cuerpo
