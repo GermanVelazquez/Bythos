@@ -173,7 +173,13 @@ func (s *Servidor) contenidoArchivo(w http.ResponseWriter, r *http.Request) {
 		responderError(w, 404, "Archivo no encontrado")
 		return
 	}
+	servirArchivo(w, r, a)
+}
 
+// servirArchivo escribe el blob de a con los headers de contenido seguro. Es
+// compartida por /api/archivos/{id}/contenido y las rutas de adjuntos de una
+// sesión: el caller ya resolvió y autorizó el archivo (design D12).
+func servirArchivo(w http.ResponseWriter, r *http.Request, a db.Archivo) {
 	f, err := archivos.Abrir(a.Ruta)
 	if err != nil {
 		responderError(w, 404, "El archivo no está en el disco")

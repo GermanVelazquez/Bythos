@@ -111,6 +111,7 @@ func (s *Servidor) Rutas() http.Handler {
 
 	// Terminal: sesiones, pizarra y entorno (ver sesiones.go).
 	s.rutasSesiones(mux)
+	s.rutasAdjuntos(mux) // adjuntos de la pizarra (ver adjuntos.go)
 	s.rutasPizarra(mux) // latido, ops y capturas (ver pizarra.go)
 
 	// Despertar la UI: "/" sirve ui/dist SIN pisar "/api/..."
