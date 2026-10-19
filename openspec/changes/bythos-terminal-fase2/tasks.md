@@ -139,7 +139,7 @@ Satisfies: WA Document Cards (open), Guardar en carpeta, Remove Attachment, Pick
 - [x] 5b.3 Create `T/BarraAdjunto.jsx` (presentational): shown for a selected image or card with actions "Abrir", "Guardar en carpeta" (only when the session has a folder; shows the existing resource on duplicate), "Quitar". "Quitar" deletes the element(s) from the scene only; the link row stays (D4) and Ctrl+Z restores it. (WA: Manual save, Session without folder, Remove, Library untouched)
 - [x] 5b.4 Create `T/SelectorRecursoCarpeta.jsx` and wire it into the Adjuntar menu: lists the folder's resources (hidden or empty without a folder, videos excluded) and calls `desde-recurso`. Add the `api.js` calls. (WA: Pick folder resource, Session without folder)
 - [ ] 5b.5 Verify: `pnpm build`; `go vet ./...`, `go test ./...`. Manual: M.10 to M.15.
-- [ ] 5b.6 Open PR5b (base PR5a branch) with M.10 to M.15.
+- [x] 5b.6 Open PR5b (base PR5a branch) with M.10 to M.15. (#40)
 
 ## Manual verification checklist (real app, Windows)
 
