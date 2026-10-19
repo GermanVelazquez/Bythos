@@ -3,7 +3,7 @@ import { Terminal as Xterm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { api, TEXTO_TERMINAL } from '../api.js'
-import { conectarPty } from './conexionPty.js'
+import { conectarPty, sinControl } from './conexionPty.js'
 import { ChipTerminal } from './ChipsEstado.jsx'
 
 const TEXTO_ESTADO = {
@@ -17,7 +17,7 @@ const TEXTO_ESTADO = {
 }
 
 // Presentacional: monta xterm y lo conecta a la sesión. Sin estado de negocio.
-export default function PanelTerminal({ sesion, enfocarRef }) {
+export default function PanelTerminal({ sesion, enfocarRef, escribirRef }) {
   const contenedor = useRef(null)
   const [estado, setEstado] = useState({ clave: 'conectando' })
   const [agente, setAgente] = useState('')
@@ -45,6 +45,15 @@ export default function PanelTerminal({ sesion, enfocarRef }) {
     ajustar()
     term.focus()
     if (enfocarRef) enfocarRef.current = () => term.focus()
+    // Pega (sin Enter) una sola línea; false y nada escrito si no hay conexión.
+    if (escribirRef) {
+      escribirRef.current = (texto) => {
+        if (!conexion.abierta()) return false
+        const linea = sinControl(texto)
+        if (linea) term.paste(linea)
+        return true
+      }
+    }
 
     const datos = term.onData((t) => conexion.enviar(t))
 
@@ -78,6 +87,7 @@ export default function PanelTerminal({ sesion, enfocarRef }) {
     return () => {
       window.removeEventListener('keydown', bloquear, true)
       if (enfocarRef) enfocarRef.current = null
+      if (escribirRef) escribirRef.current = null
       clearTimeout(temporizador)
       observador.disconnect()
       datos.dispose()

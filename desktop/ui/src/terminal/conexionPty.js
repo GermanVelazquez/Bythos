@@ -9,7 +9,19 @@ const ESPERA_MIN = 500
 const ESPERA_MAX = 5000
 const CIERRE_REEMPLAZADA = 4000
 
-// Devuelve { enviar(texto), redimensionar(cols, filas), cerrar() }.
+// Quita caracteres de control C0 y DEL: el texto que se pega queda en una sola línea.
+export function sinControl(texto) {
+  return String(texto).replace(/[\x00-\x1f\x7f]/g, '')
+}
+
+// Pedido de Revisar: una sola línea, sin Enter. Devuelve null si el id no es numérico.
+export function pedidoRevisar(sesionId) {
+  const id = String(sesionId)
+  if (!/^\d{1,12}$/.test(id)) return null
+  return sinControl(`Revisa la pizarra de la sesión ${id}: léela con pizarra_leer y marca cada paso con pizarra_marcar según las reglas de tutor.`)
+}
+
+// Devuelve { abierta(), enviar(texto), redimensionar(cols, filas), cerrar() }.
 // Callbacks: alDatos(Uint8Array), alReiniciar() (antes de cada repetición),
 // alEstado(estado, extra). Estados: conectando, conectado, reconectando,
 // terminado (extra = código), reemplazada, sinconpty, limite.
@@ -84,6 +96,9 @@ export function conectarPty(sesionId, { alDatos, alReiniciar, alEstado }) {
   abrir()
 
   return {
+    abierta() {
+      return ws?.readyState === WebSocket.OPEN
+    },
     enviar(texto) {
       if (ws?.readyState === WebSocket.OPEN) ws.send(codificar.encode(texto))
     },

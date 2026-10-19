@@ -347,6 +347,7 @@ export const TEXTO_PIZARRA = {
   error: 'Error al guardar',
   otraVentana: 'Actualizada desde otra ventana',
   revisar: 'Revisar',
+  revisarSinTerminal: 'La terminal no está conectada: no se escribió el pedido.',
   adjuntar: 'Adjuntar',
   adjuntarAyuda: 'Adjuntar imágenes o documentos a la pizarra',
   adjuntoNoDisponible: 'Algunos adjuntos no están disponibles',
