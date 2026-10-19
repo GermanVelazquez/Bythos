@@ -60,14 +60,14 @@ Satisfies: WT pizarra_marcar (validation, expansion, caps), WB Scene Limits delt
 Split in two: 02 (validation) and 02b (expansion).
 
 - [x] 2.1 RED: create `D/pizarra/marcas_test.go`: `ValidarMarcas` rejects >20 marks, `pista` >300 runes, `pasaje` >200, `pagina` outside 1..100000, unknown veredicto, empty targets; `limpiarTexto` strips controls. (D9)
-- [ ] 2.2 RED: ids and expansion: `ExpandirMarcas` yields exactly 2 `agregar` ops per mark (frame and pill); id is `marca-` + base64url(sha256(sesion|clave))[:10] + `-m`/`-t`; replace bumps version to prev+1; ops carry `Datos {bythos:"marca", veredicto, clave}`. (D3, D4, D5)
-- [ ] 2.3 RED: geometry and text: frame = bounding box + 6 px pad, stroke 2; pill alto 20 wrapped at 48 runes; verdict and citation lines never truncated (citation ≤73 runes, ≤2 lines); pista ≤10 lines and pasaje ≤6 lines cut with "…"; max 19 lines; colors ok #2f9e44, error #e03131, parcial #f08c00; citation "<título>, pág. N" with title cut to 60 runes with "…". (D6, D8)
+- [x] 2.2 RED: ids and expansion: `ExpandirMarcas` yields exactly 2 `agregar` ops per mark (frame and pill); id is `marca-` + base64url(sha256(sesion|clave))[:10] + `-m`/`-t`; replace bumps version to prev+1; ops carry `Datos {bythos:"marca", veredicto, clave}`. (D3, D4, D5)
+- [x] 2.3 RED: geometry and text: frame = bounding box + 6 px pad, stroke 2; pill alto 20 wrapped at 48 runes; verdict and citation lines never truncated (citation ≤73 runes, ≤2 lines); pista ≤10 lines and pasaje ≤6 lines cut with "…"; max 19 lines; colors ok #2f9e44, error #e03131, parcial #f08c00; citation "<título>, pág. N" with title cut to 60 runes with "…". (D6, D8)
 - [x] 2.4 RED: `Cajas` in `D/pizarra/resumen_test.go`: ids resolve to boxes from the saved scene, unknown id errors, an area target is used as given. `Validar` rejects `datos` from the agent and agregar ids with the `marca-` prefix in `D/pizarra/ops_test.go`. (D4, D7) The area-target case of `Cajas` is tested in 02b with `ExpandirMarcas`.
 - [x] 2.5a Create `D/pizarra/marcas.go` (types, `ValidarMarcas`, `limpiarTexto`). (D9) [PR 02]
-- [ ] 2.5b Create `D/pizarra/marcas_expandir.go` (wrapping, ids, geometry, `ExpandirMarcas`, `Describir`). (D3 to D8) [PR 02b]
+- [x] 2.5b Create `D/pizarra/marcas_expandir.go` (wrapping, ids, geometry, `ExpandirMarcas`, `Describir`). (D3 to D8) [PR 02b]
 - [x] 2.6 Modify `D/pizarra/resumen.go` (`Cajas`) and `D/pizarra/ops.go` (`Elemento.Datos`, reserved prefix check in `Validar`). (D4, D7)
-- [ ] 2.7 Verify: `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...`.
-- [ ] 2.8 Open PR2 (base PR1 branch).
+- [x] 2.7 Verify: `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...`.
+- [x] 2.8 Open PR2 (base PR1 branch). (#42, #43)
 
 ## PR3: Marks UI, Quitar marcas, forged-mark guard (branch `feat/bythos-terminal-fase3-03-marcas-ui`, base `feat/bythos-terminal-fase3-02-marcas-dominio`)
 
