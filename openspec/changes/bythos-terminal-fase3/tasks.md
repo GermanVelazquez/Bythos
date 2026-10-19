@@ -50,7 +50,7 @@ Satisfies: TS Revisar (5 scenarios) (D1, D2).
 - [x] 1.2 Modify `T/conexionPty.js` (near lines 87-89): expose a `pegar(texto)` path that returns `false` when `conexion.abierta()` is false, otherwise calls `term.paste`. Strip C0 control characters and DEL. (D1, D2)
 - [x] 1.3 Modify `T/PanelTerminal.jsx` (line ~49): `escribirRef` exposing the paste; sanitize id with `/^\d{1,12}$/`; template "Revisa la pizarra de la sesión ${id}: léela con pizarra_leer y marca cada paso con pizarra_marcar según las reglas de tutor."; order vaciar → paste → focus; no Enter. (D1, D2; TS Revisar sends, Not connected)
 - [x] 1.4 Modify `T/PanelSesion.jsx`: "Revisar" button wired to `escribirRef`; when not connected show "La terminal no está conectada: no se escribió el pedido." and write nothing. (D2; TS Not connected)
-- [ ] 1.5 Verify: `pnpm build`, `git checkout -- desktop/ui/dist/.gitkeep`; `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...`. Manual: M.1, M.2.
+- [x] 1.5 Verify: `pnpm build`, `git checkout -- desktop/ui/dist/.gitkeep`; `go vet ./...`, `GOOS=linux go vet ./...`, `go test ./...`. Manual: M.1, M.2.
 - [ ] 1.6 Open PR1 (base `master`) with the chain diagram, R1 results, M.1, M.2.
 
 ## PR2: Marks domain (branch `feat/bythos-terminal-fase3-02-marcas-dominio`, base `feat/bythos-terminal-fase3-01-revisar`)
