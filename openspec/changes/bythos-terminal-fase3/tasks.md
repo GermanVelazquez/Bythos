@@ -79,7 +79,7 @@ Satisfies: WB Quitar marcas, Forged mark; WH tagging round trip (D4, D10, D11). 
 - [x] 3.4 Modify `T/opsPizarra.js`: map `datos` to `customData`; on replace of an existing `marca-` id bump the element version to prev+1. (D3, D5)
 - [x] 3.5 Modify `T/Pizarra.jsx`: "Quitar marcas" button, disabled when no marks; removes tagged elements via `updateScene` with `captureUpdate: IMMEDIATELY`; NOT recorded in the agent history; Ctrl+Z restores. (D10; WB Quitar marcas, Undo removal)
 - [ ] 3.6 Verify: `pnpm build`, `git checkout -- desktop/ui/dist/.gitkeep`; Go commands. Manual: M.3 to M.5.
-- [ ] 3.7 Open PR3 (base PR2 branch) with R2, R4 results and M.3 to M.5.
+- [x] 3.7 Open PR3 (base PR2 branch) with R2, R4 results and M.3 to M.5. (#44)
 
 ## PR4: Marcar route and MCP tool (branch `feat/bythos-terminal-fase3-04-marcar-mcp`, base `feat/bythos-terminal-fase3-03-marcas-ui`)
 
