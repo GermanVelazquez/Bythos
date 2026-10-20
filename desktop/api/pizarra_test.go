@@ -644,3 +644,140 @@ func TestGetCambiosListaYGuarda(t *testing.T) {
 		t.Errorf("sesión inexistente = %d, debía ser 404", rec.Code)
 	}
 }
+
+// --- deshacer: reclamo atómico, liberación y guardas (design D16) ---
+
+func opDeshacible(t *testing.T, s *Servidor, sesionID int64) int64 {
+	t.Helper()
+	id, _ := db.EncolarOp(s.Base, sesionID, `[{"accion":"borrar","ids":["a"]}]`)
+	if rec := ack(s, id, `{"ok":true,"ids":["a"],"inversa":{"restaurar":[{"id":"a"}],"quitar":[]},"versiones":{"a":[2,9]}}`); rec.Code != 200 {
+		t.Fatalf("ack: %d", rec.Code)
+	}
+	return id
+}
+
+func deshacerT(s *Servidor, sesionID, opID int64, cuerpo string) *httptest.ResponseRecorder {
+	return ventanaT(s, "POST", fmt.Sprintf("sesiones/%d/cambios/%d/deshacer", sesionID, opID), cuerpo)
+}
+
+func deshechoDe(s *Servidor, id int64) (d sql.NullString) {
+	s.Base.QueryRow(`SELECT deshecho FROM terminal_pizarra_ops WHERE id = ?`, id).Scan(&d)
+	return d
+}
+
+func TestDeshacerDevuelveInversaYMarcaDeshecho(t *testing.T) {
+	s := basePrueba(t)
+	se := sesionMontada(t, s, "A")
+	id := opDeshacible(t, s, se.ID)
+	rec := deshacerT(s, se.ID, id, "")
+	if rec.Code != 200 {
+		t.Fatalf("deshacer: %d %s", rec.Code, rec.Body.String())
+	}
+	m := json2(t, rec)
+	if m["inversa"] == nil || m["versiones"] == nil {
+		t.Fatalf("falta inversa o versiones: %s", rec.Body.String())
+	}
+	if !deshechoDe(s, id).Valid {
+		t.Fatal("el lote debía quedar deshecho")
+	}
+	if rec := deshacerT(s, se.ID, id, ""); rec.Code != 409 {
+		t.Errorf("segundo deshacer = %d, debía ser 409", rec.Code)
+	}
+	ev, _ := db.ListarEventos(s.Base, db.FiltroEventos{})
+	hay := false
+	for _, e := range ev {
+		hay = hay || e.Accion == db.AccionPizarraDeshecha
+	}
+	if !hay {
+		t.Errorf("falta el evento de deshacer: %+v", ev)
+	}
+}
+
+func TestDeshacerSinOriginOConExtensionDa403(t *testing.T) {
+	s := basePrueba(t)
+	se := sesionMontada(t, s, "A")
+	id := opDeshacible(t, s, se.ID)
+	ruta := fmt.Sprintf("sesiones/%d/cambios/%d/deshacer", se.ID, id)
+	for _, origen := range []string{"", "chrome-extension://abcdef", "http://evil.example"} {
+		if rec := pedirTerminal(s, "POST", ruta, "", origen); rec.Code != 403 {
+			t.Errorf("Origin %q = %d, debía ser 403", origen, rec.Code)
+		}
+	}
+	if deshechoDe(s, id).Valid {
+		t.Fatal("un 403 no debe reclamar el lote")
+	}
+}
+
+func TestDeshacerSinInversaDa409(t *testing.T) {
+	s := basePrueba(t)
+	se := sesionMontada(t, s, "A")
+	id, _ := db.EncolarOp(s.Base, se.ID, `[]`)
+	ack(s, id, `{"ok":true,"ids":["a"]}`)
+	if rec := deshacerT(s, se.ID, id, ""); rec.Code != 409 {
+		t.Fatalf("sin inversa = %d, debía ser 409", rec.Code)
+	}
+}
+
+func TestDeshacerPizarraNoMontadaDa409YSigueDeshacible(t *testing.T) {
+	s := basePrueba(t)
+	se, _ := db.CrearSesion(s.Base, "A", "dibujo", nil) // sin latido
+	id := opDeshacible(t, s, se.ID)
+	rec := deshacerT(s, se.ID, id, "")
+	if rec.Code != 409 || !strings.Contains(rec.Body.String(), textoPizarraCerrada) {
+		t.Fatalf("no montada: %d %s", rec.Code, rec.Body.String())
+	}
+	if deshechoDe(s, id).Valid {
+		t.Fatal("el lote debía seguir deshacible")
+	}
+	latir(t, s, se.ID)
+	if rec := deshacerT(s, se.ID, id, ""); rec.Code != 200 {
+		t.Fatalf("con la pizarra abierta = %d", rec.Code)
+	}
+}
+
+func TestDeshacerLiberarRestauraYRegistraEvento(t *testing.T) {
+	s := basePrueba(t)
+	se := sesionMontada(t, s, "A")
+	id := opDeshacible(t, s, se.ID)
+	deshacerT(s, se.ID, id, "")
+	for i := 0; i < 2; i++ { // idempotente
+		if rec := deshacerT(s, se.ID, id, `{"liberar":true}`); rec.Code != 200 {
+			t.Fatalf("liberar %d: %d %s", i, rec.Code, rec.Body.String())
+		}
+	}
+	if deshechoDe(s, id).Valid {
+		t.Fatal("liberar debía limpiar deshecho")
+	}
+	ev, _ := db.ListarEventos(s.Base, db.FiltroEventos{})
+	hay := false
+	for _, e := range ev {
+		hay = hay || strings.Contains(e.Detalle, "deshacer no aplicado")
+	}
+	if !hay {
+		t.Errorf("falta el evento 'deshacer no aplicado': %+v", ev)
+	}
+	if rec := deshacerT(s, se.ID, id, ""); rec.Code != 200 {
+		t.Errorf("tras liberar debía poder deshacerse: %d", rec.Code)
+	}
+}
+
+func TestDeshacerIdDesconocidoOtraSesionDa404(t *testing.T) {
+	s := basePrueba(t)
+	a := sesionMontada(t, s, "A")
+	b := sesionMontada(t, s, "B")
+	id := opDeshacible(t, s, a.ID)
+	for _, cuerpo := range []string{"", `{"liberar":true}`} {
+		if rec := deshacerT(s, a.ID, 9999, cuerpo); rec.Code != 404 {
+			t.Errorf("op desconocida %q = %d", cuerpo, rec.Code)
+		}
+		if rec := deshacerT(s, b.ID, id, cuerpo); rec.Code != 404 {
+			t.Errorf("otra sesión %q = %d", cuerpo, rec.Code)
+		}
+		if rec := deshacerT(s, 9999, id, cuerpo); rec.Code != 404 {
+			t.Errorf("sesión desconocida %q = %d", cuerpo, rec.Code)
+		}
+	}
+	if deshechoDe(s, id).Valid {
+		t.Fatal("ningún 404 debe reclamar el lote")
+	}
+}

@@ -3,6 +3,8 @@ package db
 import (
 	"database/sql"
 	"errors"
+	"sync"
+	"sync/atomic"
 	"testing"
 )
 
@@ -276,5 +278,75 @@ func TestListarCambiosEstadosYOcultas(t *testing.T) {
 		if lista[i-1].ID < lista[i].ID {
 			t.Fatal("más nuevo primero")
 		}
+	}
+}
+
+func TestReclamarDeshacerEsAtomico(t *testing.T) {
+	base := basePrueba(t)
+	s, _ := CrearSesion(base, "A", "dibujo", nil)
+	id, _ := EncolarOp(base, s.ID, `[]`)
+	inv, ver := `{"quitar":["a"]}`, `{"a":[1,1]}`
+	if _, _, err := ResponderOpHistorial(base, id, true, "", &inv, &ver); err != nil {
+		t.Fatal(err)
+	}
+	const n = 8
+	var wg sync.WaitGroup
+	var ganadores, rechazados int32
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _, err := ReclamarDeshacer(base, s.ID, id)
+			switch {
+			case err == nil:
+				atomic.AddInt32(&ganadores, 1)
+			case errors.Is(err, ErrNoDeshacible):
+				atomic.AddInt32(&rechazados, 1)
+			default:
+				t.Errorf("error inesperado: %v", err)
+			}
+		}()
+	}
+	wg.Wait()
+	if ganadores != 1 || rechazados != n-1 {
+		t.Fatalf("ganadores=%d rechazados=%d, debía ser 1 y %d", ganadores, rechazados, n-1)
+	}
+}
+
+func TestReclamarDeshacerRechazos(t *testing.T) {
+	base := basePrueba(t)
+	s, _ := CrearSesion(base, "A", "dibujo", nil)
+	otra, _ := CrearSesion(base, "B", "dibujo", nil)
+	sinInv, _ := EncolarOp(base, s.ID, `[]`)
+	ResponderOp(base, sinInv, true, "")
+	if _, _, err := ReclamarDeshacer(base, s.ID, sinInv); !errors.Is(err, ErrNoDeshacible) {
+		t.Errorf("sin inversa = %v", err)
+	}
+	if _, _, err := ReclamarDeshacer(base, s.ID, 999); !errors.Is(err, sql.ErrNoRows) {
+		t.Errorf("desconocida = %v", err)
+	}
+	if _, _, err := ReclamarDeshacer(base, otra.ID, sinInv); !errors.Is(err, sql.ErrNoRows) {
+		t.Errorf("otra sesión = %v", err)
+	}
+}
+
+func TestLiberarDeshacerEsIdempotente(t *testing.T) {
+	base := basePrueba(t)
+	s, _ := CrearSesion(base, "A", "dibujo", nil)
+	id, _ := EncolarOp(base, s.ID, `[]`)
+	inv := `{"quitar":["a"]}`
+	ResponderOpHistorial(base, id, true, "", &inv, nil)
+	ReclamarDeshacer(base, s.ID, id)
+	if lib, err := LiberarDeshacer(base, s.ID, id); err != nil || !lib {
+		t.Fatalf("primera liberación = %v %v", lib, err)
+	}
+	if lib, err := LiberarDeshacer(base, s.ID, id); err != nil || lib {
+		t.Fatalf("segunda liberación = %v %v, debía ser idempotente", lib, err)
+	}
+	if _, _, err := ReclamarDeshacer(base, s.ID, id); err != nil {
+		t.Fatalf("tras liberar debía poder reclamarse: %v", err)
+	}
+	if _, err := LiberarDeshacer(base, s.ID, 999); !errors.Is(err, sql.ErrNoRows) {
+		t.Errorf("liberar desconocida = %v", err)
 	}
 }

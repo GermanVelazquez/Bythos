@@ -205,6 +205,7 @@ func (s *Servidor) rutasPizarra(mux *http.ServeMux) {
 	mux.HandleFunc("POST "+p+"latido", conVentana(s.latido))
 	mux.HandleFunc("POST "+p+"pizarra/ops/{id}/ack", conVentana(s.ackOp))
 	mux.HandleFunc("GET "+p+"sesiones/{id}/cambios", conVentanaLectura(s.listarCambios))
+	mux.HandleFunc("POST "+p+"sesiones/{id}/cambios/{op}/deshacer", conVentana(s.deshacerCambio))
 	mux.HandleFunc("POST "+p+"pizarra/capturas/{id}", conVentana(s.subirCaptura))
 }
 
@@ -713,4 +714,73 @@ func (s *Servidor) listarCambios(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	responder(w, lista)
+}
+
+// deshacerCambio (POST sesiones/{id}/cambios/{op}/deshacer, guarda Ventana): sin
+// body reclama el lote (atómico) y devuelve {inversa, versiones} para que la UI
+// la aplique; con {"liberar":true} suelta el reclamo si la UI no pudo aplicarla.
+// Exige la pizarra montada ANTES de reclamar, así el lote sigue deshacible (D16).
+func (s *Servidor) deshacerCambio(w http.ResponseWriter, r *http.Request) {
+	id, err1 := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	opID, err2 := strconv.ParseInt(r.PathValue("op"), 10, 64)
+	if err1 != nil || err2 != nil {
+		responderError(w, 404, "Cambio no encontrado")
+		return
+	}
+	var b struct {
+		Liberar bool `json:"liberar"`
+	}
+	if r.ContentLength != 0 {
+		if err := leerJSON(w, r, &b); err != nil && !errors.Is(err, io.EOF) {
+			responderError(w, 400, "JSON inválido. Manda {\"liberar\":true} o nada")
+			return
+		}
+	}
+	if _, ok, err := db.ObtenerSesion(s.Base, id); err != nil {
+		responderError(w, 500, "No se pudo leer la sesión")
+		return
+	} else if !ok {
+		noExiste(w, id)
+		return
+	}
+	if b.Liberar {
+		liberado, err := db.LiberarDeshacer(s.Base, id, opID)
+		if errors.Is(err, sql.ErrNoRows) {
+			responderError(w, 404, "Cambio no encontrado")
+			return
+		} else if err != nil {
+			responderError(w, 500, "No se pudo liberar el cambio")
+			return
+		}
+		if liberado {
+			if err := db.RegistrarEvento(s.Base, db.OrigenApp, "", db.AccionPizarraDeshecha, id, "deshacer no aplicado"); err != nil {
+				log.Println("No se pudo registrar evento de historial:", err)
+			}
+		}
+		responder(w, map[string]bool{"ok": true})
+		return
+	}
+	if !s.pizarra.montada(id) {
+		responderError(w, http.StatusConflict, msgPizarraCerrada)
+		return
+	}
+	inversa, versiones, err := db.ReclamarDeshacer(s.Base, id, opID)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		responderError(w, 404, "Cambio no encontrado")
+		return
+	case errors.Is(err, db.ErrNoDeshacible):
+		responderError(w, http.StatusConflict, "Este cambio no se puede deshacer")
+		return
+	case err != nil:
+		responderError(w, 500, "No se pudo reclamar el cambio")
+		return
+	}
+	if err := db.RegistrarEvento(s.Base, db.OrigenApp, "", db.AccionPizarraDeshecha, id, fmt.Sprintf("deshacer · cambio %d", opID)); err != nil {
+		log.Println("No se pudo registrar evento de historial:", err)
+	}
+	if versiones == "" {
+		versiones = "null"
+	}
+	responder(w, map[string]json.RawMessage{"inversa": json.RawMessage(inversa), "versiones": json.RawMessage(versiones)})
 }
