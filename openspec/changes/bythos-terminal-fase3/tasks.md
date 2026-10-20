@@ -109,13 +109,13 @@ Satisfies: WH Storage, Ack payload, List Changes, Retention (D12, D13, D17, D18)
 
 Satisfies: WH Inverse computation, Conflict check, Partial undo count (D13 to D15, D21).
 
-- [ ] 6.1 Add Vitest: devDependency and `"test": "vitest run"` (node environment) in `UI/package.json` and the lockfile; confirm `pnpm test` runs with zero tests. (D21)
-- [ ] 6.2 RED: create `T/opsPizarra.test.js` (`vi.mock` the adapter): `calcularInversa` cases (added -> quitar; changed -> restaurar previous; removed -> restaurar), identity diff, no-op batch, marks batch; `planDeshacer` conflict check by version+nonce, container grouped with its bound texts as one unit, `omitidos` counts elements, messages "1 elemento no se restauró porque lo cambiaste" / "N elementos no se restauraron porque los cambiaste"; 512 KiB cap sets `sin_deshacer`. (D13 to D15)
-- [ ] 6.3 Modify `T/opsPizarra.js`: `calcularInversa`, `planDeshacer`. (D14, D15)
-- [ ] 6.4 Modify `T/usePizarraAgente.js`: compute the inverse before applying, send `inversa`, `versiones`, `sin_deshacer` in the ack; enforce the UI cap of 512 KiB. Add the ack fields in `S/api.js` if the call is defined there. (D13)
-- [ ] 6.5 Modify `.github/workflows/build.yml`: add a `pnpm test` step after `pnpm build`. (D21)
-- [ ] 6.6 Verify: `pnpm test`, `pnpm build`, `git checkout -- desktop/ui/dist/.gitkeep`; Go commands. Manual: M.7.
-- [ ] 6.7 Open PR6 (base PR5 branch); note the CI step is part of the Vitest approval.
+- [x] 6.1 Add Vitest: devDependency and `"test": "vitest run"` (node environment) in `UI/package.json` and the lockfile; confirm `pnpm test` runs with zero tests. (D21)
+- [x] 6.2 RED: create `T/opsPizarra.test.js` (`vi.mock` the adapter): `calcularInversa` cases (added -> quitar; changed -> restaurar previous; removed -> restaurar), identity diff, no-op batch, marks batch; `planDeshacer` conflict check by version+nonce, container grouped with its bound texts as one unit, `omitidos` counts elements, messages "1 elemento no se restauró porque lo cambiaste" / "N elementos no se restauraron porque los cambiaste"; 512 KiB cap sets `sin_deshacer`. (D13 to D15)
+- [x] 6.3 Modify `T/opsPizarra.js`: `calcularInversa`, `planDeshacer`. (D14, D15)
+- [x] 6.4 Modify `T/usePizarraAgente.js`: compute the inverse before applying, send `inversa`, `versiones`, `sin_deshacer` in the ack; enforce the UI cap of 512 KiB. Add the ack fields in `S/api.js` if the call is defined there. (D13)
+- [x] 6.5 Modify `.github/workflows/build.yml`: add a `pnpm test` step after `pnpm build`. (D21)
+- [x] 6.6 Verify: `pnpm test`, `pnpm build`, `git checkout -- desktop/ui/dist/.gitkeep`; Go commands. Manual: M.7.
+- [x] 6.7 Open PR6 (base PR5 branch); note the CI step is part of the Vitest approval. Opened as #48 (base #47).
 
 ## PR7: POST deshacer (branch `feat/bythos-terminal-fase3-07-deshacer-api`, base `feat/bythos-terminal-fase3-06-inversa-vitest`)
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { api } from '../api.js'
 import { actualizarEscena, exportarPng } from './excalidrawAdapter.js'
-import { aplicarOps } from './opsPizarra.js'
+import { aplicarOps, camposDeshacer } from './opsPizarra.js'
 
 const LATIDO_MS = 1000
 
@@ -26,9 +26,11 @@ export function usePizarraAgente(sesionId, excalidrawApi, vaciar) {
         try {
           const ops = typeof o.op === 'string' ? JSON.parse(o.op) : o.op
           if (!Array.isArray(ops)) throw new Error('Lote de operaciones inválido')
-          const { elementos, ids } = aplicarOps(excalidrawApi.getSceneElementsIncludingDeleted(), ops)
+          const antes = excalidrawApi.getSceneElementsIncludingDeleted()
+          const { elementos, ids } = aplicarOps(antes, ops)
+          // La inversa se calcula antes de aplicar y viaja en el ack (D13): sin ella el lote no se deshace.
+          cuerpo = { ok: true, ids, ...camposDeshacer(antes, elementos) }
           actualizarEscena(excalidrawApi, elementos)
-          cuerpo = { ok: true, ids }
         } catch (e) {
           cuerpo = { ok: false, ids: [], error: e.message }
         }
