@@ -115,7 +115,7 @@ Satisfies: WH Inverse computation, Conflict check, Partial undo count (D13 to D1
 - [x] 6.4 Modify `T/usePizarraAgente.js`: compute the inverse before applying, send `inversa`, `versiones`, `sin_deshacer` in the ack; enforce the UI cap of 512 KiB. Add the ack fields in `S/api.js` if the call is defined there. (D13)
 - [x] 6.5 Modify `.github/workflows/build.yml`: add a `pnpm test` step after `pnpm build`. (D21)
 - [x] 6.6 Verify: `pnpm test`, `pnpm build`, `git checkout -- desktop/ui/dist/.gitkeep`; Go commands. Manual: M.7.
-- [ ] 6.7 Open PR6 (base PR5 branch); note the CI step is part of the Vitest approval.
+- [x] 6.7 Open PR6 (base PR5 branch); note the CI step is part of the Vitest approval. Opened as #48 (base #47).
 
 ## PR7: POST deshacer (branch `feat/bythos-terminal-fase3-07-deshacer-api`, base `feat/bythos-terminal-fase3-06-inversa-vitest`)
 
