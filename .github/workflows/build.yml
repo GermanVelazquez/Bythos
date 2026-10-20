@@ -35,6 +35,10 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm build
 
+      - name: Tests (UI)
+        working-directory: desktop/ui
+        run: pnpm test
+
       - name: Vet + tests (Go)
         working-directory: desktop
         run: |

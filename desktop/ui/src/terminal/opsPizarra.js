@@ -145,3 +145,84 @@ export function aplicarOps(elementos, ops) {
   }
   return { elementos: [...mapa.values()], ids: [...tocados] }
 }
+
+// Inversa de un lote (D14): compara por identidad de objeto, porque aplicarOps
+// copia solo lo que cambia (cubre textos enlazados y subidas de versión de nueva()).
+// Un id tocado que ya existía (aunque fuera una lápida) se restaura con su estado
+// previo; cualquier otro se quita. Un lote sin cambios devuelve una inversa vacía.
+export function calcularInversa(antes, despues) {
+  const previos = new Map(antes.map((e) => [e.id, e]))
+  const restaurar = []
+  const quitar = []
+  for (const e of despues) {
+    const previo = previos.get(e.id)
+    if (previo === e) continue
+    if (previo) restaurar.push(previo)
+    else quitar.push(e.id)
+  }
+  return { restaurar, quitar }
+}
+
+// [version, versionNonce] que dejó el lote en cada id de la inversa: base del
+// chequeo de conflictos de planDeshacer.
+export function versionesDe(despues, inversa) {
+  const porId = new Map(despues.map((e) => [e.id, e]))
+  const versiones = {}
+  for (const id of [...inversa.restaurar.map((e) => e.id), ...inversa.quitar]) {
+    const e = porId.get(id)
+    if (e) versiones[id] = [e.version, e.versionNonce]
+  }
+  return versiones
+}
+
+const mensajeOmitidos = (n) => (n === 1
+  ? '1 elemento no se restauró porque lo cambiaste'
+  : `${n} elementos no se restauraron porque los cambiaste`)
+
+// Arma el deshacer (D15). Un contenedor y sus textos enlazados forman una unidad:
+// si algún miembro cambió después del lote (versión o nonce distintos) o falta, se
+// omite la unidad entera. `omitidos` cuenta elementos, no unidades.
+// Devuelve { elementos, omitidos, aviso } con la lista completa ya modificada.
+export function planDeshacer(actuales, inversa, versiones) {
+  const actual = new Map(actuales.map((e) => [e.id, e]))
+  const miembros = [
+    ...inversa.restaurar.map((e) => ({ id: e.id, previo: e })),
+    ...inversa.quitar.map((id) => ({ id, previo: null })),
+  ]
+  const unidades = new Map()
+  for (const m of miembros) {
+    const clave = (m.previo ?? actual.get(m.id))?.containerId ?? m.id
+    if (!unidades.has(clave)) unidades.set(clave, [])
+    unidades.get(clave).push(m)
+  }
+
+  const resultado = new Map(actuales.map((e) => [e.id, e]))
+  let omitidos = 0
+  for (const unidad of unidades.values()) {
+    const intacta = unidad.every(({ id }) => {
+      const e = actual.get(id)
+      const v = versiones?.[id]
+      return e && v && e.version === v[0] && e.versionNonce === v[1]
+    })
+    if (!intacta) { omitidos += unidad.length; continue }
+    for (const { id, previo } of unidad) {
+      const e = actual.get(id)
+      const cambios = previo ?? { isDeleted: true }
+      resultado.set(id, nueva(e, cambios))
+    }
+  }
+  return { elementos: [...resultado.values()], omitidos, aviso: omitidos ? mensajeOmitidos(omitidos) : null }
+}
+
+export const TOPE_INVERSA = 512 * 1024 // bytes serializados; pasado esto el lote queda sin deshacer (D13)
+
+// Campos del ack que habilitan deshacer: la inversa, las versiones que dejó el lote
+// y `sin_deshacer` cuando la inversa serializada pasa del tope (entonces va null).
+export function camposDeshacer(antes, despues) {
+  const inversa = calcularInversa(antes, despues)
+  const serializada = JSON.stringify(inversa)
+  if (new TextEncoder().encode(serializada).length > TOPE_INVERSA) {
+    return { inversa: null, versiones: null, sin_deshacer: true }
+  }
+  return { inversa, versiones: versionesDe(despues, inversa), sin_deshacer: false }
+}
