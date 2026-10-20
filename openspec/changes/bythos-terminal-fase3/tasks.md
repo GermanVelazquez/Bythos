@@ -126,7 +126,7 @@ Satisfies: WH Undo, Claim, Release, Board not open (D16). Threat: HTTP routing.
 - [x] 7.3 Implement claim/release in `D/db/pizarra_ops.go` and the handler in `D/api/pizarra.go`; add `AccionPizarraDeshecha` in `D/db/eventos.go`; wire in `D/api/server.go`. (D16)
 - [x] 7.4 Modify `S/api.js`: `listarCambios`, `deshacerCambio`, `liberarCambio`. (D16, D17)
 - [x] 7.5 Verify: Go commands.
-- [ ] 7.6 Open PR7 (base PR6 branch).
+- [x] 7.6 Open PR7 (base PR6 branch). Opened as #49 (base #48).
 
 ## PR8: History panel (branch `feat/bythos-terminal-fase3-08-historial-ui`, base `feat/bythos-terminal-fase3-07-deshacer-api`)
 
