@@ -121,12 +121,12 @@ Satisfies: WH Inverse computation, Conflict check, Partial undo count (D13 to D1
 
 Satisfies: WH Undo, Claim, Release, Board not open (D16). Threat: HTTP routing.
 
-- [ ] 7.1 RED: `D/api/pizarra_test.go`: `POST .../cambios/{id}/deshacer` with no Origin -> 403; returns `{inversa, versiones}` and sets `deshecho`; second call -> 409; op without inverse -> 409; board without heartbeat (not `montada`) -> 409 and the batch stays undoable; `{"liberar":true}` clears `deshecho` and logs "deshacer no aplicado"; unknown id/other session -> 404. (D16)
-- [ ] 7.2 RED: `D/db` claim is atomic (two concurrent claims, one wins) and release is idempotent. (D16)
-- [ ] 7.3 Implement claim/release in `D/db/pizarra_ops.go` and the handler in `D/api/pizarra.go`; add `AccionPizarraDeshecha` in `D/db/eventos.go`; wire in `D/api/server.go`. (D16)
-- [ ] 7.4 Modify `S/api.js`: `listarCambios`, `deshacerCambio`, `liberarCambio`. (D16, D17)
-- [ ] 7.5 Verify: Go commands.
-- [ ] 7.6 Open PR7 (base PR6 branch).
+- [x] 7.1 RED: `D/api/pizarra_test.go`: `POST .../cambios/{id}/deshacer` with no Origin -> 403; returns `{inversa, versiones}` and sets `deshecho`; second call -> 409; op without inverse -> 409; board without heartbeat (not `montada`) -> 409 and the batch stays undoable; `{"liberar":true}` clears `deshecho` and logs "deshacer no aplicado"; unknown id/other session -> 404. (D16)
+- [x] 7.2 RED: `D/db` claim is atomic (two concurrent claims, one wins) and release is idempotent. (D16)
+- [x] 7.3 Implement claim/release in `D/db/pizarra_ops.go` and the handler in `D/api/pizarra.go`; add `AccionPizarraDeshecha` in `D/db/eventos.go`; wire in `D/api/server.go`. (D16)
+- [x] 7.4 Modify `S/api.js`: `listarCambios`, `deshacerCambio`, `liberarCambio`. (D16, D17)
+- [x] 7.5 Verify: Go commands.
+- [x] 7.6 Open PR7 (base PR6 branch). Opened as #49 (base #48).
 
 ## PR8: History panel (branch `feat/bythos-terminal-fase3-08-historial-ui`, base `feat/bythos-terminal-fase3-07-deshacer-api`)
 

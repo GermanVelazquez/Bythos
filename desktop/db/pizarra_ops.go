@@ -234,3 +234,48 @@ func EstadoOp(base *sql.DB, id int64) (estado, resultado string, err error) {
 	err = base.QueryRow(`SELECT estado, resultado FROM terminal_pizarra_ops WHERE id = ?`, id).Scan(&estado, &resultado)
 	return estado, resultado, err
 }
+
+// ErrNoDeshacible: el lote existe pero no se puede deshacer (ya deshecho, sin
+// inversa, fallido o pendiente).
+var ErrNoDeshacible = errors.New("el lote no se puede deshacer")
+
+// ReclamarDeshacer reclama el lote para deshacerlo: una sola llamada gana
+// (UPDATE condicionado, atómico) y recibe la inversa y las versiones guardadas.
+// sql.ErrNoRows si el lote no existe o es de otra sesión; ErrNoDeshacible si ya
+// no se puede (design D16).
+func ReclamarDeshacer(base *sql.DB, sesionID, id int64) (inversa, versiones string, err error) {
+	var ver sql.NullString
+	err = base.QueryRow(`UPDATE terminal_pizarra_ops SET deshecho = datetime('now','localtime')
+		WHERE id = ? AND sesion_id = ? AND estado = 'aplicada' AND inversa IS NOT NULL AND deshecho IS NULL
+		RETURNING inversa, versiones`, id, sesionID).Scan(&inversa, &ver)
+	if err == nil {
+		return inversa, ver.String, nil
+	}
+	if err != sql.ErrNoRows {
+		return "", "", err
+	}
+	var existe int
+	if err := base.QueryRow(`SELECT 1 FROM terminal_pizarra_ops WHERE id = ? AND sesion_id = ?`, id, sesionID).Scan(&existe); err != nil {
+		return "", "", err // sql.ErrNoRows = no existe en esta sesión
+	}
+	return "", "", ErrNoDeshacible
+}
+
+// LiberarDeshacer limpia el reclamo (deshecho) de un lote: la UI no pudo
+// aplicar la inversa. Idempotente: devuelve si había algo que liberar.
+// sql.ErrNoRows si el lote no existe o es de otra sesión.
+func LiberarDeshacer(base *sql.DB, sesionID, id int64) (bool, error) {
+	res, err := base.Exec(`UPDATE terminal_pizarra_ops SET deshecho = NULL
+		WHERE id = ? AND sesion_id = ? AND deshecho IS NOT NULL`, id, sesionID)
+	if err != nil {
+		return false, err
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		return true, nil
+	}
+	var existe int
+	if err := base.QueryRow(`SELECT 1 FROM terminal_pizarra_ops WHERE id = ? AND sesion_id = ?`, id, sesionID).Scan(&existe); err != nil {
+		return false, err
+	}
+	return false, nil
+}

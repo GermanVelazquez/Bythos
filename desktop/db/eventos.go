@@ -62,6 +62,8 @@ const (
 	AccionSesionTerminalBorrada = "sesion_terminal_borrada"
 	// AccionPizarraEditada: un lote de pizarra_dibujar quedó aplicado en la pizarra.
 	AccionPizarraEditada = "pizarra_editada"
+	// AccionPizarraDeshecha: el usuario deshizo un lote del agente (o no pudo aplicarlo y lo liberó).
+	AccionPizarraDeshecha = "pizarra_deshecha"
 )
 
 // limiteEventosPorDefecto/Maximo acotan ListarEventos: sin límite pedido

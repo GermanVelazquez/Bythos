@@ -329,6 +329,16 @@ export const api = {
     fetch(`${BASE}/api/terminal/pizarra/capturas/${capturaId}`, {
       method: 'POST', headers: { 'Content-Type': 'image/png', ...CABECERAS_ORIGEN }, body: png,
     }).then(leer),
+  // Historial del agente (api/pizarra.go): lista de lotes; deshacer reclama el lote y devuelve
+  // {inversa, versiones}; liberar suelta el reclamo si la UI no pudo aplicar la inversa.
+  listarCambios: (sesionId) =>
+    fetch(`${BASE}/api/terminal/sesiones/${sesionId}/cambios`, { headers: CABECERAS_ORIGEN }).then(leer),
+  deshacerCambio: (sesionId, opId) =>
+    fetch(`${BASE}/api/terminal/sesiones/${sesionId}/cambios/${opId}/deshacer`, { method: 'POST', headers: CABECERAS_ORIGEN }).then(leer),
+  liberarCambio: (sesionId, opId) =>
+    fetch(`${BASE}/api/terminal/sesiones/${sesionId}/cambios/${opId}/deshacer`, {
+      method: 'POST', headers: CABECERAS_JSON, body: JSON.stringify({ liberar: true }),
+    }).then(leer),
 }
 
 // Textos de la pantalla Terminal (design, UI Strings).
